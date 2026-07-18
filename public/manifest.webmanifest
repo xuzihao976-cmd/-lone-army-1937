@@ -1,0 +1,19 @@
+{
+  "name": "孤军：四行1937",
+  "short_name": "孤军1937",
+  "description": "离线优先的四行仓库文字策略网页游戏",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

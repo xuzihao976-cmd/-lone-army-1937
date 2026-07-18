@@ -1,3 +1,57 @@
 # 孤军：四行1937
 
-离线优先的四行仓库文字策略网页游戏。
+一款以四行仓库保卫战为背景的文字策略网页游戏。2.0 版采用“本地规则引擎 + 可选 AI 文字增强”架构：所有兵力、资源、战斗、事件与结局都在浏览器内即时结算，断网或 AI 服务不可用时仍能完整游玩。
+
+## 直接运行
+
+需要 Node.js 20 或更高版本。
+
+```bash
+npm install
+npm run dev
+```
+
+浏览器打开终端显示的本地地址。生产构建与完整检查：
+
+```bash
+npm run check
+npm run preview
+```
+
+`dist/` 是可直接部署的静态网页版本；首次在线打开后，浏览器会缓存已访问的游戏文件用于离线启动。
+
+## GitHub Pages 部署
+
+仓库已经包含 `.github/workflows/deploy-pages.yml`。将源码推送到公开 GitHub 仓库的 `main` 分支后，在仓库的 **Settings → Pages → Build and deployment** 中把 **Source** 设为 **GitHub Actions**，随后工作流会自动测试、构建并发布 `dist/`。
+
+游戏使用相对资源路径，可在 `https://<用户名>.github.io/<仓库名>/` 这样的项目子路径中运行。GitHub Pages 不保存服务端密钥，因此该部署默认使用完整的本地游戏引擎与本地战地顾问。
+
+## 免费 AI 增强（可选）
+
+可选增强默认接入硅基流动的 OpenAI 兼容接口，模型为 `Qwen/Qwen2.5-7B-Instruct`。游戏内 AI 开关默认关闭；没有配置密钥时，即使打开也会自动回退到本地叙事和本地顾问，不会卡住游戏。
+
+1. 复制 `.env.example` 为 `.env.local`。
+2. 只填写服务端变量 `SILICONFLOW_API_KEY`，不要使用 `VITE_` 前缀。
+3. 重启开发服务器。
+
+密钥只由 Vite 本地服务或 Netlify Function 读取，不会打包到浏览器 JavaScript。生产部署时，请在托管平台的环境变量设置中填写密钥，切勿把真实密钥写进源码。
+
+Netlify 已包含 `netlify.toml` 与 `netlify/functions/narrate.mjs`。其他静态托管平台即使没有部署 `/api/narrate`，本地游戏仍可完整运行，只是没有 AI 润色。
+
+## 代码结构
+
+- `engine/`：本地游戏规则、命令意图与结局判断。
+- `data/text/`：本地战报、事件和对白模板。
+- `services/aiClient.ts`：可取消、限时的可选 AI 客户端；失败即回退本地内容。
+- `server/`、`netlify/functions/`：服务端 AI 网关，负责保护密钥。
+- `storage/`：版本化存档与旧存档迁移。
+- `public/`：PWA 清单、图标与离线缓存脚本。
+- `tests/`：意图识别、结局和存档迁移测试。
+
+## 设计约束
+
+- AI 只能润色文字，不能修改数值、胜负、事件或存档。
+- 撤退命令必须精确匹配并二次确认；移动命令不会误触结局。
+- 随机数状态随存档保存，同一存档可稳定复现后续随机结果。
+- 外部纹理、Google 字体、Tailwind CDN 和 Google AI SDK 均已移除。
+- AI 请求最长等待 8 秒，可手动取消，本地战报始终先显示。

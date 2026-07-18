@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="84" fill="#090909"/>
+  <path d="M96 382h320v42H96zM124 204h264v178H124z" fill="#262626" stroke="#737373" stroke-width="14"/>
+  <path d="M150 162h212v42H150zM177 116h158v46H177z" fill="#404040"/>
+  <path d="M256 80v178" stroke="#a3a3a3" stroke-width="12"/>
+  <path d="M262 92c58 4 88 18 118 44-42 20-76 26-118 18z" fill="#991b1b"/>
+  <path d="M164 254h48v62h-48zm136 0h48v62h-48z" fill="#0a0a0a" stroke="#737373" stroke-width="8"/>
+  <text x="256" y="472" fill="#d4d4d4" font-size="56" font-family="serif" text-anchor="middle">孤军</text>
+</svg>
