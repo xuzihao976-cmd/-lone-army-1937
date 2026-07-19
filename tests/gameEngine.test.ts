@@ -121,7 +121,7 @@ describe('local game engine endings', () => {
     expect(result.eventTriggered).toBe('attack');
     expect(result.summary?.kind).toBe('battle');
     expect(result.summary?.title).toBe('敌军进攻结算');
-    expect(result.summary?.notes.some((note) => note.includes('工事等级'))).toBe(true);
+    expect(result.summary?.notes.some((note) => note.includes('实际减伤'))).toBe(true);
   });
 
   it('does not spend time or count aggression for a blocked daytime raid', () => {
@@ -165,20 +165,42 @@ describe('local game engine endings', () => {
     expect(ending.updatedStats.gameOverReason).toBe('combat_force_collapsed');
   });
 
-  it('turns the first structure collapse into a repairable last stand', () => {
+  it('does not erase surviving floor garrisons when global structure reaches zero', () => {
     const stats = createInitialStats(100);
     stats.tutorialStep = 3;
     stats.health = 0;
+    stats.lastStandUsed = true;
     stats.siegeMeter = 0;
 
-    const warning = runGameTurn(stats, '询问当前情况');
-    expect(warning.updatedStats.isGameOver).not.toBe(true);
-    expect(warning.updatedStats.lastStandUsed).toBe(true);
-    expect(warning.updatedStats.health).toBe(1);
-    expect(warning.narrative).toContain('最后防线');
+    const result = runGameTurn(stats, '询问当前情况');
+    expect(result.updatedStats.isGameOver).not.toBe(true);
+    expect(result.updatedStats.gameOverReason).toBeUndefined();
+    expect(result.narrative).not.toContain('战役结束');
   });
 
-  it('does not call surviving flag defenders fully martyred when only the position collapses', () => {
+  it('keeps the battle recoverable after only the first floor is lost', () => {
+    const stats = createInitialStats(102);
+    stats.tutorialStep = 3;
+    stats.health = 0;
+    stats.lastStandUsed = true;
+    stats.siegeMeter = 0;
+    stats.soldiers = 60;
+    stats.sectorIntegrity['一楼入口'] = 0;
+    stats.soldierDistribution = {
+      '一楼入口': 0,
+      '二楼阵地': 40,
+      '屋顶': 10,
+      '地下室': 10,
+    };
+    stats.hmgSquads = stats.hmgSquads.map((squad) => ({ ...squad, status: 'destroyed', count: 0 }));
+
+    const result = runGameTurn(stats, '询问当前情况');
+    expect(result.updatedStats.isGameOver).not.toBe(true);
+    expect(result.updatedStats.gameOverReason).toBeUndefined();
+    expect(result.narrative).not.toContain('战役结束');
+  });
+
+  it('does not call surviving flag defenders martyred because of structure damage alone', () => {
     const stats = createInitialStats(101);
     stats.tutorialStep = 3;
     stats.health = 0;
@@ -186,12 +208,9 @@ describe('local game engine endings', () => {
     stats.hasFlagRaised = true;
     stats.siegeMeter = 0;
 
-    const ending = runGameTurn(stats, '询问当前情况');
-    expect(ending.updatedStats.isGameOver).toBe(true);
-    expect(ending.updatedStats.gameResult).toBe('defeat_generic');
-    expect(ending.updatedStats.gameOverReason).toBe('position_collapsed');
-    expect(ending.narrative).not.toContain('壮烈殉国');
-    expect(ending.narrative).toContain('幸存者');
+    const result = runGameTurn(stats, '询问当前情况');
+    expect(result.updatedStats.isGameOver).not.toBe(true);
+    expect(result.narrative).not.toContain('壮烈殉国');
   });
 
   it('keeps attack settlement when combat crosses midnight', () => {
@@ -220,7 +239,7 @@ describe('local game engine endings', () => {
     expect(infantry.updatedStats.soldierDistribution?.['二楼阵地']).toBe(150);
     expect(infantry.updatedStats.soldierDistribution?.['屋顶']).toBeGreaterThan(10);
     expect(Object.values(infantry.updatedStats.soldierDistribution ?? {}).reduce((sum, value) => sum + value, 0))
-      .toBe(infantry.updatedStats.soldiers);
+      .toBe(stats.soldiers);
 
     const movedStats = { ...stats, ...infantry.updatedStats };
     const hmg = runGameTurn(movedStats, '部署机枪一连至屋顶');
@@ -229,24 +248,42 @@ describe('local game engine endings', () => {
   });
 
   it('can kill the commander only when the attacked sector contains the command post', () => {
-    const exposed = createInitialStats(25);
-    exposed.tutorialStep = 3;
-    exposed.day = 3;
-    exposed.currentTime = '10:00';
-    exposed.siegeMeter = 100;
-    exposed.location = '一楼入口';
-    exposed.fortificationLevel['一楼入口'] = 0;
-    exposed.sectorIntegrity['一楼入口'] = 20;
-    exposed.soldierDistribution['一楼入口'] = 15;
-    exposed.soldierDistribution['二楼阵地'] += 125;
+    let fatal: ReturnType<typeof runGameTurn> | undefined;
+    let fatalSeed = 0;
+    for (let seed = 1; seed <= 600 && !fatal; seed += 1) {
+      const exposed = createInitialStats(seed);
+      exposed.tutorialStep = 3;
+      exposed.day = 3;
+      exposed.currentTime = '23:00';
+      exposed.siegeMeter = 100;
+      exposed.location = '一楼入口';
+      exposed.fortificationLevel['一楼入口'] = 0;
+      exposed.sectorIntegrity['一楼入口'] = 20;
+      exposed.soldierDistribution['一楼入口'] = 15;
+      exposed.soldierDistribution['二楼阵地'] += 125;
+      const candidate = runGameTurn(exposed, '侦察敌情');
+      if (candidate.updatedStats.gameOverReason === 'commander_killed') {
+        fatal = candidate;
+        fatalSeed = seed;
+      }
+    }
 
-    const fatal = runGameTurn(exposed, '侦察敌情');
+    expect(fatal).toBeDefined();
+    if (!fatal) throw new Error('No deterministic commander casualty seed found');
     expect(fatal.attackLocation).toBe('一楼入口');
     expect(fatal.updatedStats.gameResult).toBe('defeat_commander');
     expect(fatal.updatedStats.gameOverReason).toBe('commander_killed');
     expect(fatal.narrative).toContain('将星陨落');
 
-    const sheltered = structuredClone(exposed);
+    const sheltered = createInitialStats(fatalSeed);
+    sheltered.tutorialStep = 3;
+    sheltered.day = 3;
+    sheltered.currentTime = '23:00';
+    sheltered.siegeMeter = 100;
+    sheltered.fortificationLevel['一楼入口'] = 0;
+    sheltered.sectorIntegrity['一楼入口'] = 20;
+    sheltered.soldierDistribution['一楼入口'] = 15;
+    sheltered.soldierDistribution['二楼阵地'] += 125;
     sheltered.location = '地下室';
     const survived = runGameTurn(sheltered, '侦察敌情');
     expect(survived.attackLocation).toBe('一楼入口');
@@ -269,7 +306,7 @@ describe('local game engine endings', () => {
     expect(breach.updatedStats.hmgSquads?.some((squad) => squad.status === 'active' && squad.location === '一楼入口')).toBe(false);
     expect(breach.narrative).toContain('防区失守：一楼入口');
 
-    const afterBreach = { ...stats, ...breach.updatedStats, siegeMeter: 100 };
+    const afterBreach = { ...stats, ...breach.updatedStats, currentTime: '23:00', siegeMeter: 100, turnCount: 2, lastAttackTurn: 1 };
     const nextAttack = runGameTurn(afterBreach, '侦察敌情');
     expect(['二楼阵地', '地下室']).toContain(nextAttack.attackLocation);
     expect(nextAttack.attackLocation).not.toBe('一楼入口');
@@ -279,7 +316,7 @@ describe('local game engine endings', () => {
     const stats = createInitialStats(1);
     stats.tutorialStep = 3;
     stats.day = 2;
-    stats.currentTime = '10:00';
+    stats.currentTime = '23:00';
     stats.siegeMeter = 100;
     stats.location = '一楼入口';
     stats.sectorIntegrity['一楼入口'] = 1;
@@ -307,7 +344,7 @@ describe('local game engine endings', () => {
     const stats = createInitialStats(9);
     stats.tutorialStep = 3;
     stats.day = 2;
-    stats.currentTime = '10:00';
+    stats.currentTime = '23:00';
     stats.siegeMeter = 0;
     stats.location = '屋顶';
     stats.sectorIntegrity['一楼入口'] = 0;
@@ -325,6 +362,41 @@ describe('local game engine endings', () => {
     expect(attack.narrative).toContain('楼梯封锁触发');
   });
 
+  it('guarantees a respite action immediately after an enemy attack', () => {
+    const stats = createInitialStats(77);
+    stats.tutorialStep = 3;
+    stats.day = 5;
+    stats.currentTime = '23:00';
+    stats.siegeMeter = 100;
+    stats.turnCount = 12;
+    stats.lastAttackTurn = 12;
+
+    const result = runGameTurn(stats, '侦察敌情');
+    expect(result.eventTriggered).not.toBe('attack');
+    expect(result.attackLocation).toBeNull();
+  });
+
+  it('enters close combat when rifles are empty and no local HMG can fire', () => {
+    const stats = createInitialStats(78);
+    stats.tutorialStep = 3;
+    stats.day = 5;
+    stats.currentTime = '23:00';
+    stats.siegeMeter = 100;
+    stats.location = '地下室';
+    stats.ammo = 0;
+    stats.grenades = 0;
+    stats.machineGunAmmo = 7832;
+    stats.enemiesKilled = 0;
+    stats.hmgSquads = stats.hmgSquads.map((squad) => ({ ...squad, location: '二楼阵地' }));
+
+    const result = runGameTurn(stats, '侦察敌情');
+    expect(result.eventTriggered).toBe('attack');
+    expect(result.attackLocation).toBe('一楼入口');
+    expect(result.narrative).toContain('白刃防守');
+    expect(result.updatedStats.enemiesKilled).toBeLessThanOrEqual(20);
+    expect(result.updatedStats.machineGunAmmo).toBe(7832);
+  });
+
   it('can counterattack to recover a lost sector', () => {
     const stats = createInitialStats(1);
     stats.tutorialStep = 3;
@@ -340,5 +412,25 @@ describe('local game engine endings', () => {
     expect(result.updatedStats.sectorIntegrity?.['一楼入口']).toBe(30);
     expect(result.updatedStats.soldierDistribution?.['一楼入口']).toBeGreaterThan(0);
     expect(result.narrative).toContain('反冲锋成功');
+  });
+
+  it('allows a high-casualty bayonet counterattack with no ammunition', () => {
+    const stats = createInitialStats(4);
+    stats.tutorialStep = 3;
+    stats.day = 1;
+    stats.currentTime = '10:00';
+    stats.siegeMeter = 0;
+    stats.morale = 90;
+    stats.ammo = 0;
+    stats.grenades = 0;
+    stats.sectorIntegrity['一楼入口'] = 0;
+    stats.soldierDistribution['一楼入口'] = 0;
+    stats.soldierDistribution['二楼阵地'] += 140;
+
+    const result = runGameTurn(stats, '反冲锋夺回一楼入口');
+    expect(result.updatedStats.currentTime).toBe('11:00');
+    expect(result.updatedStats.ammo).toBe(0);
+    expect(result.narrative).toContain('火力不足');
+    expect(result.narrative).not.toContain('反冲锋无法发动');
   });
 });

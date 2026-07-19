@@ -5,7 +5,7 @@ const METRICS: Array<{ metric: SummaryMetric; label: string }> = [
   { metric: 'soldiers', label: '可战兵力' },
   { metric: 'wounded', label: '伤员' },
   { metric: 'morale', label: '士气' },
-  { metric: 'health', label: '阵地' },
+  { metric: 'health', label: '总结构' },
   { metric: 'ammo', label: '七九弹' },
   { metric: 'machineGunAmmo', label: '机枪弹' },
   { metric: 'grenades', label: '手榴弹' },
@@ -47,7 +47,7 @@ export const buildTurnSummary = (
     kind = 'battle';
     title = '敌军进攻结算';
     notes.push(result.attackLocation ? `交火位置：${result.attackLocation}` : '敌军对仓库发动进攻');
-    notes.push('工事等级、机枪火力与攻击规模共同决定伤亡');
+    notes.push('实际减伤、本层可用火力与敌军规模共同决定伤亡');
   } else if (result.eventTriggered === 'new_day') {
     kind = 'new_day';
     title = `进入第 ${after.day} 天`;

@@ -1,7 +1,7 @@
 import { INITIAL_STATS } from '../constants';
 import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 6;
+export const SAVE_SCHEMA_VERSION = 7;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';

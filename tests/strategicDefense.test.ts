@@ -62,4 +62,17 @@ describe('strategic defense helpers', () => {
     stats.sectorIntegrity['一楼入口'] = 0;
     expect(getSectorDefenseProfile(stats, '一楼入口').mitigation).toBe(0);
   });
+
+  it('does not count an unloaded HMG as suppression fire', () => {
+    const stats = createInitialStats(4);
+    const supplied = getSectorDefenseProfile(stats, '一楼入口');
+    expect(supplied.activeHmgSquads).toBe(1);
+    expect(supplied.fireReadyHmgSquads).toBe(1);
+
+    stats.machineGunAmmo = 199;
+    const empty = getSectorDefenseProfile(stats, '一楼入口');
+    expect(empty.activeHmgSquads).toBe(1);
+    expect(empty.fireReadyHmgSquads).toBe(0);
+    expect(empty.mitigation).toBeLessThan(supplied.mitigation);
+  });
 });

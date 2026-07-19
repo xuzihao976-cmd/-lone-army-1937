@@ -40,6 +40,7 @@ export const INITIAL_STATS: GameStats = {
   currentTime: "19:00", 
   turnCount: 0,
   lastRestTurn: 0,
+  lastAttackTurn: -99,
   rngState: 19371026,
   lastStandUsed: false,
   

@@ -78,6 +78,7 @@ export interface GameStats {
   currentTime: string; 
   turnCount: number;
   lastRestTurn: number;
+  lastAttackTurn: number; // Resulting turn number of the most recent enemy attack
   rngState: number; // Seeded random state, persisted for repeatable saves
   lastStandUsed: boolean; // First collapse becomes a recoverable warning instead of an instant ending
   
@@ -167,6 +168,7 @@ export interface ActionPreview {
   durationLabel: string;
   threatIncrease: number;
   predictedThreat: number;
+  attackChance: number;
   risk: 'safe' | 'low' | 'medium' | 'high' | 'critical';
   riskLabel: string;
   costs: string[];

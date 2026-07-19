@@ -63,4 +63,16 @@ describe('action risk previews', () => {
     expect(preview?.durationMinutes).toBe(60);
     expect(preview?.costs).toContain('七九弹 800');
   });
+
+  it('keeps a bayonet counterattack available after ammunition is exhausted', () => {
+    const stats = createInitialStats();
+    stats.sectorIntegrity['一楼入口'] = 0;
+    stats.ammo = 0;
+    stats.grenades = 0;
+
+    const preview = getActionPreview(stats, '反冲锋夺回一楼入口');
+    expect(preview?.available).toBe(true);
+    expect(preview?.costs).toContain('刺刀反攻：伤亡较高');
+    expect(preview?.reason).toContain('近战夺回');
+  });
 });

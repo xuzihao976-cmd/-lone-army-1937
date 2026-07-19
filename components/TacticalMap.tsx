@@ -34,6 +34,8 @@ const SECTORS: SectorDefinition[] = [
   { location: '地下室', code: 'B1', icon: '▽', accent: 'text-green-600', lossEffect: '治疗停摆，伤员和物资受损' },
 ];
 
+const FORTIFICATION_NAMES = ['无掩体', '沙袋防线', '加固掩体', '堡垒化阵地'] as const;
+
 const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocation }) => {
   const [selectedLocation, setSelectedLocation] = useState<Location>(stats.location);
   const [flashingLocation, setFlashingLocation] = useState<Location | null>(null);
@@ -223,7 +225,9 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                 {flashingLocation === selectedLocation && <span className="text-xs font-black text-red-400 animate-pulse">● 交战中</span>}
               </div>
               <div className="mt-1 text-xs text-neutral-300">
-                驻军 {selectedGarrison} · 工事 Lv.{selectedFort} · {selectedHmg.length ? selectedHmg.map((squad) => squad.name).join('、') : '无机枪组'}
+                驻军 {selectedGarrison} · {FORTIFICATION_NAMES[Math.max(0, Math.min(3, selectedFort))]} · {selectedHmg.length
+                  ? `${selectedHmg.map((squad) => squad.name).join('、')}（${selectedDefense.fireReadyHmgSquads}/${selectedHmg.length}可开火）`
+                  : '无机枪组'}
               </div>
               {stats.location === selectedLocation && (
                 <div className={`mt-1 text-xs font-black ${commanderRisk >= 0.03 ? 'text-red-300 animate-pulse' : commanderRisk >= 0.015 ? 'text-amber-300' : 'text-green-300'}`}>
@@ -252,7 +256,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
             {!selectedHeld ? (
               <TacticalAction
                 command={`反冲锋夺回${selectedLocation}`}
-                label={`⚔ 反冲锋夺回${selectedLocation}`}
+                label={`${stats.ammo < 200 ? '⚔ 刺刀反攻夺回' : '⚔ 反冲锋夺回'}${selectedLocation}`}
                 tone="red"
                 disabled={!canRecaptureSector(stats, selectedLocation)}
               />

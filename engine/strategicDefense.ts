@@ -68,6 +68,7 @@ export interface SectorDefenseProfile {
   effectiveFortLevel: number;
   garrison: number;
   activeHmgSquads: number;
+  fireReadyHmgSquads: number;
   mitigation: number;
 }
 
@@ -91,6 +92,7 @@ export const getSectorDefenseProfile = (stats: GameStats, location: Location): S
       effectiveFortLevel: 0,
       garrison: 0,
       activeHmgSquads: 0,
+      fireReadyHmgSquads: 0,
       mitigation: 0,
     };
   }
@@ -105,6 +107,10 @@ export const getSectorDefenseProfile = (stats: GameStats, location: Location): S
   const garrison = Math.max(0, stats.soldierDistribution[location] ?? 0);
   const activeHmgSquads = stats.hmgSquads.filter((squad) =>
     squad.status === 'active' && squad.location === location).length;
+  // A token handful of rounds cannot sustain suppressive fire. Each local HMG
+  // needs at least 200 rounds before it contributes to the displayed/combat
+  // mitigation value.
+  const fireReadyHmgSquads = Math.min(activeHmgSquads, Math.floor(Math.max(0, stats.machineGunAmmo) / 200));
 
   return {
     localFortLevel,
@@ -112,7 +118,8 @@ export const getSectorDefenseProfile = (stats: GameStats, location: Location): S
     effectiveFortLevel,
     garrison,
     activeHmgSquads,
-    mitigation: calculateDefenseMitigation(effectiveFortLevel, activeHmgSquads, garrison),
+    fireReadyHmgSquads,
+    mitigation: calculateDefenseMitigation(effectiveFortLevel, fireReadyHmgSquads, garrison),
   };
 };
 

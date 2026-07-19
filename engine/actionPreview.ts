@@ -2,6 +2,7 @@ import type { ActionPreview, GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { isMoveCommand } from './intents';
 import { canRecaptureSector, getRecaptureStagingSectors, isApproachExposed, isSectorHeld } from './strategicDefense';
+import { calculateAttackChance } from './threat';
 import type { Location } from '../types';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
@@ -22,12 +23,13 @@ const formatDuration = (minutes: number): string => {
   return remainder ? `${hours}小时${remainder}分` : `${hours}小时`;
 };
 
-const riskFor = (predictedThreat: number): Pick<ActionPreview, 'risk' | 'riskLabel'> => {
-  if (predictedThreat >= 90) return { risk: 'critical', riskLabel: '极可能遇袭' };
-  if (predictedThreat >= 70) return { risk: 'high', riskLabel: '高风险' };
-  if (predictedThreat >= 45) return { risk: 'medium', riskLabel: '中风险' };
-  if (predictedThreat > 10) return { risk: 'low', riskLabel: '低风险' };
-  return { risk: 'safe', riskLabel: '相对安全' };
+const riskFor = (attackChance: number): Pick<ActionPreview, 'risk' | 'riskLabel'> => {
+  const percent = Math.round(attackChance * 100);
+  if (attackChance >= 0.66) return { risk: 'critical', riskLabel: `敌袭概率 ${percent}%` };
+  if (attackChance >= 0.45) return { risk: 'high', riskLabel: `敌袭概率 ${percent}%` };
+  if (attackChance >= 0.25) return { risk: 'medium', riskLabel: `敌袭概率 ${percent}%` };
+  if (attackChance > 0) return { risk: 'low', riskLabel: `敌袭概率 ${percent}%` };
+  return { risk: 'safe', riskLabel: '本次不会遇袭' };
 };
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
@@ -45,12 +47,23 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     const target = commandLocation(command)!;
     const maxMovableForce = Math.max(0, ...getRecaptureStagingSectors(stats, target)
       .map((location) => (stats.soldierDistribution[location] || 0) - 20));
+    const rifleCommitment = Math.min(800, stats.ammo);
+    const grenadeCommitment = Math.min(40, stats.grenades);
+    const bayonetAssault = rifleCommitment < 200;
     action = `反冲锋夺回${target}`;
-    available = canRecaptureSector(stats, target) && maxMovableForce >= 20 && stats.ammo >= 800 && stats.grenades >= 40;
+    available = canRecaptureSector(stats, target) && maxMovableForce >= 20;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 20 : 0;
-    costs = ['七九弹 800', '手榴弹 40'];
-    reason = available ? '成败取决于士气与出发防区，成功后只恢复30%完整度' : '需要敌占目标、相邻出发阵地、20名可抽调步兵及足够弹药';
+    costs = [
+      rifleCommitment > 0 ? `七九弹 ${rifleCommitment}` : '',
+      grenadeCommitment > 0 ? `手榴弹 ${grenadeCommitment}` : '',
+      bayonetAssault ? '刺刀反攻：伤亡较高' : '',
+    ].filter(Boolean);
+    reason = available
+      ? bayonetAssault
+        ? '弹药不足仍可近战夺回，但成功率更低、伤亡更高；成功后恢复30%完整度'
+        : '投入最多800发七九弹和40枚手榴弹；成功后恢复30%完整度'
+      : '需要敌占目标、相邻出发阵地及至少20名可抽调步兵';
   } else if (command.includes('封锁') && (command.includes('楼梯') || command.includes('通道'))) {
     const target = commandLocation(command);
     action = target ? `封锁通往${target}的楼梯` : '封锁楼梯';
@@ -109,12 +122,12 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     durationMinutes = available ? 120 : 0;
     baseThreat = available ? 15 : 0;
     costs = level >= 3 ? [] : ['粮包 200'];
-    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}工事与防区完整度均已满` : stats.sandbags < 200 ? '粮包不足 200' : '修复防区完整度；每完成两次施工提升一级工事';
+    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < 200 ? '粮包不足 200' : '每次恢复18%防区完整度；每两次施工强化一次实际减伤';
   } else if (includesAny(command, ['休息', '睡', '整顿'])) {
     action = '轮换休整';
     durationMinutes = 120;
     baseThreat = 35;
-    reason = '恢复士气与阵地状态，但会给敌军充分准备时间';
+    reason = '恢复士气与总结构，但会给敌军充分准备时间';
   } else if (includesAny(command, ['治疗', '抢救', '救', '医'])) {
     action = '救治伤员';
     available = isSectorHeld(stats, '地下室') && stats.wounded > 0 && stats.medkits > 0;
@@ -142,7 +155,10 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   const multiplier = getDayProfile(stats.day).threatMultiplier;
   const threatIncrease = Math.max(0, Math.ceil(baseThreat * multiplier));
   const predictedThreat = Math.min(100, stats.siegeMeter + threatIncrease);
-  const risk = riskFor(predictedThreat);
+  const attackChance = available && durationMinutes > 0
+    ? calculateAttackChance(predictedThreat, stats.turnCount, stats.lastAttackTurn ?? -99)
+    : 0;
+  const risk = riskFor(attackChance);
   const short = available
     ? `${formatDuration(durationMinutes)} · 威胁${threatIncrease > 0 ? `+${threatIncrease}` : '不变'}`
     : '当前不可执行';
@@ -153,6 +169,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     durationLabel: formatDuration(durationMinutes),
     threatIncrease,
     predictedThreat,
+    attackChance,
     ...risk,
     costs,
     available,

@@ -29,11 +29,12 @@ const BattleResultCard: React.FC<{ summary: TurnSummary }> = ({ summary }) => {
             const deltaColor = delta.metric === 'wounded'
               ? delta.value > 0 ? 'text-red-500' : 'text-amber-500'
               : delta.value > 0 ? 'text-green-500' : 'text-red-500';
+            const suffix = delta.metric === 'morale' || delta.metric === 'health' ? '%' : '';
             return (
               <div key={delta.metric} className="flex items-center justify-between rounded border border-neutral-800 bg-black/50 px-2.5 py-2 text-xs">
                 <span className="font-bold text-neutral-400">{delta.label}</span>
                 <span className={`font-mono font-bold ${deltaColor}`}>
-                  {delta.value > 0 ? '+' : ''}{delta.value}
+                  {delta.value > 0 ? '+' : ''}{delta.value}{suffix}
                 </span>
               </div>
             );
