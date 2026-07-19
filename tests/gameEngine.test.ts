@@ -33,6 +33,29 @@ describe('local game engine endings', () => {
     expect(nextBuild.fortificationBuildCounts['一楼入口']).toBe(5);
   });
 
+  it('only accepts fortifying the first floor for tutorial step one', () => {
+    const initial = createInitialStats(1937);
+    const started = applyTurnUpdate(initial, runGameTurn(initial, 'start_game').updatedStats);
+    const wrongFloor = runGameTurn(started, '加固屋顶');
+
+    expect(wrongFloor.updatedStats.tutorialStep).toBeUndefined();
+    expect(wrongFloor.narrative).toContain('加固');
+    expect(wrongFloor.narrative).toContain('1/2');
+  });
+
+  it('skips the tutorial without putting returning players at a disadvantage', () => {
+    const initial = createInitialStats(1937);
+    const started = applyTurnUpdate(initial, runGameTurn(initial, 'start_game').updatedStats);
+    const skipped = applyTurnUpdate(started, runGameTurn(started, 'skip_tutorial').updatedStats);
+
+    expect(skipped.tutorialStep).toBe(3);
+    expect(skipped.day).toBe(1);
+    expect(skipped.currentTime).toBe('08:00');
+    expect(skipped.fortificationLevel['一楼入口']).toBe(2);
+    expect(skipped.fortificationBuildCounts['一楼入口']).toBe(4);
+    expect(skipped.morale).toBe(95);
+  });
+
   it('requires confirmation before an early retreat ending', () => {
     const stats = createInitialStats();
     stats.tutorialStep = 3;

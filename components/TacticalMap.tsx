@@ -149,6 +149,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
           {SECTORS.map((sector) => {
             const garrison = stats.soldierDistribution[sector.location] || 0;
             const integrity = getSectorIntegrity(stats, sector.location);
+            const mitigation = Math.round(getSectorDefenseProfile(stats, sector.location).mitigation * 100);
             const condition = getSectorCondition(integrity);
             const held = integrity > 0;
             const selected = selectedLocation === sector.location;
@@ -191,11 +192,15 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
 
                 <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-neutral-400">
                   <span>兵 <b className="text-neutral-100">{garrison}</b></span>
-                  <span className={integrity < 25 ? 'text-red-300' : integrity < 60 ? 'text-amber-300' : 'text-green-300'}>层 {integrity}%</span>
+                  <span className={mitigation < 35 ? 'text-red-300' : mitigation < 65 ? 'text-amber-300' : 'text-green-300'}>减伤 {mitigation}%</span>
                 </div>
                 <div className="mt-1">
-                  <div className="h-2 overflow-hidden rounded-full border border-neutral-800 bg-black">
-                    <div className={`h-full transition-all ${integrity < 25 ? 'bg-red-600' : integrity < 60 ? 'bg-amber-600' : 'bg-green-700'}`} style={{ width: `${integrity}%` }} />
+                  <div
+                    className="h-2 overflow-hidden rounded-full border border-neutral-800 bg-black"
+                    aria-label={`${sector.location}实际减伤 ${mitigation}%`}
+                    title={`实际减伤 ${mitigation}%`}
+                  >
+                    <div className={`h-full transition-all ${mitigation < 35 ? 'bg-red-600' : mitigation < 65 ? 'bg-amber-600' : 'bg-green-700'}`} style={{ width: `${mitigation}%` }} />
                   </div>
                 </div>
                 <div className={`mt-1 truncate text-[11px] font-bold ${targeted ? 'text-red-400' : condition === 'lost' ? 'text-red-400' : 'text-neutral-500'}`}>
@@ -213,7 +218,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                 <span className={`text-base font-black ${selectedSector.accent}`}>{selectedLocation}</span>
                 <span className="rounded bg-neutral-800 px-2 py-1 text-[11px] font-bold text-neutral-300">实际减伤 {defenseMitigation}%</span>
                 <span className={`rounded px-2 py-1 text-[11px] font-black ${selectedCondition === 'lost' ? 'bg-red-950 text-red-300' : selectedCondition === 'critical' ? 'bg-orange-950 text-orange-300' : 'bg-green-950/50 text-green-300'}`}>
-                  防区 {selectedIntegrity}%
+                  防区完整度 {selectedIntegrity}%
                 </span>
                 {flashingLocation === selectedLocation && <span className="text-xs font-black text-red-400 animate-pulse">● 交战中</span>}
               </div>
@@ -232,8 +237,14 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                 <div className="mt-1 text-xs font-bold text-red-300">失守：{selectedSector.lossEffect}</div>
               )}
             </div>
-            <div className="mt-1 h-2.5 w-28 overflow-hidden rounded-full border border-neutral-800 bg-black">
-              <div className={`h-full ${defenseMitigation < 35 ? 'bg-red-700' : defenseMitigation < 65 ? 'bg-amber-700' : 'bg-green-800'}`} style={{ width: `${defenseMitigation}%` }} />
+            <div className="mt-1 w-28 shrink-0">
+              <div className="mb-1 text-right font-mono text-[11px] font-black text-neutral-300">减伤 {defenseMitigation}%</div>
+              <div
+                className="h-2.5 overflow-hidden rounded-full border border-neutral-800 bg-black"
+                aria-label={`${selectedLocation}实际减伤 ${defenseMitigation}%`}
+              >
+                <div className={`h-full ${defenseMitigation < 35 ? 'bg-red-700' : defenseMitigation < 65 ? 'bg-amber-700' : 'bg-green-800'}`} style={{ width: `${defenseMitigation}%` }} />
+              </div>
             </div>
           </div>
 

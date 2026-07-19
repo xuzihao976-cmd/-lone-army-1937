@@ -82,7 +82,7 @@ export interface GameStats {
   lastStandUsed: boolean; // First collapse becomes a recoverable warning instead of an instant ending
   
   // NEW MECHANICS
-  tutorialStep: number; // 0: Start, 1: Need Fortify, 2: Need Supply, 3: Done
+  tutorialStep: number; // 0: Not started, 1: Fortify entrance, 2: Rest troops, 3: Done/skipped
   siegeMeter: number; // 0-100, triggers attack when full
   activeTacticalCard?: TacticalCard | null;
 

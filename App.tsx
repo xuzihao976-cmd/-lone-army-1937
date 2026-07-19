@@ -12,6 +12,7 @@ import TacticalCardDisplay from './components/TacticalCardDisplay';
 import GameOverModal from './components/GameOverModal'; 
 import BattleResultCard from './components/BattleResultCard';
 import ActionPreviewBar from './components/ActionPreviewBar';
+import TutorialGuide from './components/TutorialGuide';
 import { GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType } from './types';
 import { runGameTurn } from './engine/gameEngine';
 import { getActionPreview } from './engine/actionPreview';
@@ -21,6 +22,7 @@ import { getSoundEnabled, playSound, setSoundEnabled as persistSoundEnabled } fr
 
 const ACHIEVEMENTS_KEY = 'lone_army_achievements';
 const AI_PREFERENCE_KEY = 'lone_army_ai_enhancement';
+const MAP_HINT_SEEN_KEY = 'lone_army_map_hint_seen';
 const IS_STATIC_HOSTING = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
 
 const createLogId = (): string =>
@@ -56,6 +58,7 @@ const App: React.FC = () => {
   const [currentDilemma, setCurrentDilemma] = useState<Dilemma | null>(null);
   const [enemyIntel, setEnemyIntel] = useState<string>("日军动向不明...");
   const [attackLocation, setAttackLocation] = useState<Location | null>(null);
+  const [showBattleMapHint, setShowBattleMapHint] = useState(false);
 
   // Visual Effects State
   const [visualEffect, setVisualEffect] = useState<'none' | 'shake' | 'heavy-damage'>('none');
@@ -192,6 +195,7 @@ const App: React.FC = () => {
         setLogs(data.logs);
         setCurrentDilemma(null);
         setAttackLocation(null);
+        setShowBattleMapHint(false);
         setAiSource('auto');
         setView('GAME');
         setShowSaveLoadModal(false);
@@ -216,6 +220,7 @@ const App: React.FC = () => {
         setLogs(data.logs);
         setCurrentDilemma(null);
         setAttackLocation(null);
+        setShowBattleMapHint(false);
         setEnemyIntel('自动存档已恢复，侦察信息将在下一次行动后刷新。');
         setAiSource('auto');
         setView('GAME');
@@ -321,6 +326,17 @@ const App: React.FC = () => {
         setAttackLocation(response.attackLocation);
     }
 
+    if (response.eventTriggered === 'attack' && statsRef.current.tutorialStep >= 3) {
+      try {
+        if (localStorage.getItem(MAP_HINT_SEEN_KEY) !== '1') {
+          localStorage.setItem(MAP_HINT_SEEN_KEY, '1');
+          setShowBattleMapHint(true);
+        }
+      } catch {
+        setShowBattleMapHint(true);
+      }
+    }
+
     if (response.dilemma) {
         setCurrentDilemma(response.dilemma);
     }
@@ -392,6 +408,7 @@ const App: React.FC = () => {
     setShowGameOverModal(false);
     setCurrentDilemma(null);
     setAttackLocation(null);
+    setShowBattleMapHint(false);
     setAiSource('auto');
 
     try {
@@ -628,6 +645,33 @@ const App: React.FC = () => {
 
             <StatsPanel stats={stats} enemyIntel={enemyIntel} />
 
+            {showBattleMapHint && (
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-red-900/50 bg-red-950/25 px-3 py-2" role="status">
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-red-300">战场提示：红点就是敌军当前目标</div>
+                  <div className="truncate text-[11px] text-neutral-400">打开地图可查看遭袭楼层，并立即调兵或加固。</div>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  {!showMap && (
+                    <button
+                      type="button"
+                      onClick={() => { playSound('click'); setShowMap(true); setShowBattleMapHint(false); }}
+                      className="rounded border border-red-800 bg-red-950/40 px-2.5 py-1.5 text-[11px] font-black text-red-200"
+                    >
+                      打开地图
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowBattleMapHint(false)}
+                    className="rounded border border-neutral-700 px-2.5 py-1.5 text-[11px] font-bold text-neutral-300"
+                  >
+                    知道了
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="relative z-10 flex shrink-0 justify-center border-b border-neutral-800 bg-neutral-900 px-4 py-2">
                 <button 
                     onClick={() => { playSound('click'); setShowMap(!showMap); }}
@@ -748,11 +792,18 @@ const App: React.FC = () => {
 
                 {/* Quick Actions Row */}
                 {!stats.isGameOver && (
-                    <QuickActions 
-                        onAction={(cmd) => handleCommand(undefined, cmd)} 
-                        disabled={isLoading || !!currentDilemma} 
+                    <>
+                      <TutorialGuide
                         stats={stats}
-                    />
+                        disabled={isLoading || !!currentDilemma}
+                        onSkip={() => handleCommand(undefined, 'skip_tutorial', '跳过教程')}
+                      />
+                      <QuickActions
+                          onAction={(cmd) => handleCommand(undefined, cmd)}
+                          disabled={isLoading || !!currentDilemma}
+                          stats={stats}
+                      />
+                    </>
                 )}
 
                 {stats.isGameOver ? (

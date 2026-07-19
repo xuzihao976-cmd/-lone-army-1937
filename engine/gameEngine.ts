@@ -370,7 +370,7 @@ const runGameTurnInternal = (
         };
     }
     
-    // --- Start Game (RESTORED TUTORIAL TEXT) ---
+    // --- Start Game ---
     if (cmd === "start_game") {
          calculatedStats.tutorialStep = 1; 
         calculatedStats.day = 0;
@@ -390,17 +390,35 @@ const runGameTurnInternal = (
         playSound('radio'); 
         
         return {
-            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨凄迷，苏州河水在黑暗中静静流淌。你刚刚接管防务。\n\n【战场仪表盘说明】\n● 可战：步兵与仍在作战的机枪组总数；首次低于20人会触发最后防线。\n● 防区：每层都有独立完整度；失守后敌军会沿楼梯继续推进。\n● 指挥官：所在楼层遭袭时有约2%基础阵亡风险，工事与驻军会改变概率。\n● 士气：影响战斗力。过低会导致逃兵或哗变。\n● 威胁值：顶部红条。耗时行动会提高遇袭风险。\n● 战略地图：可以调兵、转移机枪、封锁楼梯或反冲锋夺回阵地。\n\n“团附！”副官冲过来，“一楼大门工事太薄弱了！鬼子坦克一炮就能轰开！请立即下令【加固一楼】！”",
+            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨中，你刚刚接管防务。副官指向摇摇欲坠的大门：“团附，先把一楼入口加固起来！”\n\n按照下方的新手引导完成两步操作，随后正式开战。",
             updatedStats: calculatedStats,
             eventTriggered: 'none',
             enemyIntel: "侦察兵报告：日军正在集结步兵，似乎准备进行试探性进攻。"
         };
     }
     
-    // --- Tutorial Logic (RESTORED TUTORIAL TEXT) ---
+    // --- Contextual two-step tutorial ---
     if (currentStats.tutorialStep > 0 && currentStats.tutorialStep < 3) {
+        if (cmd === 'skip_tutorial' || cmd.includes('跳过教程')) {
+            calculatedStats.tutorialStep = 3;
+            calculatedStats.day = 1;
+            calculatedStats.currentTime = "08:00";
+            calculatedStats.siegeMeter = 20;
+            calculatedStats.morale = Math.min(100, currentStats.morale + 15);
+            calculatedStats.health = Math.min(100, currentStats.health + 10);
+            calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, '一楼入口': 2 };
+            calculatedStats.fortificationBuildCounts = { ...currentStats.fortificationBuildCounts, '一楼入口': 4 };
+            playSound('click');
+            return {
+                narrative: "【教程已跳过】\n\n一楼工事与守军状态已按教程完成后的标准配置。10月27日，第一天，正式战斗开始。",
+                updatedStats: calculatedStats,
+                eventTriggered: 'new_day',
+                enemyIntel: "侦察兵报告：日军步兵已展开，主要威胁为冷枪和轻型迫击炮。"
+            };
+        }
+
         if (currentStats.tutorialStep === 1) {
-            if (cmd.includes('加固') || cmd.includes('修')) {
+            if ((cmd.includes('加固') || cmd.includes('修')) && cmd.includes('一楼')) {
                  calculatedStats.tutorialStep = 2;
                  calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, '一楼入口': 2 };
                  calculatedStats.fortificationBuildCounts = { ...currentStats.fortificationBuildCounts, '一楼入口': 4 };
@@ -408,13 +426,13 @@ const runGameTurnInternal = (
                  playSound('click');
                  statsLog.push("🔨 一楼工事等级 Lv.2");
                  return {
-                     narrative: "你组织人手疯狂堆砌沙袋，大门终于被封死了。安全感稍微提升了一些。\n\n“呼...”副官瘫坐在地上，“团附，弟兄们从撤退到现在两天没合眼了，士气低落。如果不【休息】，这仗没法打。请下令【休息整顿】（恢复士气与体力）。”\n\n🔨 一楼工事等级 Lv.2",
+                     narrative: "【第 1/2 步完成】\n\n沙袋封住了一楼入口，工事提升至 Lv.2。副官提醒：“弟兄们两天没合眼了，该轮换休息。”\n\n现在点击下方发光的【休息】。",
                      updatedStats: calculatedStats,
                      eventTriggered: 'none',
                      visualEffect: 'shake'
                  };
             }
-            return { narrative: "副官急得直跺脚：“团附！大门要紧啊！鬼子马上就到了！快下令【加固一楼】吧！”", updatedStats: {} };
+            return { narrative: "【新手引导 1/2】请先点击下方发光的【加固】。需要直接开战，也可以选择“跳过教程”。", updatedStats: {} };
         }
         if (currentStats.tutorialStep === 2) {
              if (cmd.includes('休息') || cmd.includes('睡') || cmd.includes('整顿')) {
@@ -429,13 +447,13 @@ const runGameTurnInternal = (
                  
                  playSound('click');
                  return {
-                     narrative: "你下令全营轮流休息。鼾声在仓库里此起彼伏。这一觉让大家的精神恢复了不少。\n\n不知不觉，天亮了。\n\n10月27日，第一天。\n晨雾散去，日军的膏药旗在废墟中若隐若现。真正的恶战，开始了。\n\n💤 士气 +15\n🏥 阵地状态 +10",
+                     narrative: "【新手引导完成】\n\n守军完成轮换，士气恢复。天亮了——10月27日，第一天，日军已在废墟中展开，真正的战斗开始。\n\n💤 士气 +15\n🏥 总结构 +10",
                      updatedStats: calculatedStats,
                      eventTriggered: 'new_day',
                      enemyIntel: "侦察兵报告：日军步兵已展开，主要威胁为冷枪和轻型迫击炮。"
                  };
              }
-             return { narrative: "“团附，弟兄们站着都要睡着了！请下令【休息】！”", updatedStats: {} };
+             return { narrative: "【新手引导 2/2】请点击下方发光的【休息】。需要直接开战，也可以选择“跳过教程”。", updatedStats: {} };
         }
     }
 
