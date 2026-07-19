@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { createInitialStats } from '../storage/saveStore';
 import {
   calculateCommanderDeathRisk,
+  calculateDefenseMitigation,
   canRecaptureSector,
   getGroundAttackTargets,
+  getSectorDefenseProfile,
   getSectorCondition,
   isApproachExposed,
 } from '../engine/strategicDefense';
@@ -42,5 +44,22 @@ describe('strategic defense helpers', () => {
     expect(canRecaptureSector(stats, '一楼入口')).toBe(true);
     expect(getSectorCondition(0)).toBe('lost');
     expect(getSectorCondition(20)).toBe('critical');
+  });
+
+  it('uses one shared mitigation value for the map and combat engine', () => {
+    const stats = createInitialStats(3);
+    stats.fortificationLevel['一楼入口'] = 2;
+    stats.fortificationLevel['二楼阵地'] = 0;
+    stats.soldierDistribution['一楼入口'] = 100;
+    stats.hmgSquads = stats.hmgSquads.map((squad) => ({ ...squad, location: '屋顶' }));
+
+    const profile = getSectorDefenseProfile(stats, '一楼入口');
+    expect(profile.effectiveFortLevel).toBe(2);
+    expect(profile.activeHmgSquads).toBe(0);
+    expect(profile.mitigation).toBeCloseTo(0.7, 5);
+    expect(profile.mitigation).toBe(calculateDefenseMitigation(2, 0, 100));
+
+    stats.sectorIntegrity['一楼入口'] = 0;
+    expect(getSectorDefenseProfile(stats, '一楼入口').mitigation).toBe(0);
   });
 });

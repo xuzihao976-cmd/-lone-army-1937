@@ -6,6 +6,7 @@ import {
   canRecaptureSector,
   formatCommanderRisk,
   getGroundAttackTargets,
+  getSectorDefenseProfile,
   getSectorCondition,
   getSectorIntegrity,
   isApproachExposed,
@@ -52,6 +53,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
   const selectedIntegrity = getSectorIntegrity(stats, selectedLocation);
   const selectedCondition = getSectorCondition(selectedIntegrity);
   const selectedHeld = isSectorHeld(stats, selectedLocation);
+  const selectedDefense = getSectorDefenseProfile(stats, selectedLocation);
   const commanderRisk = calculateCommanderDeathRisk(stats, selectedLocation);
   const groundTargets = getGroundAttackTargets(stats);
   const enemyPressure = stats.siegeMeter >= 85
@@ -71,9 +73,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
     .map((sector) => ({ location: sector.location, soldiers: stats.soldierDistribution[sector.location] || 0 }))
     .sort((a, b) => b.soldiers - a.soldiers)[0], [selectedLocation, stats.soldierDistribution]);
   const transferable = donor ? Math.min(30, Math.max(0, donor.soldiers - 20)) : 0;
-  const defenseScore = selectedHeld
-    ? Math.min(100, Math.round(selectedFort * 18 + Math.min(38, selectedGarrison / 3) + selectedHmg.length * 14 + selectedIntegrity * 0.12))
-    : 0;
+  const defenseMitigation = Math.round(selectedDefense.mitigation * 100);
   const conditionLabels = {
     secure: '稳固',
     strained: '吃紧',
@@ -191,7 +191,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
 
                 <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-neutral-400">
                   <span>兵 <b className="text-neutral-100">{garrison}</b></span>
-                  <span className={integrity < 25 ? 'text-red-300' : integrity < 60 ? 'text-amber-300' : 'text-green-300'}>{integrity}%</span>
+                  <span className={integrity < 25 ? 'text-red-300' : integrity < 60 ? 'text-amber-300' : 'text-green-300'}>层 {integrity}%</span>
                 </div>
                 <div className="mt-1">
                   <div className="h-2 overflow-hidden rounded-full border border-neutral-800 bg-black">
@@ -211,7 +211,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`text-base font-black ${selectedSector.accent}`}>{selectedLocation}</span>
-                <span className="rounded bg-neutral-800 px-2 py-1 text-[11px] font-bold text-neutral-300">防守评分 {defenseScore}/100</span>
+                <span className="rounded bg-neutral-800 px-2 py-1 text-[11px] font-bold text-neutral-300">实际减伤 {defenseMitigation}%</span>
                 <span className={`rounded px-2 py-1 text-[11px] font-black ${selectedCondition === 'lost' ? 'bg-red-950 text-red-300' : selectedCondition === 'critical' ? 'bg-orange-950 text-orange-300' : 'bg-green-950/50 text-green-300'}`}>
                   防区 {selectedIntegrity}%
                 </span>
@@ -233,7 +233,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
               )}
             </div>
             <div className="mt-1 h-2.5 w-28 overflow-hidden rounded-full border border-neutral-800 bg-black">
-              <div className={`h-full ${defenseScore < 35 ? 'bg-red-700' : defenseScore < 65 ? 'bg-amber-700' : 'bg-green-800'}`} style={{ width: `${defenseScore}%` }} />
+              <div className={`h-full ${defenseMitigation < 35 ? 'bg-red-700' : defenseMitigation < 65 ? 'bg-amber-700' : 'bg-green-800'}`} style={{ width: `${defenseMitigation}%` }} />
             </div>
           </div>
 

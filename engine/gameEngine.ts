@@ -7,9 +7,11 @@ import { buildTurnSummary } from './turnSummary';
 import { advanceCampaignClock, formatCampaignDate } from './time';
 import {
     calculateCommanderDeathRisk,
+    calculateDefenseMitigation,
     canRecaptureSector,
     formatCommanderRisk,
     getGroundAttackTargets,
+    getSectorDefenseProfile,
     getRecaptureStagingSectors,
     getRetreatDestination,
     isApproachExposed,
@@ -151,17 +153,7 @@ const calculateCombatOutcomes = (
     // Lv1 = 35% mitigation (65% damage taken) -> Sandbags
     // Lv2 = 60% mitigation (40% damage taken) -> Reinforced
     // Lv3 = 85% mitigation (15% damage taken) -> Fortress
-    let mitigation = 0.1 + (avgFortLevel * 0.25);
-    
-    // HMG Suppression: Each squad adds 5% mitigation
-    mitigation += (activeHmgSquads * 0.05);
-
-    // A properly manned sector is materially harder to overrun. This makes
-    // troop placement on the tactical map part of the actual combat model.
-    mitigation += Math.min(0.12, Math.max(0, garrisonStrength) / 1000);
-
-    // Cap mitigation at 95%
-    mitigation = Math.min(0.95, mitigation);
+    const mitigation = calculateDefenseMitigation(avgFortLevel, activeHmgSquads, garrisonStrength);
 
     // 3. Calculate Friendly Casualties
     // If bayonet charge, ignore mitigation (0% mitigation)
@@ -411,6 +403,7 @@ const runGameTurnInternal = (
             if (cmd.includes('加固') || cmd.includes('修')) {
                  calculatedStats.tutorialStep = 2;
                  calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, '一楼入口': 2 };
+                 calculatedStats.fortificationBuildCounts = { ...currentStats.fortificationBuildCounts, '一楼入口': 4 };
                  calculatedStats.currentTime = "21:00";
                  playSound('click');
                  statsLog.push("🔨 一楼工事等级 Lv.2");
@@ -1174,26 +1167,14 @@ const runGameTurnInternal = (
             statsLog.push(`⛓ 楼梯封锁生效: 额外毙敌${barrierKills}人 / 障碍已耗尽`);
         }
 
-        const lv1 = calculatedStats.fortificationLevel?.['一楼入口'] ?? currentStats.fortificationLevel['一楼入口'];
-        const lv2 = calculatedStats.fortificationLevel?.['二楼阵地'] ?? currentStats.fortificationLevel['二楼阵地'];
-        const lvRoof = calculatedStats.fortificationLevel?.['屋顶'] ?? currentStats.fortificationLevel['屋顶'];
-        const lvBasement = calculatedStats.fortificationLevel?.['地下室'] ?? currentStats.fortificationLevel['地下室'];
-        const fortByLocation: Record<Location, number> = {
-            '屋顶': lvRoof,
-            '二楼阵地': lv2,
-            '一楼入口': lv1,
-            '地下室': lvBasement,
-        };
-        const targetFort = isSectorHeld(strategicStateAfterAction, attackLocation) ? fortByLocation[attackLocation] : 0;
-        const adjacentSupport = attackLocation === '一楼入口' && isSectorHeld(strategicStateAfterAction, '二楼阵地') ? lv2 * 0.2
-            : attackLocation === '二楼阵地' && isSectorHeld(strategicStateAfterAction, '一楼入口') ? lv1 * 0.1
-                : 0;
-        const effectiveDefense = Math.min(3, targetFort + adjacentSupport);
-        const currentDistribution = calculatedStats.soldierDistribution || currentStats.soldierDistribution;
-        const targetGarrison = Math.max(0, currentDistribution[attackLocation] || 0);
+        const defenseProfile = getSectorDefenseProfile(strategicStateAfterAction, attackLocation);
+        const currentDistribution = strategicStateAfterAction.soldierDistribution;
+        const targetFort = defenseProfile.localFortLevel;
+        const effectiveDefense = defenseProfile.effectiveFortLevel;
+        const targetGarrison = defenseProfile.garrison;
 
         // Only HMG squads physically deployed in the attacked sector contribute.
-        const activeSquadsCount = ammoCheckSquads.filter((squad) => squad.status === 'active' && squad.location === attackLocation).length;
+        const activeSquadsCount = defenseProfile.activeHmgSquads;
 
         // 4. CALCULATE OUTCOME
         const outcome = calculateCombatOutcomes(attackScale, effectiveDefense, activeSquadsCount, targetGarrison, damageType, bayonetMode);

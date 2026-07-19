@@ -62,6 +62,60 @@ export const canRecaptureSector = (stats: GameStats, target: Location): boolean 
   return getRecaptureStagingSectors(stats, target).length > 0;
 };
 
+export interface SectorDefenseProfile {
+  localFortLevel: number;
+  adjacentSupport: number;
+  effectiveFortLevel: number;
+  garrison: number;
+  activeHmgSquads: number;
+  mitigation: number;
+}
+
+export const calculateDefenseMitigation = (
+  effectiveFortLevel: number,
+  activeHmgSquads: number,
+  garrison: number,
+): number => Math.min(
+  0.95,
+  0.1
+    + Math.max(0, effectiveFortLevel) * 0.25
+    + Math.max(0, activeHmgSquads) * 0.05
+    + Math.min(0.12, Math.max(0, garrison) / 1000),
+);
+
+export const getSectorDefenseProfile = (stats: GameStats, location: Location): SectorDefenseProfile => {
+  if (!isSectorHeld(stats, location)) {
+    return {
+      localFortLevel: 0,
+      adjacentSupport: 0,
+      effectiveFortLevel: 0,
+      garrison: 0,
+      activeHmgSquads: 0,
+      mitigation: 0,
+    };
+  }
+
+  const localFortLevel = Math.max(0, Math.min(3, stats.fortificationLevel[location] ?? 0));
+  const adjacentSupport = location === '一楼入口' && isSectorHeld(stats, '二楼阵地')
+    ? (stats.fortificationLevel['二楼阵地'] ?? 0) * 0.2
+    : location === '二楼阵地' && isSectorHeld(stats, '一楼入口')
+      ? (stats.fortificationLevel['一楼入口'] ?? 0) * 0.1
+      : 0;
+  const effectiveFortLevel = Math.min(3, localFortLevel + adjacentSupport);
+  const garrison = Math.max(0, stats.soldierDistribution[location] ?? 0);
+  const activeHmgSquads = stats.hmgSquads.filter((squad) =>
+    squad.status === 'active' && squad.location === location).length;
+
+  return {
+    localFortLevel,
+    adjacentSupport,
+    effectiveFortLevel,
+    garrison,
+    activeHmgSquads,
+    mitigation: calculateDefenseMitigation(effectiveFortLevel, activeHmgSquads, garrison),
+  };
+};
+
 export const calculateCommanderDeathRisk = (stats: GameStats, location: Location): number => {
   const fort = Math.max(0, Math.min(3, stats.fortificationLevel[location] ?? 0));
   const garrison = Math.max(0, stats.soldierDistribution[location] ?? 0);

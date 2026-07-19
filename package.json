@@ -1,7 +1,7 @@
 {
   "name": "lone-army-1937-webgame",
   "private": true,
-  "version": "2.5.0",
+  "version": "2.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

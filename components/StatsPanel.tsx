@@ -28,7 +28,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
     { label: '可战', value: combatReady, tone: combatReady < 100 ? 'text-red-400' : 'text-neutral-100', alert: combatReady < 100 },
     { label: '伤员', value: stats.wounded, tone: stats.wounded > 0 ? 'text-orange-400' : 'text-neutral-300', alert: stats.wounded > 20 },
     { label: '士气', value: stats.morale, tone: stats.morale < 30 ? 'text-red-400' : 'text-amber-300', alert: stats.morale < 30 },
-    { label: '结构', value: stats.health, tone: stats.health < 30 ? 'text-red-400' : 'text-cyan-200', alert: stats.health < 30 },
+    { label: '总结构', value: stats.health, tone: stats.health < 30 ? 'text-red-400' : 'text-cyan-200', alert: stats.health < 30 },
   ];
 
   const resources = [

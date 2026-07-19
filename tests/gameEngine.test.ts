@@ -1,8 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { runGameTurn } from '../engine/gameEngine';
 import { createInitialStats } from '../storage/saveStore';
+import type { GameStats } from '../types';
+
+const applyTurnUpdate = (stats: GameStats, update: Partial<GameStats>): GameStats => ({
+  ...stats,
+  ...update,
+  fortificationLevel: { ...stats.fortificationLevel, ...(update.fortificationLevel ?? {}) },
+  fortificationBuildCounts: { ...stats.fortificationBuildCounts, ...(update.fortificationBuildCounts ?? {}) },
+  sectorIntegrity: { ...stats.sectorIntegrity, ...(update.sectorIntegrity ?? {}) },
+});
 
 describe('local game engine endings', () => {
+  it('keeps the tutorial fortification after the real battle begins', () => {
+    const initial = createInitialStats(1937);
+    const started = applyTurnUpdate(initial, runGameTurn(initial, 'start_game').updatedStats);
+    const fortified = applyTurnUpdate(started, runGameTurn(started, '加固一楼').updatedStats);
+
+    expect(fortified.tutorialStep).toBe(2);
+    expect(fortified.fortificationLevel['一楼入口']).toBe(2);
+    expect(fortified.fortificationBuildCounts['一楼入口']).toBe(4);
+
+    const formal = applyTurnUpdate(fortified, runGameTurn(fortified, '休息整顿').updatedStats);
+    expect(formal.tutorialStep).toBe(3);
+    expect(formal.day).toBe(1);
+    expect(formal.fortificationLevel['一楼入口']).toBe(2);
+    expect(formal.fortificationBuildCounts['一楼入口']).toBe(4);
+
+    formal.siegeMeter = 0;
+    const nextBuild = applyTurnUpdate(formal, runGameTurn(formal, '加固一楼').updatedStats);
+    expect(nextBuild.fortificationLevel['一楼入口']).toBe(2);
+    expect(nextBuild.fortificationBuildCounts['一楼入口']).toBe(5);
+  });
+
   it('requires confirmation before an early retreat ending', () => {
     const stats = createInitialStats();
     stats.tutorialStep = 3;
