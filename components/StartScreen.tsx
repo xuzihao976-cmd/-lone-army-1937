@@ -73,9 +73,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
                 查看勋章墙 ({unlockedAchievements.length}/{ACHIEVEMENTS.length})
             </button>
             
-            <div className="text-[10px] text-neutral-600 text-center mt-6 font-mono leading-relaxed">
+            <div className="mt-6 text-center text-xs font-mono leading-relaxed text-neutral-400">
                 建议佩戴耳机体验本地战场音效<br/>
-                v2.3.0 | 纵深防御 · 战局连锁 · 离线可玩
+                v2.4.0 | 清晰战况 · 大字界面 · 离线可玩
             </div>
         </div>
       </>
@@ -106,7 +106,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
                                   <div className={`font-bold font-serif ${isUnlocked ? 'text-neutral-200' : 'text-neutral-600'}`}>
                                       {isUnlocked ? ach.title : (ach.isSecret ? '???' : ach.title)}
                                   </div>
-                                  <div className="text-[10px] sm:text-xs text-neutral-500 mt-1 leading-relaxed">
+                                  <div className="mt-1 text-xs leading-relaxed text-neutral-400">
                                       {isUnlocked ? ach.desc : (ach.isSecret ? '该成就尚未解锁。' : ach.desc)}
                                   </div>
                               </div>
@@ -118,7 +118,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
       )}
       
       {/* Footer */}
-      <div className="absolute bottom-4 text-[10px] text-neutral-700 font-mono pointer-events-none">
+      <div className="pointer-events-none absolute bottom-4 text-[11px] font-mono text-neutral-600">
         &copy; 2024 孤军项目组
       </div>
     </div>

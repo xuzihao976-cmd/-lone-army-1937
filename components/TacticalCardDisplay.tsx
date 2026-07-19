@@ -40,7 +40,7 @@ const TacticalCardDisplay: React.FC<TacticalCardDisplayProps> = ({ card, onExecu
               {card.description}
           </p>
           
-          <div className={`text-[10px] font-bold uppercase tracking-wider ${textColor} border-t border-white/10 pt-2`}>
+          <div className={`border-t border-white/10 pt-2 text-xs font-bold uppercase tracking-wider ${textColor}`}>
               效果: {card.effectText}
           </div>
           

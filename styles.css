@@ -26,6 +26,12 @@ body {
     #090909;
   font-family: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", serif;
   overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.readable-panel {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  letter-spacing: 0.01em;
 }
 
 button,

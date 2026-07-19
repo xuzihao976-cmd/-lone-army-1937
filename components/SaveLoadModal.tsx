@@ -40,7 +40,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                     >
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-sm font-bold tracking-widest text-amber-500">⟳ 自动存档</span>
-                            <span className="text-[10px] font-mono text-neutral-500">{formatDate(autoSave.savedAt)}</span>
+                            <span className="text-xs font-mono text-neutral-400">{formatDate(autoSave.savedAt)}</span>
                         </div>
                         <div className="mt-2 flex justify-between text-xs text-neutral-400">
                             <span>第 {autoSave.day} 天 · {autoSave.location}</span>
@@ -48,12 +48,12 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                         </div>
                     </button>
                 ) : (
-                    <div className="rounded border border-neutral-800 bg-black/30 px-3 py-2 text-[10px] text-neutral-600">
+                    <div className="rounded border border-neutral-800 bg-black/30 px-3 py-2 text-xs text-neutral-400">
                         游戏会在每次命令结算后自动保存。下方 5 个位置用于手动保留关键节点。
                     </div>
                 )}
             </div>
-            <div className="mb-2 text-[10px] font-bold tracking-widest text-neutral-600">手动档案 · 5 个位置</div>
+            <div className="mb-2 text-xs font-bold tracking-widest text-neutral-400">手动档案 · 5 个位置</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {slots.map((slot) => (
                     <button
@@ -67,7 +67,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                             }
                         `}
                     >
-                        <div className="flex justify-between w-full text-[10px] font-mono opacity-50 mb-1">
+                        <div className="mb-1 flex w-full justify-between text-xs font-mono opacity-70">
                             <span>编号 {String(slot.id + 1).padStart(2, '0')}</span>
                             {!slot.isEmpty && <span>{formatDate(slot.savedAt)}</span>}
                         </div>
@@ -84,7 +84,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                                 <div className="flex justify-between items-end w-full">
                                     <span className="text-xs text-neutral-400">幸存: {slot.soldiers}人</span>
                                     {mode === 'save' && (
-                                        <span className="text-[9px] text-amber-700 uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-[11px] text-amber-500 uppercase opacity-0 transition-opacity group-hover:opacity-100">
                                             覆盖存档
                                         </span>
                                     )}
@@ -97,7 +97,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-neutral-800 bg-neutral-900 text-center text-[10px] text-neutral-600 font-mono">
+        <div className="border-t border-neutral-800 bg-neutral-900 p-3 text-center text-xs font-mono text-neutral-400">
             {mode === 'save' ? '选择一个位置保存当前进度；自动存档不会被占用。' : '读取档案后会从该命令结算点继续。'}
         </div>
       </div>

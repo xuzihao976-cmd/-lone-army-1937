@@ -62,7 +62,6 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
     .map((sector) => ({ location: sector.location, soldiers: stats.soldierDistribution[sector.location] || 0 }))
     .sort((a, b) => b.soldiers - a.soldiers)[0], [selectedLocation, stats.soldierDistribution]);
   const transferable = donor ? Math.min(30, Math.max(0, donor.soldiers - 20)) : 0;
-  const maxGarrison = Math.max(1, ...SECTORS.map((sector) => stats.soldierDistribution[sector.location] || 0));
   const defenseScore = selectedHeld
     ? Math.min(100, Math.round(selectedFort * 18 + Math.min(38, selectedGarrison / 3) + selectedHmg.length * 14 + selectedIntegrity * 0.12))
     : 0;
@@ -96,29 +95,29 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
         type="button"
         onClick={() => execute(command)}
         disabled={disabled || stats.isGameOver || preview?.available === false}
-        className={`min-w-[112px] rounded border bg-black/40 px-2 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${tones[tone]}`}
+        className={`min-w-[144px] rounded-md border bg-black/40 px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${tones[tone]}`}
       >
-        <span className="block whitespace-nowrap text-[10px] font-bold">{label}</span>
-        <span className="mt-0.5 block whitespace-nowrap text-[8px] text-neutral-600">{preview?.short || '即时命令'}</span>
+        <span className="block whitespace-nowrap text-xs font-black">{label}</span>
+        <span className="mt-1 block whitespace-nowrap text-[11px] text-neutral-400">{preview?.short || '即时命令'}</span>
       </button>
     );
   };
 
   return (
-    <section className="select-none border-b border-neutral-800 bg-[#080808] p-3 font-sans" aria-label="仓库战略地图">
+    <section className="select-none border-b border-neutral-800 bg-[#080808] p-3 font-sans sm:p-4" aria-label="仓库战略地图">
       <div className="mx-auto max-w-3xl">
-        <header className="mb-2 flex items-start justify-between gap-3">
+        <header className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xs font-bold tracking-[0.2em] text-neutral-300">仓库剖面指挥图</h2>
-            <p className="mt-0.5 text-[9px] text-neutral-600">防区失守会永久改变进攻路线 · 指挥官所在层遭袭存在阵亡风险</p>
+            <h2 className="text-sm font-black tracking-[0.16em] text-neutral-100">仓库纵深防御图</h2>
+            <p className="mt-1 text-xs leading-relaxed text-neutral-400">选择楼层查看兵力和操作。防区失守会改变敌军路线。</p>
           </div>
-          <div className="shrink-0 text-right text-[8px] text-red-700">
-            <div>当前地面推进目标</div>
-            <div className="font-mono">{groundTargets.length ? groundTargets.join(' / ') : '仓库纵深已突破'}</div>
+          <div className="flex shrink-0 items-center justify-between gap-3 rounded border border-red-900/60 bg-red-950/20 px-3 py-2 sm:block sm:text-right">
+            <div className="text-[11px] font-bold text-red-400">敌军当前推进目标</div>
+            <div className="font-mono text-xs font-black text-red-200">{groundTargets.length ? groundTargets.join(' / ') : '仓库纵深已突破'}</div>
           </div>
         </header>
 
-        <div className="relative grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="relative grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-px w-[70%] -translate-x-1/2 bg-gradient-to-r from-transparent via-red-950 to-transparent sm:top-auto sm:bottom-[-5px]" />
           {SECTORS.map((sector) => {
             const garrison = stats.soldierDistribution[sector.location] || 0;
@@ -137,7 +136,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                 key={sector.location}
                 aria-pressed={selected}
                 onClick={() => setSelectedLocation(sector.location)}
-                className={`relative z-10 min-h-[112px] overflow-hidden rounded border p-2 text-left transition-all ${
+                className={`relative z-10 min-h-[138px] overflow-hidden rounded-md border p-3 text-left transition-all ${
                   underAttack
                     ? 'border-red-500 bg-red-950/40 shadow-[0_0_18px_rgba(220,38,38,0.35)] animate-pulse'
                     : !held
@@ -148,69 +147,68 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`font-mono text-sm ${sector.accent}`}>{sector.icon}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-mono text-lg font-black ${sector.accent}`}>{sector.icon}</span>
                     <div>
-                      <div className="text-[10px] font-bold text-neutral-300">{sector.location}</div>
-                      <div className="text-[8px] font-mono text-neutral-600">{sector.code} · {sector.danger}</div>
+                      <div className="text-sm font-black text-neutral-100">{sector.location}</div>
+                      <div className="text-[11px] font-mono text-neutral-500">{sector.code} · {sector.danger}</div>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    {current && <span className="rounded bg-amber-900/30 px-1 py-0.5 text-[7px] text-amber-500">指挥部</span>}
-                    <span className={`rounded px-1 py-0.5 text-[7px] ${condition === 'lost' ? 'bg-red-900/40 text-red-400' : condition === 'critical' ? 'bg-orange-900/30 text-orange-500' : condition === 'strained' ? 'bg-amber-900/20 text-amber-600' : 'bg-green-950/30 text-green-700'}`}>
+                    {current && <span className="rounded border border-amber-800/50 bg-amber-900/30 px-1.5 py-0.5 text-[11px] font-bold text-amber-300">指挥部</span>}
+                    <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${condition === 'lost' ? 'bg-red-900/50 text-red-300' : condition === 'critical' ? 'bg-orange-900/40 text-orange-300' : condition === 'strained' ? 'bg-amber-900/30 text-amber-300' : 'bg-green-950/50 text-green-400'}`}>
                       {conditionLabels[condition]}
                     </span>
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-[8px]">
-                  <span className="text-neutral-600">驻军 <b className="text-neutral-300">{garrison}</b></span>
-                  <span className="text-neutral-600">工事 <b className={fort < 1 ? 'text-red-500' : 'text-stone-400'}>Lv.{fort}</b></span>
-                  <span className="text-neutral-600">机枪 <b className={hmgs.length ? 'text-orange-500' : 'text-neutral-700'}>{hmgs.length}</b></span>
+                <div className="mt-3 grid grid-cols-3 divide-x divide-neutral-800 rounded border border-neutral-800 bg-black/40 py-1.5 text-center">
+                  <span className="text-[11px] text-neutral-500">驻军 <b className="block font-mono text-xs text-neutral-100">{garrison}</b></span>
+                  <span className="text-[11px] text-neutral-500">工事 <b className={`block text-xs ${fort < 1 ? 'text-red-400' : 'text-stone-200'}`}>Lv.{fort}</b></span>
+                  <span className="text-[11px] text-neutral-500">机枪 <b className={`block text-xs ${hmgs.length ? 'text-orange-300' : 'text-neutral-600'}`}>{hmgs.length}</b></span>
                 </div>
-                <div className="mt-1.5 grid grid-cols-[24px_1fr] items-center gap-1 text-[7px] text-neutral-700">
-                  <span>防区</span>
-                  <div className="h-1 overflow-hidden rounded bg-black">
-                    <div className={`h-full transition-all ${integrity < 25 ? 'bg-red-700' : integrity < 60 ? 'bg-amber-700' : 'bg-green-900'}`} style={{ width: `${integrity}%` }} />
+                <div className="mt-2">
+                  <div className="mb-1 flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-neutral-500">防区完整度</span>
+                    <span className={integrity < 25 ? 'text-red-300' : integrity < 60 ? 'text-amber-300' : 'text-green-300'}>{integrity}%</span>
                   </div>
-                  <span>兵力</span>
-                  <div className="h-1 overflow-hidden rounded bg-black">
-                    <div className="h-full bg-neutral-600 transition-all" style={{ width: `${held ? Math.max(5, garrison / maxGarrison * 100) : 0}%` }} />
+                  <div className="h-2 overflow-hidden rounded-full border border-neutral-800 bg-black">
+                    <div className={`h-full transition-all ${integrity < 25 ? 'bg-red-600' : integrity < 60 ? 'bg-amber-600' : 'bg-green-700'}`} style={{ width: `${integrity}%` }} />
                   </div>
                 </div>
-                <div className={`mt-1.5 truncate text-[8px] ${held ? 'text-neutral-600' : 'text-red-900'}`}>{held ? sector.role : '敌军已建立突破口'}</div>
+                <div className={`mt-2 text-[11px] leading-snug ${held ? 'text-neutral-400' : 'font-bold text-red-400'}`}>{held ? sector.role : '敌军已建立突破口'}</div>
               </button>
             );
           })}
         </div>
 
-        <div className="mt-2 rounded border border-neutral-800 bg-neutral-950/80 p-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-3 rounded-md border border-neutral-700 bg-neutral-950/90 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold ${selectedSector.accent}`}>{selectedLocation}</span>
-                <span className="text-[8px] text-neutral-600">防守评分 {defenseScore}/100</span>
-                <span className={`text-[8px] font-bold ${selectedCondition === 'lost' ? 'text-red-500' : selectedCondition === 'critical' ? 'text-orange-500' : 'text-neutral-600'}`}>
-                  完整度 {selectedIntegrity}%
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`text-base font-black ${selectedSector.accent}`}>{selectedLocation}</span>
+                <span className="rounded bg-neutral-800 px-2 py-1 text-[11px] font-bold text-neutral-300">防守评分 {defenseScore}/100</span>
+                <span className={`rounded px-2 py-1 text-[11px] font-black ${selectedCondition === 'lost' ? 'bg-red-950 text-red-300' : selectedCondition === 'critical' ? 'bg-orange-950 text-orange-300' : 'bg-green-950/50 text-green-300'}`}>
+                  防区 {selectedIntegrity}%
                 </span>
-                {flashingLocation === selectedLocation && <span className="text-[8px] font-bold text-red-500 animate-pulse">交战中</span>}
+                {flashingLocation === selectedLocation && <span className="text-xs font-black text-red-400 animate-pulse">● 交战中</span>}
               </div>
-              <div className="mt-0.5 text-[8px] text-neutral-500">
+              <div className="mt-2 text-xs text-neutral-300">
                 驻军 {selectedGarrison} · 工事 Lv.{selectedFort} · {selectedHmg.length ? selectedHmg.map((squad) => squad.name).join('、') : '无机枪组'}
               </div>
               {stats.location === selectedLocation && (
-                <div className={`mt-1 text-[8px] font-bold ${commanderRisk >= 0.03 ? 'text-red-500 animate-pulse' : commanderRisk >= 0.015 ? 'text-amber-600' : 'text-green-700'}`}>
-                  🎖 本层遇袭：指挥官阵亡概率 {formatCommanderRisk(commanderRisk)}
+                <div className={`mt-2 rounded border px-2.5 py-2 text-xs font-black ${commanderRisk >= 0.03 ? 'border-red-800 bg-red-950/40 text-red-300 animate-pulse' : commanderRisk >= 0.015 ? 'border-amber-900 bg-amber-950/20 text-amber-300' : 'border-green-900 bg-green-950/20 text-green-300'}`}>
+                  🎖 指挥官在此 · 本层遇袭阵亡概率 {formatCommanderRisk(commanderRisk)}
                 </div>
               )}
               {stats.sealedApproaches.includes(selectedLocation) && (
-                <div className="mt-1 text-[8px] text-cyan-700">⛓ 通往本层的楼梯已封锁，可削弱下一次步兵推进</div>
+                <div className="mt-2 text-xs font-bold text-cyan-300">⛓ 楼梯已封锁：下一次步兵推进将被削弱</div>
               )}
               {!selectedHeld && (
-                <div className="mt-1 text-[8px] font-bold text-red-700">连锁后果：{selectedSector.lossEffect}</div>
+                <div className="mt-2 rounded border border-red-900/60 bg-red-950/30 px-2.5 py-2 text-xs font-bold leading-relaxed text-red-300">失守后果：{selectedSector.lossEffect}</div>
               )}
             </div>
-            <div className="h-1.5 w-24 overflow-hidden rounded bg-black">
+            <div className="mt-1 h-2.5 w-28 overflow-hidden rounded-full border border-neutral-800 bg-black">
               <div className={`h-full ${defenseScore < 35 ? 'bg-red-700' : defenseScore < 65 ? 'bg-amber-700' : 'bg-green-800'}`} style={{ width: `${defenseScore}%` }} />
             </div>
           </div>

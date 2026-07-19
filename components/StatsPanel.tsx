@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { GameStats } from '../types';
+import type { GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { formatCampaignDate, minutesUntilMidnight } from '../engine/time';
 
@@ -12,190 +11,121 @@ interface StatsPanelProps {
 const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
   const currentDate = formatCampaignDate(stats.day);
   const dayProfile = getDayProfile(stats.day);
-  
-  // Calculate total force
-  const activeHmgCount = stats.hmgSquads ? stats.hmgSquads.reduce((acc, s) => acc + (s.status === 'active' ? s.count : 0), 0) : 0;
+  const activeHmgCount = stats.hmgSquads.reduce((total, squad) =>
+    total + (squad.status === 'active' ? squad.count : 0), 0);
   const combatReady = stats.soldiers + activeHmgCount;
   const lostSectorCount = Object.values(stats.sectorIntegrity).filter((integrity) => integrity <= 0).length;
   const untilMidnight = minutesUntilMidnight(stats.currentTime);
-  const countdownLabel = `${Math.floor(untilMidnight / 60)}h${untilMidnight % 60 ? `${untilMidnight % 60}m` : ''}`;
-  
-  // Siege Meter Color
+  const countdownLabel = `${Math.floor(untilMidnight / 60)}小时${untilMidnight % 60 ? `${untilMidnight % 60}分` : ''}`;
   const siegePercent = stats.siegeMeter || 0;
-  let siegeColor = 'bg-neutral-600';
-  if (siegePercent > 80) siegeColor = 'bg-red-600 animate-pulse';
-  else if (siegePercent > 50) siegeColor = 'bg-orange-500';
-  else if (siegePercent > 20) siegeColor = 'bg-yellow-600';
+  const siegeColor = siegePercent > 80
+    ? 'bg-red-500 animate-pulse'
+    : siegePercent > 50
+      ? 'bg-orange-500'
+      : siegePercent > 20
+        ? 'bg-amber-500'
+        : 'bg-green-700';
 
-  // Helper to map location to short code
-  const getLocCode = (loc: string) => {
-      if (loc.includes('一楼')) return '1F';
-      if (loc.includes('二楼')) return '2F';
-      if (loc.includes('屋顶')) return 'RF';
-      if (loc.includes('地下')) return 'B1';
-      return '??';
+  const getLocCode = (location: string) => {
+    if (location.includes('一楼')) return '1F';
+    if (location.includes('二楼')) return '2F';
+    if (location.includes('屋顶')) return 'RF';
+    if (location.includes('地下')) return 'B1';
+    return '??';
   };
 
+  const primaryStats = [
+    { label: '可战人员', value: combatReady, tone: combatReady < 100 ? 'text-red-400' : 'text-neutral-100', alert: combatReady < 100 },
+    { label: '待救伤员', value: stats.wounded, tone: stats.wounded > 0 ? 'text-orange-400' : 'text-neutral-300', alert: stats.wounded > 20 },
+    { label: '部队士气', value: stats.morale, tone: stats.morale < 30 ? 'text-red-400' : 'text-amber-300', alert: stats.morale < 30 },
+    { label: '仓库结构', value: stats.health, tone: stats.health < 30 ? 'text-red-400' : 'text-cyan-200', alert: stats.health < 30 },
+  ];
+
+  const resources = [
+    { label: '七九弹', value: stats.ammo, tone: stats.ammo < 5000 ? 'text-red-400' : 'text-amber-200' },
+    { label: '机枪弹', value: stats.machineGunAmmo, tone: stats.machineGunAmmo < 2000 ? 'text-red-400' : 'text-orange-300' },
+    { label: '手榴弹', value: stats.grenades, tone: stats.grenades < 50 ? 'text-red-400' : 'text-neutral-200' },
+    { label: '筑垒物资', value: stats.sandbags, tone: stats.sandbags < 150 ? 'text-red-400' : 'text-stone-300' },
+    { label: '急救包', value: stats.medkits, tone: stats.medkits < 10 ? 'text-red-400' : 'text-green-300' },
+  ];
+
   return (
-    <div className="bg-black border-b border-neutral-800 shadow-2xl sticky top-0 z-30">
-      <div className="max-w-4xl mx-auto flex flex-col">
-        
-        {/* Row 1: Intel & Siege (Merged) */}
-        <div className="flex border-b border-neutral-800 h-7">
-            {/* Intel Ticker */}
-            <div className="w-[60%] bg-red-900/10 flex items-center px-2 gap-2 overflow-hidden relative border-r border-neutral-800">
-                <span className="text-[9px] font-bold text-red-700 whitespace-nowrap uppercase tracking-widest animate-pulse shrink-0">
-                    ⚠ {stats.lastStandUsed ? '最后防线已用' : lostSectorCount > 0 ? `失守防区 ${lostSectorCount}/4` : dayProfile.title}
-                </span>
-                <div className="mask-gradient-right overflow-hidden w-full">
-                    <span className="text-[10px] text-red-400/90 font-mono whitespace-nowrap animate-marquee inline-block">
-                        {enemyIntel || "通讯中断..."}
-                    </span>
-                </div>
+    <header className="sticky top-0 z-30 border-b border-neutral-700 bg-black/95 shadow-2xl backdrop-blur" aria-label="战况总览">
+      <div className="mx-auto max-w-4xl font-sans">
+        <div className="grid grid-cols-[1fr_auto] items-stretch border-b border-neutral-800">
+          <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
+            <div className="shrink-0 border-r border-neutral-700 pr-3">
+              <div className="text-[11px] font-bold tracking-wide text-neutral-400">第 {stats.day} 天 · {currentDate}</div>
+              <div className="mt-0.5 font-mono text-xl font-black leading-none text-amber-300">{stats.currentTime}</div>
             </div>
-            
-            {/* Siege Meter - Expanded to fill */}
-            <div className="flex-1 bg-black flex items-center px-2 gap-2 justify-between min-w-0" title="威胁值：满条时日军将发动进攻。进行耗时行动会增加此值。">
-                <span className="text-[9px] font-bold text-neutral-500 whitespace-nowrap shrink-0">
-                    威胁值
-                </span>
-                <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden mx-1 border border-neutral-800">
-                    <div 
-                        className={`h-full transition-all duration-700 ease-out ${siegeColor}`} 
-                        style={{ width: `${siegePercent}%` }}
-                    ></div>
-                </div>
-                <span className="text-[9px] font-mono text-neutral-600 w-6 text-right">{siegePercent}%</span>
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold tracking-wider text-neutral-400">指挥部位置</div>
+              <div className="truncate text-base font-black tracking-wide text-amber-100">{stats.location}</div>
+              <div className="truncate text-[11px] text-neutral-500">距换日 {countdownLabel}</div>
             </div>
+          </div>
+
+          <div className="flex min-w-[88px] flex-col items-center justify-center border-l border-neutral-800 px-3 text-center">
+            <span className="text-[11px] font-bold text-neutral-500">国旗</span>
+            <span className={`mt-1 rounded border px-2 py-1 text-xs font-black ${stats.hasFlagRaised
+              ? 'border-red-700 bg-red-950/60 text-red-300'
+              : 'border-neutral-700 bg-neutral-900 text-neutral-300'}`}>
+              ⚑ {stats.hasFlagRaised ? '飘扬' : '未升起'}
+            </span>
+          </div>
         </div>
 
-        {/* Row 2: Vitals (Time, Location, Flag) */}
-        <div className="flex items-stretch bg-[#0a0a0a] border-b border-neutral-800 h-10">
-            
-            {/* Time/Date Block */}
-            <div className="flex flex-col justify-center px-2 border-r border-neutral-800 min-w-[70px] bg-[#111]" title="坚持到第6天即可获胜。">
-                <div className="flex items-baseline gap-1 leading-none mb-1">
-                    <span className="text-xs text-neutral-200 font-bold font-serif">{currentDate}</span>
-                    <span className="text-[8px] text-red-800 font-bold">D{stats.day} · 换日{countdownLabel}</span>
-                </div>
-                <span className="text-sm text-amber-500 font-mono font-bold tracking-widest leading-none">
-                    {stats.currentTime}
-                </span>
-            </div>
-
-            {/* Location & Flag Block */}
-            <div className="flex-1 flex items-center justify-between px-3 border-r border-neutral-800 min-w-0">
-                 <div className="flex flex-col justify-center min-w-0">
-                    <div className="text-[8px] text-neutral-600 tracking-wider truncate">当前阵地</div>
-                    <div className="text-xs sm:text-sm text-amber-500/90 font-bold font-serif tracking-widest truncate">
-                        {stats.location}
-                    </div>
-                 </div>
-                 
-                 {/* Flag Status - Enhanced Visibility */}
-                 <div className="flex flex-col items-end justify-center pl-2 shrink-0" title="升旗可大幅提升士气，但会招致日军轰炸。">
-                    <span className="text-[8px] text-neutral-500 mb-0.5 scale-90 origin-right">国旗状态</span>
-                    {stats.hasFlagRaised ? (
-                        <div className="flex items-center gap-1 text-red-500 font-bold text-[10px] border border-red-900/50 px-2 py-0.5 bg-red-900/20 shadow-[0_0_8px_rgba(220,38,38,0.5)] rounded-sm">
-                            <span className="animate-pulse">⚑</span> 飘扬
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1 text-neutral-200 font-bold text-[10px] border border-neutral-600 px-2 py-0.5 bg-neutral-800/80 shadow-[0_0_5px_rgba(255,255,255,0.1)] rounded-sm">
-                             <span className="text-neutral-400">⚑</span> 暂未升起
-                        </div>
-                    )}
-                 </div>
-            </div>
-
-            {/* Soldiers/Morale (Horizontal Layout) */}
-            <div className="flex items-center px-1 gap-1 bg-[#050505]">
-                <div className="flex flex-col items-center w-10" title="普通步兵与仍在作战的机枪组之和。首次低于20人会触发最后防线警告。">
-                    <span className="text-[8px] text-neutral-500">可战</span>
-                    <span className={`text-xs font-bold font-mono ${combatReady < 100 ? 'text-red-500' : 'text-neutral-300'}`}>{combatReady}</span>
-                </div>
-                <div className="w-px h-6 bg-neutral-800"></div>
-                <div className="flex flex-col items-center w-10" title="等待救治的伤员。如不及时救治会阵亡。">
-                    <span className="text-[8px] text-neutral-500">伤员</span>
-                    <span className={`text-xs font-bold font-mono ${stats.wounded > 0 ? 'text-orange-500' : 'text-neutral-500'}`}>{stats.wounded}</span>
-                </div>
-                <div className="w-px h-6 bg-neutral-800"></div>
-                <div className="flex flex-col items-center w-10" title="士气影响战斗力。过低会导致哗变。可以通过休息或演讲提升。">
-                    <span className="text-[8px] text-neutral-500">士气</span>
-                    <span className={`text-xs font-bold font-mono ${stats.morale < 30 ? 'text-red-500 animate-pulse' : 'text-neutral-300'}`}>{stats.morale}</span>
-                </div>
-                <div className="w-px h-6 bg-neutral-800"></div>
-                <div className="flex flex-col items-center w-10" title={`仓库整体完整度。当前失守防区 ${lostSectorCount}/4；楼层状态请查看战略地图。`}>
-                    <span className="text-[8px] text-neutral-500">阵地</span>
-                    <span className={`text-xs font-bold font-mono ${stats.health < 30 ? 'text-red-500 animate-pulse' : 'text-neutral-300'}`}>{stats.health}</span>
-                </div>
-            </div>
-        </div>
-        
-        {/* Row 3: HMG Squads (Location Added) */}
-        {stats.hmgSquads && stats.hmgSquads.length > 0 && (
-            <div className="hidden sm:flex bg-[#0f0f0f] border-b border-neutral-800 py-1 px-1 gap-1 h-8 items-center">
-                 <div className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest shrink-0 w-8 text-center leading-tight">
-                    核心<br/>火力
-                 </div>
-                 <div className="flex-1 flex gap-1">
-                    {stats.hmgSquads.map((squad, idx) => (
-                        <div key={idx} className={`flex-1 flex items-center justify-between px-2 rounded border text-[10px] ${squad.status === 'active' ? 'border-orange-900/30 bg-orange-900/10' : 'border-red-900/50 bg-red-900/20 grayscale'}`} title="机枪连提供强大的防御加成。">
-                            <div className="flex flex-col leading-none">
-                                <span className={`${squad.status === 'active' ? 'text-orange-500' : 'text-red-600 line-through'} font-bold`}>{squad.name}</span>
-                                <span className="text-[8px] text-neutral-500 mt-0.5">{getLocCode(squad.location)}</span>
-                            </div>
-                            <span className={`font-mono font-bold text-xs ${squad.status === 'active' ? 'text-neutral-300' : 'text-red-600'}`}>
-                                {squad.status === 'active' ? `${squad.count}/30` : '☠'}
-                            </span>
-                        </div>
-                    ))}
-                 </div>
-            </div>
-        )}
-
-        {/* Row 4: Resources (Expanded to Fill) */}
-        <div className="hidden sm:flex w-full bg-neutral-900 border-b border-neutral-800 py-1 px-1 gap-1 h-9 items-stretch" title="资源耗尽将导致防御力大幅下降。">
-             {[
-                { l: '七九弹', v: stats.ammo > 9999 ? '充足' : stats.ammo, c: stats.ammo < 5000 ? 'text-red-500 animate-pulse' : 'text-yellow-700' },
-                { l: '机枪弹', v: stats.machineGunAmmo > 5000 ? '充足' : stats.machineGunAmmo, c: 'text-orange-700' },
-                { l: '手榴弹', v: stats.grenades, c: 'text-neutral-300' },
-                { l: '粮包', v: stats.sandbags, c: 'text-stone-500' },
-                { l: '急救包', v: stats.medkits, c: stats.medkits < 10 ? 'text-red-500 animate-pulse' : 'text-green-700' }
-             ].map((item, i) => (
-                <div key={i} className="flex-1 bg-black px-1 sm:px-2 rounded border border-neutral-800 flex flex-col justify-center items-center gap-0.5 min-w-0">
-                    <span className="text-[8px] text-neutral-500 font-bold scale-90 whitespace-nowrap">{item.l}</span>
-                    <span className={`text-[10px] sm:text-xs font-bold font-mono ${item.c}`}>{item.v}</span>
-                </div>
-             ))}
-        </div>
-
-        {/* Mobile condensed firepower/resources row */}
-        <div className="grid h-8 grid-cols-6 gap-px border-b border-neutral-800 bg-neutral-800 sm:hidden" title="左右滑动下方快捷命令可查看更多行动。">
-          {[
-            { l: '机枪组', v: stats.hmgSquads.filter((squad) => squad.status === 'active').length, c: 'text-orange-600' },
-            { l: '七九弹', v: stats.ammo > 9999 ? '足' : stats.ammo, c: stats.ammo < 5000 ? 'text-red-500' : 'text-yellow-700' },
-            { l: '机枪弹', v: stats.machineGunAmmo > 5000 ? '足' : stats.machineGunAmmo, c: 'text-orange-700' },
-            { l: '手榴弹', v: stats.grenades, c: 'text-neutral-300' },
-            { l: '粮包', v: stats.sandbags, c: 'text-stone-500' },
-            { l: '急救包', v: stats.medkits, c: stats.medkits < 10 ? 'text-red-500' : 'text-green-700' },
-          ].map((item) => (
-            <div key={item.l} className="flex min-w-0 flex-col items-center justify-center bg-black px-0.5">
-              <span className="text-[7px] text-neutral-600">{item.l}</span>
-              <span className={`max-w-full truncate text-[9px] font-bold font-mono ${item.c}`}>{item.v}</span>
+        <div className="grid grid-cols-4 divide-x divide-neutral-800 border-b border-neutral-800 bg-[#0b0b0b]">
+          {primaryStats.map((item) => (
+            <div key={item.label} className={`relative flex min-w-0 flex-col items-center justify-center px-1 py-2 ${item.alert ? 'bg-red-950/15' : ''}`}>
+              <span className="text-[11px] font-bold text-neutral-400">{item.label}</span>
+              <span className={`font-mono text-lg font-black leading-tight ${item.tone}`}>{item.value}</span>
             </div>
           ))}
         </div>
-        
-        {/* Row 5: Health Line */}
-        <div className="relative h-1 bg-neutral-900 border-b border-neutral-800 w-full" title="阵地完整度。首次归零会进入最后防线，不再无提示直接结束。">
-            <div 
-                className={`absolute left-0 top-0 h-full transition-all duration-500 ${stats.health < 30 ? 'bg-red-900' : 'bg-neutral-600'}`} 
-                style={{ width: `${stats.health}%` }}
-            ></div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_128px] border-b border-neutral-800 bg-neutral-950 sm:grid-cols-[minmax(0,1fr)_190px]">
+          <div className="min-w-0 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className={`shrink-0 text-xs font-black ${lostSectorCount > 0 ? 'text-red-400' : 'text-neutral-300'}`}>
+                ⚠ {lostSectorCount > 0 ? `失守 ${lostSectorCount}/4` : dayProfile.title}
+              </span>
+              <span className="truncate text-xs text-neutral-300" title={enemyIntel}>{enemyIntel || '通讯中断……'}</span>
+            </div>
+          </div>
+          <div className="border-l border-neutral-800 px-3 py-2" title="威胁达到100%时，日军将发动进攻。">
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <span className="text-neutral-400">敌袭威胁</span>
+              <span className={siegePercent >= 80 ? 'text-red-400' : 'text-neutral-200'}>{siegePercent}%</span>
+            </div>
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full border border-neutral-800 bg-black">
+              <div className={`h-full transition-all duration-500 ${siegeColor}`} style={{ width: `${siegePercent}%` }} />
+            </div>
+          </div>
         </div>
 
+        <div className="flex overflow-x-auto border-b border-neutral-800 bg-[#080808] no-scrollbar">
+          {resources.map((item) => (
+            <div key={item.label} className="flex min-w-[92px] flex-1 items-center justify-between gap-2 border-r border-neutral-800 px-2.5 py-2 last:border-r-0">
+              <span className="whitespace-nowrap text-[11px] font-bold text-neutral-500">{item.label}</span>
+              <span className={`font-mono text-xs font-black ${item.tone}`}>{item.value}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden items-center gap-2 bg-neutral-950 px-3 py-1.5 sm:flex">
+          <span className="shrink-0 text-[11px] font-black tracking-wider text-neutral-500">核心火力</span>
+          {stats.hmgSquads.map((squad) => (
+            <div key={squad.name} className={`flex flex-1 items-center justify-between rounded border px-2 py-1 text-xs ${squad.status === 'active'
+              ? 'border-orange-900/60 bg-orange-950/20'
+              : 'border-red-900/60 bg-red-950/20'}`}>
+              <span className={squad.status === 'active' ? 'font-bold text-orange-300' : 'font-bold text-red-500 line-through'}>{squad.name}</span>
+              <span className="font-mono text-neutral-300">{getLocCode(squad.location)} · {squad.status === 'active' ? `${squad.count}/30` : '损失'}</span>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </header>
   );
 };
 

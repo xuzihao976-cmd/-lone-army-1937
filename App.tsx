@@ -524,7 +524,7 @@ const App: React.FC = () => {
   const actionPreview = stats.isGameOver || currentDilemma ? null : getActionPreview(stats, input);
 
   return (
-    <div className={`flex h-[100dvh] w-full max-w-4xl mx-auto flex-col bg-[#111] text-[#ddd] overflow-hidden shadow-2xl border-x border-neutral-800 relative ${containerEffectClass}`}>
+    <div className={`readable-panel relative mx-auto flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden border-x border-neutral-800 bg-[#111] text-[#ddd] shadow-2xl ${containerEffectClass}`}>
       
       {/* Modals */}
       {showSaveLoadModal && (
@@ -628,10 +628,10 @@ const App: React.FC = () => {
 
             <StatsPanel stats={stats} enemyIntel={enemyIntel} />
 
-            <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-1 flex justify-center z-10 relative shrink-0">
+            <div className="relative z-10 flex shrink-0 justify-center border-b border-neutral-800 bg-neutral-900 px-4 py-2">
                 <button 
                     onClick={() => { playSound('click'); setShowMap(!showMap); }}
-                    className="text-[10px] text-neutral-500 hover:text-neutral-300 uppercase tracking-widest flex items-center gap-1"
+                    className="flex items-center gap-2 text-xs font-bold tracking-wider text-neutral-300 hover:text-white"
                 >
                     {showMap ? '▼ 隐藏战略地图' : '▲ 显示战略地图'}
                 </button>
@@ -639,14 +639,14 @@ const App: React.FC = () => {
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
             {showMap && (
-                <div className="shrink-0 border-b border-neutral-800 bg-[#0a0a0a] max-h-[42vh] sm:max-h-[38vh] overflow-y-auto custom-scrollbar">
+                <div className="max-h-[48vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[44vh]">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
             )}
 
             <div 
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-5 sm:space-y-6 scroll-smooth font-mono min-h-0"
+                className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 font-mono scroll-smooth sm:space-y-6 sm:p-6"
                 onClick={() => {
                     const lastLog = logs[logs.length - 1];
                     if (lastLog?.isTyping) finishTyping(lastLog.id);
@@ -658,12 +658,12 @@ const App: React.FC = () => {
                     className={`flex flex-col ${log.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
                     {log.sender === 'user' && log.day !== undefined && log.time && (
-                        <div className="mb-1 text-[8px] font-mono text-neutral-700">D{log.day} · {log.time}</div>
+                        <div className="mb-1.5 text-[11px] font-mono font-bold text-neutral-500">第 {log.day} 天 · {log.time}</div>
                     )}
                     <div className={`max-w-[95%] sm:max-w-[90%] ${
                     log.sender === 'user' 
-                        ? 'text-neutral-400 font-mono text-sm border-l-2 border-neutral-600 pl-3' 
-                        : 'text-gray-300 text-sm sm:text-base leading-loose'
+                        ? 'rounded-r border-l-2 border-neutral-500 bg-neutral-900/40 py-2 pr-3 pl-3 text-sm font-bold text-neutral-300'
+                        : 'text-[15px] leading-7 text-neutral-200 sm:text-base sm:leading-8'
                     }`}>
                     {log.sender === 'system' && log.isTyping ? (
                         <>
@@ -675,7 +675,7 @@ const App: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={(event) => { event.stopPropagation(); finishTyping(log.id); }}
-                                className="ml-2 inline-flex rounded border border-neutral-700 px-1.5 py-0.5 align-middle text-[9px] leading-none text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                                className="ml-2 inline-flex rounded border border-neutral-700 px-2 py-1 align-middle text-[11px] font-bold leading-none text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
                             >
                                 跳过
                             </button>
@@ -691,11 +691,11 @@ const App: React.FC = () => {
                 ))}
 
                 {isEnhancing && (
-                <div className="flex items-center gap-2 text-neutral-500 animate-pulse text-xs font-mono">
+                <div className="flex items-center gap-2 text-sm text-neutral-400 animate-pulse font-mono">
                     <span>[本地战报已生成，AI 正在后台润色...]</span>
                     <button 
                         onClick={cancelNarrativeEnhancement} 
-                        className="ml-2 text-[10px] underline text-red-500/50 hover:text-red-500"
+                        className="ml-2 text-xs underline text-red-400 hover:text-red-300"
                         title="取消本次 AI 润色，本地战报不会丢失"
                     >
                         (取消润色)
@@ -704,14 +704,14 @@ const App: React.FC = () => {
                 )}
             </div>
 
-            <div className="bg-[#1a1a1a] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-neutral-700 z-20 relative flex flex-col gap-2 shrink-0">
+            <div className="relative z-20 flex shrink-0 flex-col gap-2 border-t border-neutral-600 bg-[#171717] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_rgba(0,0,0,0.45)]">
                 
                 {!stats.isGameOver && (
                     <div className="flex justify-between items-center px-1 mb-1">
                         <div className="flex gap-2">
                              <button 
                                 onClick={() => { playSound('click'); setShowAdvisor(true); }}
-                                className="flex items-center gap-1 px-3 py-1 text-xs text-green-500/90 hover:text-green-400 bg-neutral-900 rounded border border-green-900/50 transition-colors"
+                                className="flex items-center gap-1.5 rounded border border-green-900/70 bg-neutral-950 px-3 py-2 text-xs font-bold text-green-300 transition-colors hover:text-green-200"
                             >
                                 <span>☍</span> 战地顾问
                             </button>
@@ -719,7 +719,7 @@ const App: React.FC = () => {
                                 type="button"
                                 onClick={toggleAiEnhancement}
                                 disabled={IS_STATIC_HOSTING}
-                                className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded border transition-colors ${
+                                className={`flex items-center gap-1.5 rounded border px-3 py-2 text-xs font-bold transition-colors ${
                                   IS_STATIC_HOSTING
                                     ? 'text-green-700 bg-black border-green-950/70 cursor-default'
                                     : aiEnabled
@@ -739,7 +739,7 @@ const App: React.FC = () => {
                                 setShowGameMenu(true);
                                 setConfirmExit(false);
                             }}
-                            className="flex items-center gap-1 px-3 py-1 text-xs text-neutral-400 hover:text-white bg-neutral-900 rounded border border-neutral-700 transition-colors"
+                            className="flex items-center gap-1.5 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs font-bold text-neutral-300 transition-colors hover:text-white"
                         >
                             <span>☰</span> 菜单
                         </button>
@@ -758,21 +758,21 @@ const App: React.FC = () => {
                 {stats.isGameOver ? (
                   <div className="flex items-center justify-between gap-2 rounded border border-amber-900/40 bg-black/40 p-2">
                     <div className="min-w-0">
-                      <div className="text-[10px] font-bold tracking-widest text-amber-600">战场复盘模式</div>
-                      <div className="truncate text-[8px] text-neutral-600">可滚动查看全部命令、战报与每回合结算</div>
+                      <div className="text-sm font-black tracking-wide text-amber-400">战场复盘模式</div>
+                      <div className="text-xs text-neutral-400">可滚动查看全部命令、战报与每回合结算</div>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <button
                         type="button"
                         onClick={() => setShowGameOverModal(true)}
-                        className="rounded border border-amber-900/60 px-2 py-1.5 text-[10px] text-amber-500 hover:bg-amber-950/30"
+                        className="rounded border border-amber-800 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-950/30"
                       >
                         查看结局
                       </button>
                       <button
                         type="button"
                         onClick={handleConfirmExit}
-                        className="rounded border border-neutral-700 px-2 py-1.5 text-[10px] text-neutral-400 hover:bg-neutral-800"
+                        className="rounded border border-neutral-700 px-3 py-2 text-xs font-bold text-neutral-300 hover:bg-neutral-800"
                       >
                         主菜单
                       </button>
@@ -802,7 +802,7 @@ const App: React.FC = () => {
                     <button 
                         type="submit" 
                         disabled={isLoading || stats.isGameOver || !!currentDilemma}
-                        className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-4 py-2 rounded-md border border-neutral-700 font-medium transition-colors disabled:opacity-50 text-xs whitespace-nowrap"
+                        className="whitespace-nowrap rounded-md border border-neutral-600 bg-neutral-700 px-4 py-2 text-sm font-black text-neutral-100 transition-colors hover:bg-neutral-600 disabled:opacity-50"
                     >
                         {isLoading ? '...' : '发送'}
                     </button>

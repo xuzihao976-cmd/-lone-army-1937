@@ -97,7 +97,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
                                 ? 'bg-neutral-800 text-neutral-300 border-neutral-700' 
                                 : 'bg-[#0a200a] text-green-100/90 border-green-900/50'
                         }`}>
-                            {msg.role === 'advisor' && <div className="text-[9px] text-green-700/70 mb-1 font-bold">参谋部:</div>}
+                            {msg.role === 'advisor' && <div className="mb-1 text-[11px] font-bold text-green-500">参谋部：</div>}
                             {msg.text}
                         </div>
                     </div>
@@ -113,7 +113,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
 
             {/* Input Area */}
             <div className="p-3 bg-neutral-800 border-t border-neutral-700">
-                <div className="flex items-center justify-between mb-2 text-[9px] font-mono">
+                <div className="mb-2 flex items-center justify-between text-[11px] font-mono">
                     <span className={source === 'siliconflow' ? 'text-green-500' : 'text-neutral-500'}>
                         {source === 'siliconflow' ? '● 免费 AI 增强' : '● 本地规则顾问'}
                     </span>

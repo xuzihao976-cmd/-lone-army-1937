@@ -21,7 +21,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onAction, disabled, stats }
   ];
 
   return (
-    <div className="grid grid-flow-col auto-cols-[88px] gap-1 overflow-x-auto px-1 pb-2 sm:grid-flow-row sm:grid-cols-7 sm:overflow-visible no-scrollbar">
+    <div className="grid grid-flow-col auto-cols-[116px] gap-2 overflow-x-auto px-1 pb-2 sm:grid-flow-row sm:grid-cols-7 sm:overflow-visible no-scrollbar" aria-label="常用命令">
       {actions.map((act) => {
         const preview = getActionPreview(stats, act.cmd);
         const unavailable = preview && !preview.available;
@@ -31,10 +31,10 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onAction, disabled, stats }
             onClick={() => onAction(act.cmd)}
             disabled={disabled || !!unavailable}
             title={preview?.reason}
-            className={`min-w-0 flex flex-col items-center justify-center whitespace-nowrap px-1 py-1.5 rounded border bg-neutral-900/80 hover:bg-neutral-800 font-mono transition-colors active:scale-95 disabled:opacity-35 shadow-sm ${act.color}`}
+            className={`min-w-0 flex min-h-[54px] flex-col items-center justify-center whitespace-nowrap rounded-md border bg-neutral-900/90 px-2 py-2 font-sans transition-colors active:scale-95 disabled:opacity-35 shadow-sm ${act.color}`}
         >
-            <span className="text-[10px] sm:text-xs">{act.label}</span>
-            <span className="mt-0.5 text-[8px] text-neutral-600">{preview?.short}</span>
+            <span className="text-[13px] font-black">{act.label}</span>
+            <span className="mt-1 text-[11px] font-medium text-neutral-400">{preview?.short}</span>
         </button>
         );
       })}

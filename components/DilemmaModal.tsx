@@ -45,7 +45,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
             ))}
         </div>
         
-        <div className="bg-black text-[10px] text-center text-neutral-600 py-2 font-mono uppercase">
+        <div className="bg-black py-2 text-center text-xs font-mono text-neutral-400 uppercase">
             AWAITING ORDERS /// COMMANDER XIE
         </div>
       </div>
