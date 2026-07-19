@@ -639,7 +639,7 @@ const App: React.FC = () => {
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
             {showMap && (
-                <div className="max-h-[48vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[44vh]">
+                <div className="max-h-[34vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[38vh]">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
             )}
