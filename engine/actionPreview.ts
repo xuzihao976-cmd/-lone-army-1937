@@ -1,8 +1,18 @@
 import type { ActionPreview, GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { isMoveCommand } from './intents';
+import { canRecaptureSector, getRecaptureStagingSectors, isApproachExposed, isSectorHeld } from './strategicDefense';
+import type { Location } from '../types';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
+
+const commandLocation = (command: string): Location | null => {
+  if (command.includes('屋顶') || command.includes('楼顶')) return '屋顶';
+  if (command.includes('二楼')) return '二楼阵地';
+  if (command.includes('一楼')) return '一楼入口';
+  if (command.includes('地下')) return '地下室';
+  return null;
+};
 
 const formatDuration = (minutes: number): string => {
   if (minutes <= 0) return '不耗时';
@@ -31,7 +41,26 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let available = true;
   let reason: string | undefined;
 
-  if (command.includes('调派30人') || command.includes('增援30人')) {
+  if ((command.includes('夺回') || command.includes('反冲锋')) && commandLocation(command)) {
+    const target = commandLocation(command)!;
+    const maxMovableForce = Math.max(0, ...getRecaptureStagingSectors(stats, target)
+      .map((location) => (stats.soldierDistribution[location] || 0) - 20));
+    action = `反冲锋夺回${target}`;
+    available = canRecaptureSector(stats, target) && maxMovableForce >= 20 && stats.ammo >= 800 && stats.grenades >= 40;
+    durationMinutes = available ? 60 : 0;
+    baseThreat = available ? 20 : 0;
+    costs = ['七九弹 800', '手榴弹 40'];
+    reason = available ? '成败取决于士气与出发防区，成功后只恢复30%完整度' : '需要敌占目标、相邻出发阵地、20名可抽调步兵及足够弹药';
+  } else if (command.includes('封锁') && (command.includes('楼梯') || command.includes('通道'))) {
+    const target = commandLocation(command);
+    action = target ? `封锁通往${target}的楼梯` : '封锁楼梯';
+    available = !!target && isApproachExposed(stats, target) && !stats.sealedApproaches.includes(target)
+      && stats.sandbags >= 150 && stats.grenades >= 20;
+    durationMinutes = available ? 60 : 0;
+    baseThreat = available ? 15 : 0;
+    costs = ['粮包 150', '手榴弹 20'];
+    reason = available ? '下一次沿此路线进攻时降低一个规模，触发后失效' : '仅能封锁已经暴露且尚未设障的敌军推进路线';
+  } else if (command.includes('调派30人') || command.includes('增援30人')) {
     action = '调派步兵';
     durationMinutes = 30;
     baseThreat = 8;
@@ -62,8 +91,11 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     baseThreat = 5;
   } else if (isMoveCommand(command)) {
     action = '转移阵位';
-    durationMinutes = 15;
-    baseThreat = 5;
+    const target = commandLocation(command);
+    available = !target || isSectorHeld(stats, target);
+    durationMinutes = available ? 15 : 0;
+    baseThreat = available ? 5 : 0;
+    if (!available) reason = '敌占防区必须先通过反冲锋夺回';
   } else if (includesAny(command, ['加固', '修', '工事'])) {
     action = '加固工事';
     const target = command.includes('一楼') ? '一楼入口'
@@ -72,11 +104,12 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
           : command.includes('地下') ? '地下室'
             : stats.location;
     const level = stats.fortificationLevel[target] ?? 0;
-    available = level < 3 && stats.sandbags >= 200;
+    const integrity = stats.sectorIntegrity[target] ?? 100;
+    available = isSectorHeld(stats, target) && (level < 3 || integrity < 100) && stats.sandbags >= 200;
     durationMinutes = available ? 120 : 0;
     baseThreat = available ? 15 : 0;
     costs = level >= 3 ? [] : ['粮包 200'];
-    reason = level >= 3 ? `${target}工事已达最高等级` : stats.sandbags < 200 ? '粮包不足 200' : '每完成两次施工提升一级工事';
+    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}工事与防区完整度均已满` : stats.sandbags < 200 ? '粮包不足 200' : '修复防区完整度；每完成两次施工提升一级工事';
   } else if (includesAny(command, ['休息', '睡', '整顿'])) {
     action = '轮换休整';
     durationMinutes = 120;
@@ -84,11 +117,11 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     reason = '恢复士气与阵地状态，但会给敌军充分准备时间';
   } else if (includesAny(command, ['治疗', '抢救', '救', '医'])) {
     action = '救治伤员';
-    available = stats.wounded > 0 && stats.medkits > 0;
+    available = isSectorHeld(stats, '地下室') && stats.wounded > 0 && stats.medkits > 0;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 10 : 0;
     costs = available ? ['急救包 2–5'] : [];
-    reason = stats.wounded <= 0 ? '目前没有伤员需要救治' : stats.medkits <= 0 ? '急救包已经耗尽' : '实际消耗取决于成功救回的人数';
+    reason = !isSectorHeld(stats, '地下室') ? '地下室医院已经失守' : stats.wounded <= 0 ? '目前没有伤员需要救治' : stats.medkits <= 0 ? '急救包已经耗尽' : '实际消耗取决于成功救回的人数';
   } else if (command.includes('升旗')) {
     action = '升起国旗';
     available = stats.location === '屋顶' && !stats.hasFlagRaised;

@@ -1,7 +1,7 @@
 import { INITIAL_STATS } from '../constants';
 import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 5;
+export const SAVE_SCHEMA_VERSION = 6;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -74,6 +74,11 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     triggeredEvents: Array.isArray(incoming.triggeredEvents) ? incoming.triggeredEvents : [],
     usedTacticalCards: Array.isArray(incoming.usedTacticalCards) ? incoming.usedTacticalCards : [],
     soldierDistribution: { ...base.soldierDistribution, ...(incoming.soldierDistribution ?? {}) },
+    sectorIntegrity: { ...base.sectorIntegrity, ...(incoming.sectorIntegrity ?? {}) },
+    sealedApproaches: Array.isArray(incoming.sealedApproaches)
+      ? incoming.sealedApproaches.filter((location): location is GameStats['location'] =>
+          ['屋顶', '二楼阵地', '一楼入口', '地下室'].includes(String(location)))
+      : [],
     fortificationLevel: { ...base.fortificationLevel, ...(incoming.fortificationLevel ?? {}) },
     fortificationBuildCounts: { ...base.fortificationBuildCounts, ...(incoming.fortificationBuildCounts ?? {}) },
   };

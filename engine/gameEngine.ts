@@ -5,6 +5,16 @@ import { isExplicitRetreatCommand, isMoveCommand } from './intents';
 import { getDayProfile } from '../data/dayProfiles';
 import { buildTurnSummary } from './turnSummary';
 import { advanceCampaignClock, formatCampaignDate } from './time';
+import {
+    calculateCommanderDeathRisk,
+    canRecaptureSector,
+    formatCommanderRisk,
+    getGroundAttackTargets,
+    getRecaptureStagingSectors,
+    getRetreatDestination,
+    isApproachExposed,
+    isSectorHeld,
+} from './strategicDefense';
 
 // Import Narrative Data Modules
 import { 
@@ -193,6 +203,10 @@ const calculateScore = (stats: GameStats, endingType: EndingType): { rank: strin
         return { rank: "民族英雄", text: "旗帜不倒，军魂永存！你们全员殉国，但那面旗帜在四行仓库上空飘扬的画面，将永远激励着中华民族！" };
     }
 
+    if (endingType === 'defeat_commander') {
+        return { rank: "阵前殉职", text: "你把指挥部放在了最危险的火线上。部队仍有人活着，但失去指挥官的瞬间让整条防线陷入混乱。" };
+    }
+
     if (endingType === 'victory_retreat') {
         return { rank: "孤军", text: "你成功完成了掩护大部队撤退的任务，并按照命令撤入租界。虽然结局充满无奈（被英军缴械），但你保全了这支抗战的火种。" };
     }
@@ -374,10 +388,17 @@ const runGameTurnInternal = (
         calculatedStats.usedTacticalCards = []; 
         calculatedStats.lastStandUsed = false;
         calculatedStats.gameOverReason = undefined;
+        calculatedStats.sectorIntegrity = {
+            '一楼入口': 100,
+            '二楼阵地': 100,
+            '屋顶': 100,
+            '地下室': 100,
+        };
+        calculatedStats.sealedApproaches = [];
         playSound('radio'); 
         
         return {
-            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨凄迷，苏州河水在黑暗中静静流淌。你刚刚接管防务。\n\n【战场仪表盘说明】\n● 可战：步兵与仍在作战的机枪组总数；首次低于20人会触发最后防线。\n● 阵地：仓库结构完整度；首次归零同样会获得一次抢救机会。\n● 士气：影响战斗力。过低会导致逃兵或哗变。\n● 威胁值：顶部红条。耗时行动会提高遇袭风险。\n● 战略地图：调动步兵和机枪，部署会真实影响各防区战损。\n\n“团附！”副官冲过来，“一楼大门工事太薄弱了！鬼子坦克一炮就能轰开！请立即下令【加固一楼】！”",
+            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨凄迷，苏州河水在黑暗中静静流淌。你刚刚接管防务。\n\n【战场仪表盘说明】\n● 可战：步兵与仍在作战的机枪组总数；首次低于20人会触发最后防线。\n● 防区：每层都有独立完整度；失守后敌军会沿楼梯继续推进。\n● 指挥官：所在楼层遭袭时有约2%基础阵亡风险，工事与驻军会改变概率。\n● 士气：影响战斗力。过低会导致逃兵或哗变。\n● 威胁值：顶部红条。耗时行动会提高遇袭风险。\n● 战略地图：可以调兵、转移机枪、封锁楼梯或反冲锋夺回阵地。\n\n“团附！”副官冲过来，“一楼大门工事太薄弱了！鬼子坦克一炮就能轰开！请立即下令【加固一楼】！”",
             updatedStats: calculatedStats,
             eventTriggered: 'none',
             enemyIntel: "侦察兵报告：日军正在集结步兵，似乎准备进行试探性进攻。"
@@ -576,8 +597,90 @@ const runGameTurnInternal = (
     let actionType = "idle";
     let siegeIncrease = 5; 
     
+    // STRATEGIC ACTION: retake a lost sector from an adjacent held floor.
+    if ((cmd.includes('夺回') || cmd.includes('反冲锋')) && findLocations(cmd).length > 0) {
+        const target = findLocations(cmd).at(-1)!;
+        const donor = getRecaptureStagingSectors(currentStats, target)
+            .map((location) => ({ location, soldiers: currentStats.soldierDistribution[location] || 0 }))
+            .sort((a, b) => b.soldiers - a.soldiers)[0];
+        const assaultForce = donor ? Math.min(40, Math.max(0, donor.soldiers - 20)) : 0;
+
+        if (!canRecaptureSector(currentStats, target)) {
+            actionType = 'recapture_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push(`${target}尚未失守，或当前没有相邻防区可以作为反冲锋出发点。`);
+        } else if (!donor || assaultForce < 20 || currentStats.ammo < 800 || currentStats.grenades < 40) {
+            actionType = 'recapture_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('反冲锋无法发动：至少需要20名可抽调步兵、800发七九弹和40枚手榴弹。');
+        } else {
+            timeCost = 60;
+            siegeIncrease = 20;
+            calculatedStats.ammo = currentStats.ammo - 800;
+            calculatedStats.grenades = currentStats.grenades - 40;
+
+            const successChance = Math.min(0.85, 0.35 + currentStats.morale / 250 + (currentStats.fortificationLevel[donor.location] || 0) * 0.03);
+            const success = random() < successChance;
+            const casualties = success ? 2 + Math.floor(random() * 5) : 6 + Math.floor(random() * 10);
+            const actualCasualties = Math.min(assaultForce, casualties);
+            const distribution = { ...currentStats.soldierDistribution };
+            distribution[donor.location] = Math.max(0, donor.soldiers - (success ? assaultForce : actualCasualties));
+            if (success) distribution[target] = Math.max(0, assaultForce - actualCasualties);
+
+            calculatedStats.soldiers = Math.max(0, currentStats.soldiers - actualCasualties);
+            calculatedStats.soldierDistribution = distribution;
+            handleSoldierDeaths(currentStats, calculatedStats, actualCasualties, narrativeParts);
+            statsLog.push('🔻 反冲锋消耗: 七九弹800 / 手榴弹40');
+            statsLog.push(`🔴 反冲锋伤亡: ${actualCasualties}人`);
+
+            if (success) {
+                actionType = 'recapture_success';
+                calculatedStats.sectorIntegrity = { ...currentStats.sectorIntegrity, [target]: 30 };
+                calculatedStats.sealedApproaches = currentStats.sealedApproaches.filter((location) => location !== target);
+                calculatedStats.morale = Math.min(100, currentStats.morale + 6);
+                narrativeParts.push(`【反冲锋成功】${assaultForce}名弟兄从${donor.location}冲入${target}，用手榴弹和刺刀逐屋清剿。防区被夺回，但只恢复到30%完整度，必须尽快加固。`);
+                statsLog.push(`↗ 夺回${target}: 防区完整度30% / 士气+6`);
+            } else {
+                actionType = 'recapture_failed';
+                calculatedStats.morale = Math.max(0, currentStats.morale - 10);
+                narrativeParts.push(`【反冲锋受挫】从${donor.location}出发的突击队被敌军交叉火力压回。${target}仍在敌军手中，士气受到沉重打击。`);
+                statsLog.push('💔 反冲锋失败: 士气-10');
+            }
+        }
+    }
+    // STRATEGIC ACTION: prepare a one-use choke point before the next advance.
+    else if (cmd.includes('封锁') && (cmd.includes('楼梯') || cmd.includes('通道'))) {
+        const target = findLocations(cmd).at(-1);
+        if (!target || !isApproachExposed(currentStats, target)) {
+            actionType = 'seal_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('这里暂时没有暴露在敌军推进路线上的楼梯需要封锁。');
+        } else if (currentStats.sealedApproaches.includes(target)) {
+            actionType = 'seal_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push(`通往${target}的楼梯已经布置好炸药和障碍物。`);
+        } else if (currentStats.sandbags < 150 || currentStats.grenades < 20) {
+            actionType = 'seal_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('封锁楼梯需要150份粮包和20枚手榴弹，当前物资不足。');
+        } else {
+            actionType = 'seal_approach';
+            timeCost = 60;
+            siegeIncrease = 15;
+            calculatedStats.sandbags = currentStats.sandbags - 150;
+            calculatedStats.grenades = currentStats.grenades - 20;
+            calculatedStats.sealedApproaches = [...currentStats.sealedApproaches, target];
+            narrativeParts.push(`工兵用沙袋、木箱和手榴弹封死通往${target}的楼梯。敌军下一次从这里推进时，进攻规模会被削弱；障碍触发后即会失效。`);
+            statsLog.push(`⛓ 封锁通往${target}的楼梯: 粮包-150 / 手榴弹-20`);
+        }
+    }
     // 1. RAID (Aggressive Action for Ending 2)
-    if (cmd.includes('突袭') || cmd.includes('夜袭') || cmd.includes('偷袭') || cmd.includes('反击') || cmd.includes('进攻')) {
+    else if (cmd.includes('突袭') || cmd.includes('夜袭') || cmd.includes('偷袭') || cmd.includes('反击') || cmd.includes('进攻')) {
         const currentH = parseInt(currentStats.currentTime.split(':')[0]);
         
         if (currentH >= 0 && currentH < 5) {
@@ -694,6 +797,11 @@ const runGameTurnInternal = (
             timeCost = 0;
             siegeIncrease = 0;
             narrativeParts.push('副官没有看懂调兵路线。请从战略地图选择目标区域。');
+        } else if (!isSectorHeld(currentStats, source) || !isSectorHeld(currentStats, target)) {
+            actionType = 'redeploy_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('失守防区无法直接调兵，必须先组织反冲锋夺回。');
         } else {
             const movable = Math.max(0, (distribution[source] || 0) - 20);
             const transfer = Math.min(30, movable);
@@ -721,7 +829,7 @@ const runGameTurnInternal = (
         const squadIndex = squads.findIndex((squad) => cmd.includes(squad.name));
         const squad = squadIndex >= 0 ? squads[squadIndex] : undefined;
 
-        if (!target || !squad || squad.status !== 'active' || squad.location === target) {
+        if (!target || !squad || squad.status !== 'active' || squad.location === target || !isSectorHeld(currentStats, target)) {
             actionType = 'hmg_redeploy_fail';
             timeCost = 0;
             siegeIncrease = 0;
@@ -745,13 +853,22 @@ const runGameTurnInternal = (
         siegeIncrease = 0;
     }
     else if (isMoveCommand(cmd)) {
-        timeCost = 15;
-        actionType = "move";
-        if (cmd.includes('顶')) calculatedStats.location = '屋顶';
-        else if (cmd.includes('二楼')) calculatedStats.location = '二楼阵地';
-        else if (cmd.includes('一楼')) calculatedStats.location = '一楼入口';
-        else if (cmd.includes('地下')) calculatedStats.location = '地下室';
-        playSound('click');
+        const target = cmd.includes('顶') ? '屋顶'
+            : cmd.includes('二楼') ? '二楼阵地'
+                : cmd.includes('一楼') ? '一楼入口'
+                    : cmd.includes('地下') ? '地下室'
+                        : null;
+        if (!target || !isSectorHeld(currentStats, target)) {
+            timeCost = 0;
+            siegeIncrease = 0;
+            actionType = 'move_blocked';
+            narrativeParts.push('该防区已经失守，指挥官不能直接进入。请先组织反冲锋夺回。');
+        } else {
+            timeCost = 15;
+            actionType = "move";
+            calculatedStats.location = target;
+            playSound('click');
+        }
     }
     // 4. Build
     else if (cmd.includes('加固') || cmd.includes('修') || cmd.includes('工事')) {
@@ -762,8 +879,14 @@ const runGameTurnInternal = (
         else if (cmd.includes('地下')) targetLoc = '地下室';
 
         const currentLevel = calculatedStats.fortificationLevel?.[targetLoc] ?? currentStats.fortificationLevel[targetLoc] ?? 0;
+        const currentSectorIntegrity = calculatedStats.sectorIntegrity?.[targetLoc] ?? currentStats.sectorIntegrity[targetLoc] ?? 100;
         
-        if (currentLevel >= 3) {
+        if (!isSectorHeld(currentStats, targetLoc)) {
+            actionType = 'build_lost';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push(`${targetLoc}仍在敌军控制下，工兵无法进入施工。必须先夺回防区。`);
+        } else if (currentLevel >= 3 && currentSectorIntegrity >= 100) {
             actionType = "build_max";
             timeCost = 5; 
         } else {
@@ -777,6 +900,10 @@ const runGameTurnInternal = (
                 calculatedStats.sandbags = currentStats.sandbags - 200;
                 calculatedStats.fortificationBuildCounts = { ...currentStats.fortificationBuildCounts, [targetLoc]: newCount };
                 calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, [targetLoc]: Math.min(3, newLevel) };
+                calculatedStats.sectorIntegrity = {
+                    ...currentStats.sectorIntegrity,
+                    [targetLoc]: Math.min(100, currentSectorIntegrity + 18),
+                };
                 if (currentStats.health < 100) {
                     calculatedStats.health = Math.min(100, currentStats.health + 4);
                     statsLog.push('🏥 抢修承重结构: 阵地 +4');
@@ -792,6 +919,7 @@ const runGameTurnInternal = (
                 }
                 statsLog.push(`🧱 消耗粮包: 200`);
                 statsLog.push(`🔨 ${targetLoc}工事进度 +1`);
+                statsLog.push(`🏢 ${targetLoc}完整度 +${Math.min(18, 100 - currentSectorIntegrity)}`);
                 siegeIncrease = 15;
             } else {
                 actionType = "fail";
@@ -816,7 +944,12 @@ const runGameTurnInternal = (
     else if (cmd.includes('治疗') || cmd.includes('抢救') || cmd.includes('救') || cmd.includes('医')) {
         timeCost = 60; 
         const currentWounded = currentStats.wounded || 0;
-        if (currentWounded > 0 && currentStats.medkits > 0) {
+        if (!isSectorHeld(currentStats, '地下室')) {
+            actionType = 'heal_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('地下室医院已经失守，伤员无法接受成体系救治。必须先夺回地下室。');
+        } else if (currentWounded > 0 && currentStats.medkits > 0) {
             actionType = "heal";
             const healPotential = Math.floor(random() * 4) + 2; 
             const actualHeal = Math.min(currentWounded, currentStats.medkits, healPotential);
@@ -842,7 +975,12 @@ const runGameTurnInternal = (
     }
     // 7. Flag
     else if (cmd.includes('升旗')) {
-        if (!currentStats.hasFlagRaised) {
+        if (!isSectorHeld(currentStats, '屋顶')) {
+            narrativeParts.push('屋顶已经失守，国旗无法升起。必须先夺回屋顶阵地。');
+            actionType = 'flag_blocked';
+            timeCost = 0;
+            siegeIncrease = 0;
+        } else if (!currentStats.hasFlagRaised) {
             if (currentStats.location === '屋顶') {
                 if (!currentStats.flagWarned) {
                     timeCost = 5;
@@ -893,6 +1031,15 @@ const runGameTurnInternal = (
     const dayProfile = getDayProfile(currentStats.day);
     const effectiveSiegeIncrease = Math.max(0, Math.ceil(siegeIncrease * dayProfile.threatMultiplier));
     let newSiege = Math.min(100, currentSiege + effectiveSiegeIncrease);
+    const strategicStateAfterAction: GameStats = {
+        ...currentStats,
+        ...calculatedStats,
+        soldierDistribution: calculatedStats.soldierDistribution || currentStats.soldierDistribution,
+        hmgSquads: calculatedStats.hmgSquads || currentStats.hmgSquads,
+        fortificationLevel: calculatedStats.fortificationLevel || currentStats.fortificationLevel,
+        sectorIntegrity: calculatedStats.sectorIntegrity || currentStats.sectorIntegrity,
+        sealedApproaches: calculatedStats.sealedApproaches || currentStats.sealedApproaches,
+    };
 
     // --- ATTACK TRIGGER LOGIC ---
     let attackTriggered = false;
@@ -943,9 +1090,11 @@ const runGameTurnInternal = (
     let currentTimer = calculatedStats.woundedTimer ?? currentStats.woundedTimer;
     
     if (currentWoundedCount > 0) {
+        const hospitalHeld = isSectorHeld(strategicStateAfterAction, '地下室');
+        const treatmentWindow = hospitalHeld ? 720 : 360;
         currentTimer += totalMinutesPassed;
-        if (currentTimer >= 720) {
-            const deathToll = Math.floor(random() * 5) + 1; 
+        if (currentTimer >= treatmentWindow) {
+            const deathToll = hospitalHeld ? Math.floor(random() * 5) + 1 : Math.floor(random() * 7) + 3;
             const actualDeaths = Math.min(currentWoundedCount, deathToll);
             if (actualDeaths > 0) {
                 calculatedStats.wounded = currentWoundedCount - actualDeaths;
@@ -953,9 +1102,10 @@ const runGameTurnInternal = (
                 const minM = calculatedStats.minMorale ?? currentStats.minMorale ?? 0;
                 calculatedStats.morale = Math.max(minM, (calculatedStats.morale ?? currentStats.morale) - moraleLoss);
                 narrativeParts.push("\n\n" + pick(WOUNDED_DEATH_SCENES));
+                if (!hospitalHeld) narrativeParts.push('\n地下室失守后，伤员只能分散在楼梯间，死亡速度明显加快。');
                 statsLog.push(`⚰️ 重伤员不治: ${actualDeaths}人`);
                 statsLog.push(`💔 士气 -${moraleLoss}`);
-                currentTimer = 660; 
+                currentTimer = hospitalHeld ? 660 : 300;
             }
         }
     } else {
@@ -987,20 +1137,41 @@ const runGameTurnInternal = (
             statsLog.push(`⚔️ 弹尽粮绝! 刺刀冲锋!`);
         }
 
-        // 2. Resolve the attacked sector before calculating defense. In the
-        // previous engine every HMG and the average of 1F/2F defended every hit,
-        // so the tactical map had almost no gameplay effect.
+        // 2. Resolve the attacked sector. Lost floors permanently change the
+        // enemy's route: after 1F falls, ground troops split toward 2F/B1.
         if (damageType === 'BOMBING') {
             narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.BOMBING));
-            attackLocation = '屋顶';
+            attackLocation = (['屋顶', '二楼阵地', '一楼入口', '地下室'] as Location[])
+                .find((location) => isSectorHeld(strategicStateAfterAction, location)) ?? strategicStateAfterAction.location;
         } else if (damageType === 'ARTILLERY') {
             narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.ARTILLERY));
-            attackLocation = random() > 0.5 ? '一楼入口' : '二楼阵地';
+            const artilleryTargets = (['一楼入口', '二楼阵地'] as Location[])
+                .filter((location) => isSectorHeld(strategicStateAfterAction, location));
+            const fallbackTargets = getGroundAttackTargets(strategicStateAfterAction);
+            const candidates = artilleryTargets.length > 0 ? artilleryTargets : fallbackTargets;
+            attackLocation = candidates.length > 1 && random() > 0.5
+                ? candidates[1]
+                : candidates[0] ?? strategicStateAfterAction.location;
         } else {
+            const groundTargets = getGroundAttackTargets(strategicStateAfterAction);
+            attackLocation = groundTargets.length > 1 && random() > 0.7
+                ? groundTargets[1]
+                : groundTargets[0] ?? strategicStateAfterAction.location;
             if (attackScale === 'LARGE') narrativeParts.push("\n\n【日军总攻】鬼子发疯了！满山遍野的黄皮狗涌了上来！");
-            else if (attackScale === 'MEDIUM') narrativeParts.push("\n\n【日军强攻】日军组织了一个中队的兵力，试图强行突破一楼大门。");
+            else if (attackScale === 'MEDIUM') narrativeParts.push(`\n\n【日军强攻】日军组织了一个中队的兵力，沿突破口向${attackLocation}强行推进。`);
             else narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.INFANTRY));
-            attackLocation = '一楼入口';
+        }
+
+        let barrierKills = 0;
+        let sealedBarrierTriggered = false;
+        const activeSeals = calculatedStats.sealedApproaches ?? strategicStateAfterAction.sealedApproaches;
+        if (damageType === 'INFANTRY' && activeSeals.includes(attackLocation)) {
+            sealedBarrierTriggered = true;
+            attackScale = attackScale === 'LARGE' ? 'MEDIUM' : 'SMALL';
+            barrierKills = 5 + Math.floor(random() * 8);
+            calculatedStats.sealedApproaches = activeSeals.filter((location) => location !== attackLocation);
+            narrativeParts.push(`\n\n【楼梯封锁触发】通往${attackLocation}的障碍物和预埋手榴弹同时爆炸，敌军进攻队形被截断，本次攻势规模下降。`);
+            statsLog.push(`⛓ 楼梯封锁生效: 额外毙敌${barrierKills}人 / 障碍已耗尽`);
         }
 
         const lv1 = calculatedStats.fortificationLevel?.['一楼入口'] ?? currentStats.fortificationLevel['一楼入口'];
@@ -1013,9 +1184,9 @@ const runGameTurnInternal = (
             '一楼入口': lv1,
             '地下室': lvBasement,
         };
-        const targetFort = fortByLocation[attackLocation];
-        const adjacentSupport = attackLocation === '一楼入口' ? lv2 * 0.2
-            : attackLocation === '二楼阵地' ? lv1 * 0.1
+        const targetFort = isSectorHeld(strategicStateAfterAction, attackLocation) ? fortByLocation[attackLocation] : 0;
+        const adjacentSupport = attackLocation === '一楼入口' && isSectorHeld(strategicStateAfterAction, '二楼阵地') ? lv2 * 0.2
+            : attackLocation === '二楼阵地' && isSectorHeld(strategicStateAfterAction, '一楼入口') ? lv1 * 0.1
                 : 0;
         const effectiveDefense = Math.min(3, targetFort + adjacentSupport);
         const currentDistribution = calculatedStats.soldierDistribution || currentStats.soldierDistribution;
@@ -1026,7 +1197,8 @@ const runGameTurnInternal = (
 
         // 4. CALCULATE OUTCOME
         const outcome = calculateCombatOutcomes(attackScale, effectiveDefense, activeSquadsCount, targetGarrison, damageType, bayonetMode);
-        statsLog.push(`🛡️ ${attackLocation}: 驻军${targetGarrison}人 / 工事Lv.${targetFort} / 机枪组${activeSquadsCount}`);
+        const sectorIntegrityAtContact = strategicStateAfterAction.sectorIntegrity[attackLocation] ?? 100;
+        statsLog.push(`🛡️ ${attackLocation}: 驻军${targetGarrison}人 / 工事Lv.${targetFort} / 机枪组${activeSquadsCount} / 完整度${sectorIntegrityAtContact}%`);
 
         if (outcome.attackScale === 'LARGE' || damageType === 'BOMBING') visualEffect = "heavy-damage";
 
@@ -1066,7 +1238,7 @@ const runGameTurnInternal = (
         if (totalDamage > 0) {
             // Wounded are sheltered in the basement; only air raids have a
             // small chance to reach them unless that sector is directly hit.
-            const woundedExposureRate = damageType === 'BOMBING' ? 0.1 : 0;
+            const woundedExposureRate = attackLocation === '地下室' ? 0.25 : damageType === 'BOMBING' ? 0.1 : 0;
             woundedDeaths = Math.min(currentWounded, Math.ceil(totalDamage * woundedExposureRate));
             deaths += woundedDeaths;
             totalDamage -= woundedDeaths;
@@ -1112,11 +1284,116 @@ const runGameTurnInternal = (
             }
         }
 
-        // Structure Damage
+        // Structure and sector damage. Global integrity measures the whole
+        // warehouse; sector integrity drives the floor-by-floor butterfly effects.
         let structureDmg = (attackScale === 'LARGE' ? 10 : 2) + (damageType === 'BOMBING' ? 15 : 0);
         structureDmg = Math.max(1, structureDmg - Math.floor(targetFort * 2));
         if (targetGarrison < 30) structureDmg += 4;
         calculatedStats.health = Math.max(0, (calculatedStats.health ?? currentStats.health) - structureDmg);
+
+        const baseSectorDamage = attackScale === 'LARGE' ? 28 : attackScale === 'MEDIUM' ? 16 : 8;
+        const typeSectorDamage = damageType === 'BOMBING' ? 12 : damageType === 'ARTILLERY' ? 6 : 0;
+        let sectorDamage = Math.max(
+            3,
+            baseSectorDamage + typeSectorDamage - targetFort * 4 - Math.min(6, Math.floor(targetGarrison / 30)),
+        );
+        if (targetGarrison < 30) sectorDamage += 8;
+        if (sealedBarrierTriggered) sectorDamage = Math.max(2, Math.floor(sectorDamage * 0.6));
+
+        const sectorIntegrityBefore = strategicStateAfterAction.sectorIntegrity[attackLocation] ?? 100;
+        const sectorIntegrityAfter = Math.max(0, sectorIntegrityBefore - sectorDamage);
+        calculatedStats.sectorIntegrity = {
+            ...(calculatedStats.sectorIntegrity || strategicStateAfterAction.sectorIntegrity),
+            [attackLocation]: sectorIntegrityAfter,
+        };
+        statsLog.push(`🏢 ${attackLocation}完整度: ${sectorIntegrityBefore}% → ${sectorIntegrityAfter}%`);
+
+        const commanderLocationAtContact = calculatedStats.location ?? currentStats.location;
+        const sectorLostThisAttack = sectorIntegrityBefore > 0 && sectorIntegrityAfter <= 0;
+        if (sectorLostThisAttack) {
+            const sealsAtLoss = calculatedStats.sealedApproaches ?? strategicStateAfterAction.sealedApproaches;
+            calculatedStats.sealedApproaches = sealsAtLoss.filter((location) => location !== attackLocation);
+            const stateAtLoss: GameStats = {
+                ...strategicStateAfterAction,
+                ...calculatedStats,
+                sectorIntegrity: calculatedStats.sectorIntegrity,
+                soldierDistribution: calculatedStats.soldierDistribution || currentDistribution,
+                hmgSquads: ammoCheckSquads,
+            };
+            const retreatDestination = getRetreatDestination(stateAtLoss, attackLocation);
+            const distributionAfterCombat = { ...(calculatedStats.soldierDistribution || currentDistribution) };
+            const retreatingRiflemen = Math.max(0, (distributionAfterCombat[attackLocation] || 0) - healthyDeaths - injuries);
+            distributionAfterCombat[attackLocation] = 0;
+            if (retreatDestination) {
+                distributionAfterCombat[retreatDestination] = (distributionAfterCombat[retreatDestination] || 0) + retreatingRiflemen;
+            } else if (retreatingRiflemen > 0) {
+                calculatedStats.soldiers = Math.max(0, (calculatedStats.soldiers ?? currentStats.soldiers) - retreatingRiflemen);
+                statsLog.push(`⚠ ${retreatingRiflemen}名守军被切断，失散或被俘`);
+            }
+            calculatedStats.soldierDistribution = distributionAfterCombat;
+
+            const evacuationChance = Math.min(0.9, 0.55 + targetFort * 0.05 + (commanderLocationAtContact === attackLocation ? 0.15 : 0));
+            ammoCheckSquads = ammoCheckSquads.map((squad) => {
+                if (squad.status !== 'active' || squad.location !== attackLocation) return squad;
+                if (retreatDestination && random() < evacuationChance) {
+                    statsLog.push(`♜ ${squad.name}抢救成功，后撤至${retreatDestination}`);
+                    return { ...squad, location: retreatDestination };
+                }
+
+                const crewDeaths = Math.min(squad.count, 8 + Math.floor(random() * 8));
+                const survivingCrew = Math.max(0, squad.count - crewDeaths);
+                deaths += crewDeaths;
+                if (retreatDestination && survivingCrew > 0) {
+                    calculatedStats.soldiers = (calculatedStats.soldiers ?? currentStats.soldiers) + survivingCrew;
+                    distributionAfterCombat[retreatDestination] = (distributionAfterCombat[retreatDestination] || 0) + survivingCrew;
+                    statsLog.push(`🔴 ${squad.name}重机枪被弃置，${survivingCrew}名幸存机枪手转为步兵`);
+                } else {
+                    statsLog.push(`🔴 ${squad.name}被敌军截断，整组失联`);
+                }
+                return { ...squad, status: 'destroyed', count: 0 };
+            });
+            calculatedStats.hmgSquads = ammoCheckSquads;
+            calculatedStats.soldierDistribution = distributionAfterCombat;
+
+            if (commanderLocationAtContact === attackLocation && retreatDestination) {
+                calculatedStats.location = retreatDestination;
+                statsLog.push(`🎖 指挥部紧急后撤至${retreatDestination}`);
+            }
+            if (attackLocation === '屋顶' && (calculatedStats.hasFlagRaised ?? currentStats.hasFlagRaised)) {
+                calculatedStats.hasFlagRaised = false;
+                narrativeParts.push('\n屋顶被突破，旗杆在爆炸中折断，国旗由敢死队抢下带走。');
+                statsLog.push('⚑ 屋顶失守: 国旗撤下');
+            }
+            if (attackLocation === '地下室') {
+                const woundedAtLoss = calculatedStats.wounded ?? currentStats.wounded;
+                const hospitalDeaths = Math.min(woundedAtLoss, Math.ceil(woundedAtLoss * 0.25));
+                calculatedStats.wounded = Math.max(0, woundedAtLoss - hospitalDeaths);
+                calculatedStats.medkits = Math.floor((calculatedStats.medkits ?? currentStats.medkits) * 0.75);
+                calculatedStats.ammo = Math.floor((calculatedStats.ammo ?? currentStats.ammo) * 0.9);
+                deaths += hospitalDeaths;
+                statsLog.push(`⚕ 地下室医院失守: 重伤员死亡${hospitalDeaths}人 / 药品与弹药部分丢失`);
+            }
+
+            calculatedStats.health = Math.max(0, (calculatedStats.health ?? currentStats.health) - 8);
+            currentMorale = Math.max(0, currentMorale - 12);
+            narrativeParts.push(`\n\n【防区失守：${attackLocation}】\n敌军突破最后一道掩体。${retreatDestination ? `残余守军沿内部通道撤往${retreatDestination}。` : '所有退路均被切断，防线已经被分割。'}从现在起，敌军会沿新的突破口继续向仓库纵深推进。`);
+            statsLog.push(`▼ ${attackLocation}失守: 阵地-8 / 士气-12`);
+        }
+
+        if (commanderLocationAtContact === attackLocation) {
+            const commanderRisk = calculateCommanderDeathRisk(strategicStateAfterAction, attackLocation);
+            const commanderKilled = random() < commanderRisk;
+            statsLog.push(`🎖 指挥官处于交战区: 阵亡风险${formatCommanderRisk(commanderRisk)}${commanderKilled ? '（判定命中）' : '（幸存）'}`);
+            if (commanderKilled) {
+                calculatedStats.isGameOver = true;
+                calculatedStats.gameResult = 'defeat_commander';
+                calculatedStats.gameOverReason = 'commander_killed';
+                calculatedStats.finalRank = calculateScore({ ...currentStats, ...calculatedStats }, 'defeat_commander').rank;
+                eventTriggered = 'game_over';
+                visualEffect = 'heavy-damage';
+                narrativeParts.push(`\n\n【将星陨落】\n一发炮弹击穿${attackLocation}的指挥掩体。副官扑过来时，你已经倒在碎砖和硝烟之中。部队尚未死光，但失去最高指挥后，各防区通信迅速中断，成建制防守无法继续。\n\n结局达成：【阵前殉职】`);
+            }
+        }
 
         // Fortification Degradation
         if (random() < (attackScale === 'LARGE' ? 0.7 : 0.2)) {
@@ -1132,7 +1409,7 @@ const runGameTurnInternal = (
 
         // Apply Kills
         const prevKills = calculatedStats.enemiesKilled ?? currentStats.enemiesKilled ?? 0;
-        calculatedStats.enemiesKilled = prevKills + outcome.enemiesKilled;
+        calculatedStats.enemiesKilled = prevKills + outcome.enemiesKilled + barrierKills;
         
         // Logs for Casualties/Kills
         if (deaths > 0) {
@@ -1140,7 +1417,7 @@ const runGameTurnInternal = (
             statsLog.push(`🔴 阵亡: ${deaths}人`);
         }
         if (injuries > 0) statsLog.push(`🩹 新增伤员: ${injuries}人`);
-        statsLog.push(`💀 击毙日军: ${outcome.enemiesKilled}人`);
+        statsLog.push(`💀 击毙日军: ${outcome.enemiesKilled + barrierKills}人`);
         
         // --- MORALE CALCULATION (NEW) ---
         // 1. Gain from Kills: +1 per 8 kills
@@ -1163,7 +1440,7 @@ const runGameTurnInternal = (
 
     // --- Mutiny & Finalize (Preserved) ---
     const finalMorale = calculatedStats.morale ?? currentStats.morale;
-    if (finalMorale < 30 && random() < 0.4) {
+    if (!calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
         narrativeParts.push("\n\n" + pick(MUTINY_SCENES));
         const lost = Math.floor(random() * 10) + 5; 
         calculatedStats.soldiers = Math.max(0, (calculatedStats.soldiers ?? currentStats.soldiers) - lost);
@@ -1208,7 +1485,11 @@ const runGameTurnInternal = (
     const finalCombatants = finalSoldiers + activeHmgCrew;
     const finalWounded = calculatedStats.wounded ?? currentStats.wounded;
     const forceCollapsed = finalCombatants < 20;
-    const positionCollapsed = finalHealth <= 0;
+    const finalSectorIntegrity = calculatedStats.sectorIntegrity || currentStats.sectorIntegrity;
+    const corePositionsLost = finalSectorIntegrity['一楼入口'] <= 0
+        && finalSectorIntegrity['二楼阵地'] <= 0
+        && finalSectorIntegrity['地下室'] <= 0;
+    const positionCollapsed = finalHealth <= 0 || corePositionsLost;
     const collapseDetected = forceCollapsed || positionCollapsed;
     const immediateCollapse = finalCombatants <= 0;
     const lastStandAlreadyUsed = calculatedStats.lastStandUsed ?? currentStats.lastStandUsed ?? false;
@@ -1217,12 +1498,15 @@ const runGameTurnInternal = (
     // The old build ended immediately when riflemen fell below 20, even while
     // two HMG crews and wounded survivors were still visible in the UI. The
     // first collapse now becomes an explicit, recoverable last-stand warning.
-    if (collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
+    if (calculatedStats.gameOverReason === 'commander_killed') {
+        eventTriggered = 'game_over';
+        visualEffect = 'heavy-damage';
+    } else if (collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
         calculatedStats.lastStandUsed = true;
         if (positionCollapsed) calculatedStats.health = 1;
         calculatedStats.siegeMeter = Math.min(35, calculatedStats.siegeMeter ?? currentStats.siegeMeter);
         visualEffect = 'heavy-damage';
-        narrativeParts.push(`\n\n【最后防线】\n仓库已经逼近失守线：可战兵力 ${finalCombatants} 人，阵地完整度 ${Math.max(0, finalHealth)}%。副官组织起最后一道防线，为你争取到一次补救机会。请立即救治伤员、调整兵力或修复阵地；若再次跌破失守线，战役才会真正结束。`);
+        narrativeParts.push(`\n\n【最后防线】\n仓库已经逼近失守线：可战兵力 ${finalCombatants} 人，阵地完整度 ${Math.max(0, finalHealth)}%。副官组织起最后一道防线，为你争取到一次补救机会。请立即救治伤员、调整兵力、修复或夺回防区；若再次跌破失守线，战役才会真正结束。`);
         statsLog.push('⚠ 最后防线已启用：本局仅有一次补救机会');
     } else if (collapseDetected) {
         calculatedStats.isGameOver = true;
@@ -1258,7 +1542,9 @@ const runGameTurnInternal = (
                 ? `可战兵力只剩 ${finalCombatants} 人，仓库结构完整度也已归零。残余人员被迫停止成建制抵抗。`
                 : forceCollapsed
                     ? `可战兵力只剩 ${finalCombatants} 人，已经无法覆盖各处防线。伤员和幸存者仍在，但成建制防守宣告结束。`
-                    : `仓库结构完整度归零，主要防区被突破。仍有 ${finalCombatants} 名可战人员与伤员幸存，但阵地已经失守。`;
+                    : corePositionsLost
+                        ? `一楼、二楼与地下室相继失守，仓库纵深已被敌军切断。仍有 ${finalCombatants} 名可战人员与伤员幸存，但阵地已经无法恢复。`
+                        : `仓库结构完整度归零，主要防区被突破。仍有 ${finalCombatants} 名可战人员与伤员幸存，但阵地已经失守。`;
             narrativeParts.push(`\n\n【战役结束】\n${collapseText}\n\n最终军衔评价：${report.rank}\n${report.text}`);
         }
 

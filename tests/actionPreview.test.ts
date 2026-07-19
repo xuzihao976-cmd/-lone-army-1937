@@ -38,4 +38,29 @@ describe('action risk previews', () => {
     expect(preview?.predictedThreat).toBe(86);
     expect(preview?.risk).toBe('high');
   });
+
+  it('previews sealing an exposed stairwell and its one-use cost', () => {
+    const stats = createInitialStats();
+    stats.day = 2;
+    stats.sectorIntegrity['一楼入口'] = 0;
+
+    const preview = getActionPreview(stats, '封锁通往二楼阵地的楼梯');
+    expect(preview).toMatchObject({
+      action: '封锁通往二楼阵地的楼梯',
+      durationMinutes: 60,
+      available: true,
+    });
+    expect(preview?.costs).toEqual(['粮包 150', '手榴弹 20']);
+  });
+
+  it('previews a counterattack only for a reachable lost sector', () => {
+    const stats = createInitialStats();
+    stats.day = 1;
+    stats.sectorIntegrity['一楼入口'] = 0;
+
+    const preview = getActionPreview(stats, '反冲锋夺回一楼入口');
+    expect(preview?.available).toBe(true);
+    expect(preview?.durationMinutes).toBe(60);
+    expect(preview?.costs).toContain('七九弹 800');
+  });
 });

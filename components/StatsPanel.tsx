@@ -16,6 +16,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
   // Calculate total force
   const activeHmgCount = stats.hmgSquads ? stats.hmgSquads.reduce((acc, s) => acc + (s.status === 'active' ? s.count : 0), 0) : 0;
   const combatReady = stats.soldiers + activeHmgCount;
+  const lostSectorCount = Object.values(stats.sectorIntegrity).filter((integrity) => integrity <= 0).length;
   const untilMidnight = minutesUntilMidnight(stats.currentTime);
   const countdownLabel = `${Math.floor(untilMidnight / 60)}h${untilMidnight % 60 ? `${untilMidnight % 60}m` : ''}`;
   
@@ -44,7 +45,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             {/* Intel Ticker */}
             <div className="w-[60%] bg-red-900/10 flex items-center px-2 gap-2 overflow-hidden relative border-r border-neutral-800">
                 <span className="text-[9px] font-bold text-red-700 whitespace-nowrap uppercase tracking-widest animate-pulse shrink-0">
-                    ⚠ {stats.lastStandUsed ? '最后防线已用' : dayProfile.title}
+                    ⚠ {stats.lastStandUsed ? '最后防线已用' : lostSectorCount > 0 ? `失守防区 ${lostSectorCount}/4` : dayProfile.title}
                 </span>
                 <div className="mask-gradient-right overflow-hidden w-full">
                     <span className="text-[10px] text-red-400/90 font-mono whitespace-nowrap animate-marquee inline-block">
@@ -123,7 +124,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
                     <span className={`text-xs font-bold font-mono ${stats.morale < 30 ? 'text-red-500 animate-pulse' : 'text-neutral-300'}`}>{stats.morale}</span>
                 </div>
                 <div className="w-px h-6 bg-neutral-800"></div>
-                <div className="flex flex-col items-center w-10" title="仓库阵地完整度。首次归零会触发最后防线，之后再次归零才会失守。">
+                <div className="flex flex-col items-center w-10" title={`仓库整体完整度。当前失守防区 ${lostSectorCount}/4；楼层状态请查看战略地图。`}>
                     <span className="text-[8px] text-neutral-500">阵地</span>
                     <span className={`text-xs font-bold font-mono ${stats.health < 30 ? 'text-red-500 animate-pulse' : 'text-neutral-300'}`}>{stats.health}</span>
                 </div>

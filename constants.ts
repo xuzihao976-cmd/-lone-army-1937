@@ -70,6 +70,14 @@ export const INITIAL_STATS: GameStats = {
     '地下室': 24     
   },
 
+  sectorIntegrity: {
+    '一楼入口': 100,
+    '二楼阵地': 100,
+    '屋顶': 100,
+    '地下室': 100,
+  },
+  sealedApproaches: [],
+
   fortificationLevel: {
     '一楼入口': 1,
     '二楼阵地': 1,
@@ -113,6 +121,13 @@ export const ACHIEVEMENTS: Achievement[] = [
         title: '血染孤旗',
         icon: '🇹🇼',
         desc: '达成条件：升起国旗后，力战殉国。'
+    },
+    {
+        id: 'defeat_commander',
+        title: '将星陨落',
+        icon: '✦',
+        desc: '达成条件：指挥官所在防区遭袭，并在炮火中阵亡。',
+        isSecret: true
     },
     {
         id: 'defeat_deserter',

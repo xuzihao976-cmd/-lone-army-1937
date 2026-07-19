@@ -61,6 +61,14 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           mainTitle = '懦夫结局';
           subTitle = '遗臭万年 · DESERTER';
           break;
+      case 'defeat_commander':
+          borderColor = 'border-stone-500';
+          bgColor = 'bg-stone-900/30';
+          titleColor = 'text-stone-300';
+          icon = '✦';
+          mainTitle = '将星陨落';
+          subTitle = '指挥链中断 · COMMANDER FALLEN';
+          break;
       default: // Generic Defeat
           borderColor = 'border-red-900';
           bgColor = 'bg-red-900/10';
@@ -88,6 +96,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
     combat_force_collapsed: '可战兵力不足20人',
     position_collapsed: '阵地完整度归零',
     total_collapse: '兵力与阵地同时崩溃',
+    commander_killed: '指挥官在所在防区遭袭阵亡',
     early_retreat: '战斗初期擅自撤离',
     historical_retreat: '奉命撤入公共租界',
     mission_complete: '完成六日坚守任务',

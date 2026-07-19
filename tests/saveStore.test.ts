@@ -21,7 +21,14 @@ class MemoryStorage {
 describe('versioned saves', () => {
   it('migrates a v1 save and restores newly added defaults', () => {
     const oldStats = createInitialStats();
-    const { usedTacticalCards: _removed, rngState: _oldRandomState, ...legacyStats } = oldStats;
+    const {
+      usedTacticalCards: _removed,
+      rngState: _oldRandomState,
+      lastStandUsed: _oldLastStand,
+      sectorIntegrity: _oldSectorIntegrity,
+      sealedApproaches: _oldSealedApproaches,
+      ...legacyStats
+    } = oldStats;
     const migrated = migrateSaveData({
       stats: { ...legacyStats, day: 3, soldiers: 233 },
       logs: [{ id: '1', sender: 'system', text: '旧战报', isTyping: true }],
@@ -34,6 +41,13 @@ describe('versioned saves', () => {
     expect(migrated?.stats.usedTacticalCards).toEqual([]);
     expect(migrated?.stats.rngState).toEqual(expect.any(Number));
     expect(migrated?.stats.lastStandUsed).toBe(false);
+    expect(migrated?.stats.sectorIntegrity).toEqual({
+      '一楼入口': 100,
+      '二楼阵地': 100,
+      '屋顶': 100,
+      '地下室': 100,
+    });
+    expect(migrated?.stats.sealedApproaches).toEqual([]);
     expect(migrated?.logs[0].isTyping).toBe(false);
   });
 
@@ -41,11 +55,15 @@ describe('versioned saves', () => {
     const storage = new MemoryStorage();
     const stats = createInitialStats();
     stats.day = 2;
+    stats.sectorIntegrity['一楼入口'] = 0;
+    stats.sealedApproaches = ['二楼阵地'];
     writeSaveSlot(storage, 4, stats, [{ id: 'log', sender: 'system', text: '战报', day: 2, time: '13:30' }]);
 
     const loaded = readSaveSlot(storage, 4);
     expect(loaded?.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(loaded?.stats.day).toBe(2);
+    expect(loaded?.stats.sectorIntegrity['一楼入口']).toBe(0);
+    expect(loaded?.stats.sealedApproaches).toEqual(['二楼阵地']);
     expect(loaded?.logs[0].text).toBe('战报');
     expect(loaded?.logs[0]).toMatchObject({ day: 2, time: '13:30' });
   });

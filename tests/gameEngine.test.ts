@@ -174,4 +174,118 @@ describe('local game engine endings', () => {
     expect(hmg.updatedStats.currentTime).toBe('10:50');
     expect(hmg.updatedStats.hmgSquads?.find((squad) => squad.name === '机枪一连')?.location).toBe('屋顶');
   });
+
+  it('can kill the commander only when the attacked sector contains the command post', () => {
+    const exposed = createInitialStats(25);
+    exposed.tutorialStep = 3;
+    exposed.day = 3;
+    exposed.currentTime = '10:00';
+    exposed.siegeMeter = 100;
+    exposed.location = '一楼入口';
+    exposed.fortificationLevel['一楼入口'] = 0;
+    exposed.sectorIntegrity['一楼入口'] = 20;
+    exposed.soldierDistribution['一楼入口'] = 15;
+    exposed.soldierDistribution['二楼阵地'] += 125;
+
+    const fatal = runGameTurn(exposed, '侦察敌情');
+    expect(fatal.attackLocation).toBe('一楼入口');
+    expect(fatal.updatedStats.gameResult).toBe('defeat_commander');
+    expect(fatal.updatedStats.gameOverReason).toBe('commander_killed');
+    expect(fatal.narrative).toContain('将星陨落');
+
+    const sheltered = structuredClone(exposed);
+    sheltered.location = '地下室';
+    const survived = runGameTurn(sheltered, '侦察敌情');
+    expect(survived.attackLocation).toBe('一楼入口');
+    expect(survived.updatedStats.gameOverReason).not.toBe('commander_killed');
+  });
+
+  it('loses a breached floor, withdraws its garrison and redirects later attacks', () => {
+    const stats = createInitialStats(1);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.currentTime = '10:00';
+    stats.siegeMeter = 100;
+    stats.location = '地下室';
+    stats.sectorIntegrity['一楼入口'] = 1;
+
+    const breach = runGameTurn(stats, '侦察敌情');
+    expect(breach.attackLocation).toBe('一楼入口');
+    expect(breach.updatedStats.sectorIntegrity?.['一楼入口']).toBe(0);
+    expect(breach.updatedStats.soldierDistribution?.['一楼入口']).toBe(0);
+    expect(breach.updatedStats.hmgSquads?.some((squad) => squad.status === 'active' && squad.location === '一楼入口')).toBe(false);
+    expect(breach.narrative).toContain('防区失守：一楼入口');
+
+    const afterBreach = { ...stats, ...breach.updatedStats, siegeMeter: 100 };
+    const nextAttack = runGameTurn(afterBreach, '侦察敌情');
+    expect(['二楼阵地', '地下室']).toContain(nextAttack.attackLocation);
+    expect(nextAttack.attackLocation).not.toBe('一楼入口');
+  });
+
+  it('withdraws the command post automatically when its floor falls and the commander survives', () => {
+    const stats = createInitialStats(1);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.currentTime = '10:00';
+    stats.siegeMeter = 100;
+    stats.location = '一楼入口';
+    stats.sectorIntegrity['一楼入口'] = 1;
+
+    const result = runGameTurn(stats, '侦察敌情');
+    expect(result.updatedStats.gameOverReason).not.toBe('commander_killed');
+    expect(result.updatedStats.sectorIntegrity?.['一楼入口']).toBe(0);
+    expect(result.updatedStats.location).toBe('二楼阵地');
+    expect(result.narrative).toContain('残余守军沿内部通道撤往二楼阵地');
+  });
+
+  it('blocks organized treatment after the basement hospital is lost', () => {
+    const stats = createInitialStats(12);
+    stats.tutorialStep = 3;
+    stats.wounded = 20;
+    stats.sectorIntegrity['地下室'] = 0;
+
+    const result = runGameTurn(stats, '治疗伤员');
+    expect(result.updatedStats.soldiers).toBeUndefined();
+    expect(result.updatedStats.wounded).toBeUndefined();
+    expect(result.narrative).toContain('地下室医院已经失守');
+  });
+
+  it('can seal an exposed stairwell and consume the barrier on the next advance', () => {
+    const stats = createInitialStats(9);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.currentTime = '10:00';
+    stats.siegeMeter = 0;
+    stats.location = '屋顶';
+    stats.sectorIntegrity['一楼入口'] = 0;
+    stats.sectorIntegrity['地下室'] = 0;
+
+    const sealed = runGameTurn(stats, '封锁通往二楼阵地的楼梯');
+    expect(sealed.updatedStats.sealedApproaches).toContain('二楼阵地');
+    expect(sealed.updatedStats.sandbags).toBe(stats.sandbags - 150);
+    expect(sealed.updatedStats.grenades).toBe(stats.grenades - 20);
+
+    const prepared = { ...stats, ...sealed.updatedStats, siegeMeter: 100 };
+    const attack = runGameTurn(prepared, '侦察敌情');
+    expect(attack.attackLocation).toBe('二楼阵地');
+    expect(attack.updatedStats.sealedApproaches).not.toContain('二楼阵地');
+    expect(attack.narrative).toContain('楼梯封锁触发');
+  });
+
+  it('can counterattack to recover a lost sector', () => {
+    const stats = createInitialStats(1);
+    stats.tutorialStep = 3;
+    stats.day = 1;
+    stats.currentTime = '10:00';
+    stats.siegeMeter = 0;
+    stats.morale = 100;
+    stats.sectorIntegrity['一楼入口'] = 0;
+    stats.soldierDistribution['一楼入口'] = 0;
+    stats.soldierDistribution['二楼阵地'] += 140;
+
+    const result = runGameTurn(stats, '反冲锋夺回一楼入口');
+    expect(result.updatedStats.sectorIntegrity?.['一楼入口']).toBe(30);
+    expect(result.updatedStats.soldierDistribution?.['一楼入口']).toBeGreaterThan(0);
+    expect(result.narrative).toContain('反冲锋成功');
+  });
 });

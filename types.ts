@@ -46,6 +46,7 @@ export type EndingType =
   | 'defeat_deserter'   // 3. 逃兵 (早期撤退)
   | 'victory_retreat'   // 4. 历史撤退 (后期撤退)
   | 'defeat_martyr'     // 5. 血染孤旗 (升旗后阵亡)
+  | 'defeat_commander'  // 指挥官在交战区阵亡
   | 'defeat_generic'    // 普通战败
   | 'ongoing';
 
@@ -53,6 +54,7 @@ export type GameOverReason =
   | 'combat_force_collapsed'
   | 'position_collapsed'
   | 'total_collapse'
+  | 'commander_killed'
   | 'early_retreat'
   | 'historical_retreat'
   | 'mission_complete';
@@ -102,6 +104,11 @@ export interface GameStats {
   aggressiveCount: number; 
 
   soldierDistribution: Record<string, number>;
+
+  // Each sector can be worn down and lost independently. A value of zero
+  // means the enemy controls that floor until a counterattack retakes it.
+  sectorIntegrity: Record<Location, number>;
+  sealedApproaches: Location[];
 
   // Fortifications
   fortificationLevel: Record<string, number>; 

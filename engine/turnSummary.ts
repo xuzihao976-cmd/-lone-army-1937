@@ -1,4 +1,4 @@
-import type { GameStats, GameTurnResult, SummaryMetric, TurnDelta, TurnSummary } from '../types';
+import type { GameStats, GameTurnResult, Location, SummaryMetric, TurnDelta, TurnSummary } from '../types';
 import { getActionPreview } from './actionPreview';
 
 const METRICS: Array<{ metric: SummaryMetric; label: string }> = [
@@ -60,6 +60,19 @@ export const buildTurnSummary = (
     notes.push('敌军发动进攻后，威胁值已回落');
   } else if (after.siegeMeter > before.siegeMeter) {
     notes.push(`本次行动令威胁值上升 ${after.siegeMeter - before.siegeMeter}`);
+  }
+
+  (['屋顶', '二楼阵地', '一楼入口', '地下室'] as Location[]).forEach((location) => {
+    const beforeIntegrity = before.sectorIntegrity[location] ?? 100;
+    const afterIntegrity = after.sectorIntegrity[location] ?? 100;
+    if (beforeIntegrity > 0 && afterIntegrity <= 0) notes.push(`${location}失守，敌军推进路线已经改变`);
+    else if (beforeIntegrity <= 0 && afterIntegrity > 0) notes.push(`${location}已被反冲锋夺回（完整度${afterIntegrity}%）`);
+    else if (afterIntegrity !== beforeIntegrity) notes.push(`${location}完整度 ${beforeIntegrity}% → ${afterIntegrity}%`);
+  });
+
+  if (after.gameOverReason === 'commander_killed') {
+    title = '指挥官阵亡 · 战役结束';
+    notes.push(`指挥官在${result.attackLocation || after.location}遭袭阵亡`);
   }
 
   return {
