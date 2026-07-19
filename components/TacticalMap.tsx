@@ -5,13 +5,13 @@ import {
   calculateCommanderDeathRisk,
   canRecaptureSector,
   formatCommanderRisk,
-  getGroundAttackTargets,
   getSectorDefenseProfile,
   getSectorCondition,
   getSectorIntegrity,
   isApproachExposed,
   isSectorHeld,
 } from '../engine/strategicDefense';
+import { SPECIALIST_EFFECTS } from '../engine/specialists';
 
 interface TacticalMapProps {
   stats: GameStats;
@@ -52,12 +52,15 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
   const selectedGarrison = stats.soldierDistribution[selectedLocation] || 0;
   const selectedFort = stats.fortificationLevel[selectedLocation] || 0;
   const selectedHmg = stats.hmgSquads.filter((squad) => squad.status === 'active' && squad.location === selectedLocation);
+  const selectedSpecialists = stats.specialistSquads.filter((squad) => squad.status === 'active' && squad.location === selectedLocation);
   const selectedIntegrity = getSectorIntegrity(stats, selectedLocation);
   const selectedCondition = getSectorCondition(selectedIntegrity);
   const selectedHeld = isSectorHeld(stats, selectedLocation);
   const selectedDefense = getSectorDefenseProfile(stats, selectedLocation);
   const commanderRisk = calculateCommanderDeathRisk(stats, selectedLocation);
-  const groundTargets = getGroundAttackTargets(stats);
+  const operation = stats.enemyOperation;
+  const operationVisible = !!operation?.revealed;
+  const visibleTargets = operationVisible && operation ? [operation.target] : [];
   const enemyPressure = stats.siegeMeter >= 85
     ? '总攻迫近'
     : stats.siegeMeter >= 55
@@ -65,7 +68,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
       : stats.siegeMeter >= 25
         ? '前沿集结'
         : '零星侦察';
-  const targetCodes = groundTargets
+  const targetCodes = visibleTargets
     .map((location) => SECTORS.find((sector) => sector.location === location)?.code)
     .filter(Boolean)
     .join(' / ');
@@ -119,13 +122,13 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
       <div className="mx-auto max-w-3xl">
         <header className="mb-2 flex items-center justify-between gap-3">
           <h2 className="text-sm font-black tracking-wider text-neutral-100">战略地图</h2>
-          <div className="truncate text-right text-xs font-bold text-red-300">敌军 → {groundTargets.length ? groundTargets.join(' / ') : '纵深突破'}</div>
+          <div className="truncate text-right text-xs font-bold text-red-300">{operationVisible && operation ? `敌军 → ${operation.target}` : '敌军目标尚未查明'}</div>
         </header>
 
-        <div className="mb-2 grid grid-cols-[78px_1fr_62px] items-center gap-2 rounded border border-red-950/80 bg-red-950/15 px-2 py-1.5" aria-label={`敌军态势：${enemyPressure}，目标${groundTargets.join('、')}`}>
+        <div className="mb-2 grid grid-cols-[88px_1fr_78px] items-center gap-2 rounded border border-red-950/80 bg-red-950/15 px-2 py-2" aria-label={`敌军态势：${enemyPressure}`}>
           <div>
             <div className="text-[11px] font-black text-red-300">日军前沿</div>
-            <div className="text-[11px] text-red-500">{enemyPressure}</div>
+            <div className="text-[11px] text-red-500">{operation ? `${operation.turnsRemaining}回合接敌` : enemyPressure}</div>
           </div>
           <div className="relative h-4 overflow-hidden">
             <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-red-800" />
@@ -141,10 +144,32 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
             ))}
           </div>
           <div className="text-right">
-            <div className="text-[11px] text-neutral-500">目标</div>
-            <div className="font-mono text-xs font-black text-amber-200">{targetCodes || '--'}</div>
+            <div className="text-[11px] text-neutral-500">确证目标</div>
+            <div className="font-mono text-xs font-black text-amber-200">{targetCodes || '??'}</div>
           </div>
         </div>
+
+        <div className="mb-2 grid grid-cols-3 gap-1.5 text-[11px] font-bold">
+          <div className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-neutral-400">
+            兵力 <span className={operationVisible ? 'text-red-300' : 'text-neutral-600'}>{operationVisible && operation ? operation.scale === 'LARGE' ? '大规模' : operation.scale === 'MEDIUM' ? '中等' : '小股' : '待侦察'}</span>
+          </div>
+          <div className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-neutral-400">
+            武器 <span className={operationVisible ? 'text-amber-300' : 'text-neutral-600'}>{operationVisible && operation ? operation.attackType === 'BOMBING' ? '航空兵' : operation.attackType === 'ARTILLERY' ? '炮兵' : '步兵' : '待侦察'}</span>
+          </div>
+          <div className="truncate rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-neutral-400" title={operationVisible ? operation?.routeName : '执行侦察后显示'}>
+            路线 <span className={operationVisible ? 'text-cyan-300' : 'text-neutral-600'}>{operationVisible && operation ? operation.routeName : '待侦察'}</span>
+          </div>
+        </div>
+
+        {operationVisible && operation?.target === stats.location && (
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded border border-red-600 bg-red-950/40 px-3 py-2" role="alert">
+            <div>
+              <div className="text-xs font-black text-red-200">⚠ 指挥部位于敌军预定攻击区</div>
+              <div className="text-[11px] text-red-300">{operation.turnsRemaining}回合后接敌；若命中本层，指挥官阵亡风险 {formatCommanderRisk(calculateCommanderDeathRisk(stats, stats.location))}</div>
+            </div>
+            <span className="text-[11px] font-black text-amber-200">请考虑移动指挥部</span>
+          </div>
+        )}
 
         <div className="relative grid grid-cols-4 gap-1.5 sm:gap-2">
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-px w-[70%] -translate-x-1/2 bg-gradient-to-r from-transparent via-red-950 to-transparent sm:top-auto sm:bottom-[-5px]" />
@@ -157,7 +182,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
             const selected = selectedLocation === sector.location;
             const current = stats.location === sector.location;
             const underAttack = flashingLocation === sector.location;
-            const targeted = groundTargets.includes(sector.location);
+            const targeted = visibleTargets.includes(sector.location);
 
             return (
               <button
@@ -206,7 +231,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                   </div>
                 </div>
                 <div className={`mt-1 truncate text-[11px] font-bold ${targeted ? 'text-red-400' : condition === 'lost' ? 'text-red-400' : 'text-neutral-500'}`}>
-                  {targeted ? '敌军逼近' : conditionLabels[condition]}
+                  {targeted ? `${operation?.turnsRemaining ?? '?'}回合后接敌` : conditionLabels[condition]}
                 </div>
               </button>
             );
@@ -229,6 +254,15 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                   ? `${selectedHmg.map((squad) => squad.name).join('、')}（${selectedDefense.fireReadyHmgSquads}/${selectedHmg.length}可开火）`
                   : '无机枪组'}
               </div>
+              {selectedSpecialists.length > 0 && (
+                <div className="mt-1.5 space-y-1">
+                  {selectedSpecialists.map((squad) => (
+                    <div key={squad.id} className="rounded bg-cyan-950/30 px-1.5 py-1 text-[11px] text-cyan-200">
+                      <b>◆ {squad.name}</b> · {SPECIALIST_EFFECTS[squad.role]}
+                    </div>
+                  ))}
+                </div>
+              )}
               {stats.location === selectedLocation && (
                 <div className={`mt-1 text-xs font-black ${commanderRisk >= 0.03 ? 'text-red-300 animate-pulse' : commanderRisk >= 0.015 ? 'text-amber-300' : 'text-green-300'}`}>
                   🎖 阵亡风险 {formatCommanderRisk(commanderRisk)}
@@ -288,6 +322,14 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                     command={`部署${squad.name}至${selectedLocation}`}
                     label={`♜ 调${squad.name}`}
                     tone="amber"
+                  />
+                ))}
+                {stats.specialistSquads.map((squad) => squad.status === 'active' && squad.location !== selectedLocation && (
+                  <TacticalAction
+                    key={squad.id}
+                    command={`部署小队${squad.name}至${selectedLocation}`}
+                    label={`◆ 调${squad.name}`}
+                    tone="green"
                   />
                 ))}
                 {selectedLocation === '屋顶' && !stats.hasFlagRaised && (

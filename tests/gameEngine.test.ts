@@ -12,6 +12,104 @@ const applyTurnUpdate = (stats: GameStats, update: Partial<GameStats>): GameStat
 });
 
 describe('local game engine endings', () => {
+  it('resolves tactical cards with the exact advertised effects', () => {
+    const moraleStats = createInitialStats(80);
+    moraleStats.tutorialStep = 3;
+    moraleStats.morale = 50;
+    const morale = runGameTurn(moraleStats, 'CARD_RESOLVE:morale_boost');
+    expect(morale.updatedStats.morale).toBe(65);
+    expect(morale.updatedStats.activeTacticalCard).toBeNull();
+    expect(morale.updatedStats.currentTime).toBeUndefined();
+
+    const reinforceStats = createInitialStats(81);
+    reinforceStats.tutorialStep = 3;
+    reinforceStats.location = '二楼阵地';
+    const reinforce = runGameTurn(reinforceStats, 'CARD_RESOLVE:reinforce');
+    expect(reinforce.updatedStats.soldiers).toBe(reinforceStats.soldiers + 5);
+    expect(reinforce.updatedStats.soldierDistribution?.['二楼阵地']).toBe(reinforceStats.soldierDistribution['二楼阵地'] + 5);
+
+    const supplyStats = createInitialStats(82);
+    supplyStats.tutorialStep = 3;
+    const supply = runGameTurn(supplyStats, 'CARD_RESOLVE:supplies');
+    expect(supply.updatedStats.ammo).toBe(supplyStats.ammo + 500);
+  });
+
+  it('turns event choices into persistent, mechanical consequences', () => {
+    const students = createInitialStats(83);
+    students.tutorialStep = 3;
+    const rescue = runGameTurn(students, 'EVT_RESOLVE:student_run:0');
+    expect(rescue.updatedStats.consequenceFlags).toContain('students_rescued');
+    expect(rescue.updatedStats.ammo).toBe(students.ammo - 600);
+    expect(rescue.updatedStats.campaignHistory?.some((entry) => entry.title === '学生冲桥')).toBe(true);
+
+    const british = createInitialStats(84);
+    british.tutorialStep = 3;
+    const defiance = runGameTurn(british, 'EVT_RESOLVE:brit_ceasefire:1');
+    expect(defiance.updatedStats.consequenceFlags).toContain('british_defied');
+    expect(defiance.updatedStats.enemyOperation?.target).toBe('地下室');
+    expect(defiance.updatedStats.enemyOperation?.turnsRemaining).toBeLessThan(british.enemyOperation!.turnsRemaining);
+  });
+
+  it('uses scouting to reveal a turn-based enemy operation and improve a raid', () => {
+    const stats = createInitialStats(85);
+    stats.tutorialStep = 3;
+    stats.siegeMeter = 0;
+    stats.enemyOperation!.turnsRemaining = 3;
+    const result = runGameTurn(stats, '侦察敌情');
+    expect(result.updatedStats.enemyOperation?.revealed).toBe(true);
+    expect(result.updatedStats.enemyOperation?.turnsRemaining).toBe(2);
+    expect(result.updatedStats.reconBonus).toBe(20);
+    expect(result.narrative).toContain('敌情确证');
+  });
+
+  it('advances enemy formations once per meaningful action and attacks at contact', () => {
+    const stats = createInitialStats(86);
+    stats.tutorialStep = 3;
+    stats.siegeMeter = 0;
+    stats.enemyOperation!.turnsRemaining = 2;
+    stats.location = '地下室';
+    const first = runGameTurn(stats, '前往屋顶');
+    expect(first.eventTriggered).not.toBe('attack');
+    expect(first.updatedStats.enemyOperation?.turnsRemaining).toBe(1);
+
+    const progressed = { ...stats, ...first.updatedStats, turnCount: stats.turnCount + 1 };
+    const second = runGameTurn(progressed, '前往二楼');
+    expect(second.eventTriggered).toBe('attack');
+    expect(second.attackLocation).toBe('一楼入口');
+  });
+
+  it('makes specialist squads matter without adding phantom soldiers', () => {
+    const stats = createInitialStats(87);
+    stats.tutorialStep = 3;
+    stats.siegeMeter = 0;
+    stats.sectorIntegrity['一楼入口'] = 70;
+    const beforeTotal = stats.soldiers;
+    const build = runGameTurn(stats, '加固一楼入口');
+    expect(build.updatedStats.sandbags).toBe(stats.sandbags - 170);
+    expect(build.updatedStats.sectorIntegrity?.['一楼入口']).toBe(94);
+    expect(build.updatedStats.soldiers).toBeUndefined();
+
+    const redeploy = runGameTurn(stats, '部署小队湖北老兵班至屋顶');
+    expect(redeploy.updatedStats.specialistSquads?.find((squad) => squad.id === 'veteran')?.location).toBe('屋顶');
+    expect(stats.soldiers).toBe(beforeTotal);
+  });
+
+  it('applies diminishing returns to repeated speeches and searches', () => {
+    const stats = createInitialStats(88);
+    stats.tutorialStep = 3;
+    stats.siegeMeter = 0;
+    stats.morale = 40;
+    stats.enemyOperation!.turnsRemaining = 5;
+    const firstSpeech = runGameTurn(stats, '演讲鼓舞');
+    expect(firstSpeech.updatedStats.morale).toBe(49);
+    const afterSpeech = { ...stats, ...firstSpeech.updatedStats, turnCount: 1 };
+    const secondSpeech = runGameTurn(afterSpeech, '演讲鼓舞');
+    expect(secondSpeech.updatedStats.morale).toBe(55);
+
+    const search = runGameTurn(stats, '搜寻物资');
+    expect(search.updatedStats.searchExhaustion).toBe(1);
+  });
+
   it('keeps the tutorial fortification after the real battle begins', () => {
     const initial = createInitialStats(1937);
     const started = applyTurnUpdate(initial, runGameTurn(initial, 'start_game').updatedStats);
@@ -116,6 +214,7 @@ describe('local game engine endings', () => {
     stats.day = 3;
     stats.currentTime = '19:00';
     stats.siegeMeter = 100;
+    stats.enemyOperation!.turnsRemaining = 1;
 
     const result = runGameTurn(stats, '侦察敌情');
     expect(result.eventTriggered).toBe('attack');
@@ -219,6 +318,7 @@ describe('local game engine endings', () => {
     stats.day = 2;
     stats.currentTime = '23:45';
     stats.siegeMeter = 100;
+    stats.enemyOperation!.turnsRemaining = 1;
 
     const result = runGameTurn(stats, '侦察敌情');
     expect(result.updatedStats.day).toBe(3);
@@ -256,6 +356,7 @@ describe('local game engine endings', () => {
       exposed.day = 3;
       exposed.currentTime = '23:00';
       exposed.siegeMeter = 100;
+      exposed.enemyOperation!.turnsRemaining = 1;
       exposed.location = '一楼入口';
       exposed.fortificationLevel['一楼入口'] = 0;
       exposed.sectorIntegrity['一楼入口'] = 20;
@@ -280,6 +381,7 @@ describe('local game engine endings', () => {
     sheltered.day = 3;
     sheltered.currentTime = '23:00';
     sheltered.siegeMeter = 100;
+    sheltered.enemyOperation!.turnsRemaining = 1;
     sheltered.fortificationLevel['一楼入口'] = 0;
     sheltered.sectorIntegrity['一楼入口'] = 20;
     sheltered.soldierDistribution['一楼入口'] = 15;
@@ -296,6 +398,7 @@ describe('local game engine endings', () => {
     stats.day = 2;
     stats.currentTime = '10:00';
     stats.siegeMeter = 100;
+    stats.enemyOperation!.turnsRemaining = 1;
     stats.location = '地下室';
     stats.sectorIntegrity['一楼入口'] = 1;
 
@@ -307,6 +410,7 @@ describe('local game engine endings', () => {
     expect(breach.narrative).toContain('防区失守：一楼入口');
 
     const afterBreach = { ...stats, ...breach.updatedStats, currentTime: '23:00', siegeMeter: 100, turnCount: 2, lastAttackTurn: 1 };
+    if (afterBreach.enemyOperation) afterBreach.enemyOperation.turnsRemaining = 1;
     const nextAttack = runGameTurn(afterBreach, '侦察敌情');
     expect(['二楼阵地', '地下室']).toContain(nextAttack.attackLocation);
     expect(nextAttack.attackLocation).not.toBe('一楼入口');
@@ -318,6 +422,7 @@ describe('local game engine endings', () => {
     stats.day = 2;
     stats.currentTime = '23:00';
     stats.siegeMeter = 100;
+    stats.enemyOperation!.turnsRemaining = 1;
     stats.location = '一楼入口';
     stats.sectorIntegrity['一楼入口'] = 1;
 
@@ -356,6 +461,7 @@ describe('local game engine endings', () => {
     expect(sealed.updatedStats.grenades).toBe(stats.grenades - 20);
 
     const prepared = { ...stats, ...sealed.updatedStats, siegeMeter: 100 };
+    if (prepared.enemyOperation) prepared.enemyOperation = { ...prepared.enemyOperation, turnsRemaining: 1 };
     const attack = runGameTurn(prepared, '侦察敌情');
     expect(attack.attackLocation).toBe('二楼阵地');
     expect(attack.updatedStats.sealedApproaches).not.toContain('二楼阵地');
@@ -368,6 +474,7 @@ describe('local game engine endings', () => {
     stats.day = 5;
     stats.currentTime = '23:00';
     stats.siegeMeter = 100;
+    stats.enemyOperation!.turnsRemaining = 1;
     stats.turnCount = 12;
     stats.lastAttackTurn = 12;
 
@@ -382,6 +489,7 @@ describe('local game engine endings', () => {
     stats.day = 5;
     stats.currentTime = '23:00';
     stats.siegeMeter = 100;
+    stats.enemyOperation!.turnsRemaining = 1;
     stats.location = '地下室';
     stats.ammo = 0;
     stats.grenades = 0;

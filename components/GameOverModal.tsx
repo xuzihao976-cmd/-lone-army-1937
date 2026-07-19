@@ -94,7 +94,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
   const combatReady = stats.soldiers + hmgSurvivors;
   const reasonLabels = {
     combat_force_collapsed: '可战兵力不足20人',
-    position_collapsed: '阵地完整度归零',
+    position_collapsed: '一楼、二楼与地下室全部失守',
     total_collapse: '兵力与阵地同时崩溃',
     commander_killed: '指挥官在所在防区遭袭阵亡',
     early_retreat: '战斗初期擅自撤离',
@@ -112,6 +112,19 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
         <div className="text-6xl mb-2 filter drop-shadow-lg animate-bounce-slow">
             {icon}
         </div>
+
+        {stats.campaignHistory.length > 0 && (
+          <div className="max-h-36 overflow-y-auto rounded border border-white/10 bg-black/40 p-3 text-left custom-scrollbar">
+            <div className="mb-2 text-xs font-black tracking-wider text-neutral-300">关键行动时间线</div>
+            {stats.campaignHistory.slice(-6).map((entry) => (
+              <div key={entry.id} className="mb-2 border-l border-neutral-700 pl-2 text-[11px] last:mb-0">
+                <span className="font-mono text-neutral-500">D{entry.day} {entry.time}</span>{' '}
+                <span className={entry.tone === 'good' ? 'font-bold text-green-400' : entry.tone === 'bad' ? 'font-bold text-red-400' : 'font-bold text-amber-300'}>{entry.title}</span>
+                <div className="text-neutral-400">{entry.detail}</div>
+              </div>
+            ))}
+          </div>
+        )}
         
         <div>
             <h2 className={`text-3xl font-bold font-serif tracking-[0.2em] mb-1 ${titleColor}`}>

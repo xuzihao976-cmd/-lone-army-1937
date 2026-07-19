@@ -2,6 +2,7 @@ import React from 'react';
 import type { GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { formatCampaignDate } from '../engine/time';
+import { calculateCommanderDeathRisk, formatCommanderRisk } from '../engine/strategicDefense';
 
 interface StatsPanelProps {
   stats: GameStats;
@@ -35,9 +36,11 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
     { label: '七九弹', value: stats.ammo, tone: stats.ammo < 5000 ? 'text-red-400' : 'text-amber-200' },
     { label: '机枪弹', value: stats.machineGunAmmo, tone: stats.machineGunAmmo < 2000 ? 'text-red-400' : 'text-orange-300' },
     { label: '手榴弹', value: stats.grenades, tone: stats.grenades < 50 ? 'text-red-400' : 'text-neutral-200' },
-    { label: '物资', value: stats.sandbags, tone: stats.sandbags < 150 ? 'text-red-400' : 'text-stone-300' },
+    { label: '工事材料', value: stats.sandbags, tone: stats.sandbags < 150 ? 'text-red-400' : 'text-stone-300' },
     { label: '急救', value: stats.medkits, tone: stats.medkits < 10 ? 'text-red-400' : 'text-green-300' },
   ];
+  const commandPostThreatened = !!stats.enemyOperation?.revealed
+    && stats.enemyOperation.target === stats.location;
 
   return (
     <header className="sticky top-0 z-30 border-b border-neutral-700 bg-black/95 shadow-2xl backdrop-blur" aria-label="战况总览">
@@ -82,7 +85,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
               <span className="truncate text-xs text-neutral-300" title={enemyIntel}>{enemyIntel || '通讯中断……'}</span>
             </div>
           </div>
-          <div className="border-l border-neutral-800 px-3 py-2" title="威胁达到100%时，日军将发动进攻。">
+          <div className="border-l border-neutral-800 px-3 py-2" title="敌军按回合推进；威胁达到100%时，下一次行动后必定接敌。">
             <div className="flex items-center justify-between text-[11px] font-bold">
               <span className="text-neutral-400">敌袭威胁</span>
               <span className={siegePercent >= 80 ? 'text-red-400' : 'text-neutral-200'}>{siegePercent}%</span>
@@ -92,6 +95,22 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             </div>
           </div>
         </div>
+
+        <div className="grid grid-cols-2 divide-x divide-neutral-800 border-b border-neutral-800 bg-[#070707] text-[11px] font-bold">
+          <div className="flex items-center justify-between px-3 py-1.5 text-neutral-400">
+            <span>守军疲劳</span><span className={stats.fatigue >= 55 ? 'text-red-400' : 'text-cyan-300'}>{stats.fatigue}%</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-1.5 text-neutral-400">
+            <span>接敌倒计时</span><span className={stats.enemyOperation?.turnsRemaining === 1 ? 'text-red-400' : 'text-amber-300'}>{stats.enemyOperation ? `${stats.enemyOperation.turnsRemaining} 回合` : '重整中'}</span>
+          </div>
+        </div>
+
+        {commandPostThreatened && (
+          <div className="flex items-center justify-between gap-3 border-b border-red-700 bg-red-950/40 px-3 py-2 text-[11px]" role="alert">
+            <span className="font-black text-red-200">⚠ 指挥部将在 {stats.enemyOperation?.turnsRemaining} 回合后遭袭</span>
+            <span className="shrink-0 font-black text-amber-200">阵亡风险 {formatCommanderRisk(calculateCommanderDeathRisk(stats, stats.location))}</span>
+          </div>
+        )}
 
         <div className="flex overflow-x-auto border-b border-neutral-800 bg-[#080808] no-scrollbar">
           {resources.map((item) => (

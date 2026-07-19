@@ -2,7 +2,7 @@ import type { ActionPreview, GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { isMoveCommand } from './intents';
 import { canRecaptureSector, getRecaptureStagingSectors, isApproachExposed, isSectorHeld } from './strategicDefense';
-import { calculateAttackChance } from './threat';
+import { getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from './actionDynamics';
 import type { Location } from '../types';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
@@ -23,13 +23,12 @@ const formatDuration = (minutes: number): string => {
   return remainder ? `${hours}小时${remainder}分` : `${hours}小时`;
 };
 
-const riskFor = (attackChance: number): Pick<ActionPreview, 'risk' | 'riskLabel'> => {
-  const percent = Math.round(attackChance * 100);
-  if (attackChance >= 0.66) return { risk: 'critical', riskLabel: `敌袭概率 ${percent}%` };
-  if (attackChance >= 0.45) return { risk: 'high', riskLabel: `敌袭概率 ${percent}%` };
-  if (attackChance >= 0.25) return { risk: 'medium', riskLabel: `敌袭概率 ${percent}%` };
-  if (attackChance > 0) return { risk: 'low', riskLabel: `敌袭概率 ${percent}%` };
-  return { risk: 'safe', riskLabel: '本次不会遇袭' };
+const riskFor = (turnsAfterAction: number | null, threatForcesContact: boolean): Pick<ActionPreview, 'risk' | 'riskLabel'> => {
+  if (turnsAfterAction !== null && turnsAfterAction <= 0) return { risk: 'critical', riskLabel: '本次行动后接敌' };
+  if (threatForcesContact || turnsAfterAction === 1) return { risk: 'high', riskLabel: '下一回合必定接敌' };
+  if (turnsAfterAction !== null && turnsAfterAction <= 3) return { risk: 'medium', riskLabel: `预计${turnsAfterAction}回合后接敌` };
+  if (turnsAfterAction !== null) return { risk: 'low', riskLabel: `预计${turnsAfterAction}回合后接敌` };
+  return { risk: 'safe', riskLabel: '敌军仍在重整' };
 };
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
@@ -71,7 +70,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
       && stats.sandbags >= 150 && stats.grenades >= 20;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 15 : 0;
-    costs = ['粮包 150', '手榴弹 20'];
+    costs = ['工事材料 150', '手榴弹 20'];
     reason = available ? '下一次沿此路线进攻时降低一个规模，触发后失效' : '仅能封锁已经暴露且尚未设障的敌军推进路线';
   } else if (command.includes('调派30人') || command.includes('增援30人')) {
     action = '调派步兵';
@@ -83,6 +82,11 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     durationMinutes = 20;
     baseThreat = 6;
     reason = '机枪组只会支援其实际部署的防区';
+  } else if (command.includes('部署小队') && command.includes('至')) {
+    action = '转移特色小队';
+    durationMinutes = 20;
+    baseThreat = 6;
+    reason = '小队专长只会在实际驻扎的防区生效';
   } else if (command.startsWith('evt_resolve:')) {
     action = '事件抉择';
     reason = '抉择会立即生效，具体结果取决于事件风险';
@@ -92,16 +96,20 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     available = hour >= 0 && hour < 5;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 5 : 0;
-    reason = available ? '成败不定，可能伤亡并缴获物资' : '仅可在 00:00–04:59 发动';
+    const recon = Math.max(0, stats.reconBonus || 0);
+    const chance = Math.round(getRaidSuccessChance(stats) * 100);
+    reason = available ? `预计成功率${chance}%${recon ? `（含侦察+${recon}%）` : ''}；结果会消耗侦察优势` : '仅可在 00:00–04:59 发动';
   } else if (includesAny(command, ['搜寻', '寻找', '搜'])) {
     action = '搜寻物资';
     durationMinutes = 30;
     baseThreat = 10;
-    reason = '可能找到弹药、药品或粮包，也可能一无所获';
+    const yieldPercent = Math.round(getSearchYieldFactor(stats.searchExhaustion || 0) * 100);
+    reason = `可能找到弹药、药品或工事材料；当前区域剩余收益约${yieldPercent}%`;
   } else if (includesAny(command, ['侦察', '观察'])) {
     action = '侦察敌情';
     durationMinutes = 15;
     baseThreat = 5;
+    reason = '查明下一轮敌军目标、路线、规模和武器，并使下一次夜袭成功率+20%';
   } else if (isMoveCommand(command)) {
     action = '转移阵位';
     const target = commandLocation(command);
@@ -118,16 +126,19 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
             : stats.location;
     const level = stats.fortificationLevel[target] ?? 0;
     const integrity = stats.sectorIntegrity[target] ?? 100;
-    available = isSectorHeld(stats, target) && (level < 3 || integrity < 100) && stats.sandbags >= 200;
+    const engineerReady = stats.specialistSquads.some((squad) => squad.status === 'active' && squad.role === 'engineer' && squad.location === target);
+    const materialCost = engineerReady ? 170 : 200;
+    const repair = engineerReady ? 24 : 18;
+    available = isSectorHeld(stats, target) && (level < 3 || integrity < 100) && stats.sandbags >= materialCost;
     durationMinutes = available ? 120 : 0;
     baseThreat = available ? 15 : 0;
-    costs = level >= 3 ? [] : ['粮包 200'];
-    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < 200 ? '粮包不足 200' : '每次恢复18%防区完整度；每两次施工强化一次实际减伤';
+    costs = level >= 3 && integrity >= 100 ? [] : [`工事材料 ${materialCost}`];
+    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `恢复${repair}%防区完整度；每两次施工强化一次实际减伤${engineerReady ? '（工兵组生效）' : ''}`;
   } else if (includesAny(command, ['休息', '睡', '整顿'])) {
     action = '轮换休整';
     durationMinutes = 120;
     baseThreat = 35;
-    reason = '恢复士气与总结构，但会给敌军充分准备时间';
+    reason = `恢复士气、仓库结构与35%疲劳，但敌军会推进一回合（当前疲劳${stats.fatigue}%）`;
   } else if (includesAny(command, ['治疗', '抢救', '救', '医'])) {
     action = '救治伤员';
     available = isSectorHeld(stats, '地下室') && stats.wounded > 0 && stats.medkits > 0;
@@ -145,7 +156,8 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     action = '战前动员';
     durationMinutes = 60;
     baseThreat = 10;
-    reason = '小幅提升士气';
+    const moraleGain = getSpeechMoraleGain(stats);
+    reason = `本次预计士气+${moraleGain}；连续演讲效果递减，休整后恢复`;
   } else if (includesAny(command, ['补给', '物资']) && !command.includes('整理')) {
     action = '请求补给';
     available = false;
@@ -153,14 +165,20 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   }
 
   const multiplier = getDayProfile(stats.day).threatMultiplier;
-  const threatIncrease = Math.max(0, Math.ceil(baseThreat * multiplier));
+  const threatIncrease = Math.max(0, Math.ceil(baseThreat * multiplier * 0.6));
   const predictedThreat = Math.min(100, stats.siegeMeter + threatIncrease);
+  const turnsAfterAction = stats.enemyOperation && available && durationMinutes > 0
+    ? Math.max(0, stats.enemyOperation.turnsRemaining - 1)
+    : stats.enemyOperation?.turnsRemaining ?? null;
+  const operationDue = turnsAfterAction === 0;
   const attackChance = available && durationMinutes > 0
-    ? calculateAttackChance(predictedThreat, stats.turnCount, stats.lastAttackTurn ?? -99)
+    ? operationDue
+      ? 1
+      : 0
     : 0;
-  const risk = riskFor(attackChance);
+  const risk = riskFor(turnsAfterAction, predictedThreat >= 100 && !operationDue);
   const short = available
-    ? `${formatDuration(durationMinutes)} · 威胁${threatIncrease > 0 ? `+${threatIncrease}` : '不变'}`
+    ? `${formatDuration(durationMinutes)} · ${stats.enemyOperation ? `接敌${Math.max(0, stats.enemyOperation.turnsRemaining - 1)}回合` : `威胁${threatIncrease > 0 ? `+${threatIncrease}` : '不变'}`}`
     : '当前不可执行';
 
   return {

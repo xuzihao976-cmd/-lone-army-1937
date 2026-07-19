@@ -13,11 +13,11 @@ describe('action risk previews', () => {
     expect(preview).toMatchObject({
       action: '加固工事',
       durationMinutes: 120,
-      threatIncrease: 15,
-      predictedThreat: 35,
+      threatIncrease: 9,
+      predictedThreat: 29,
       available: true,
     });
-    expect(preview?.costs).toContain('粮包 200');
+    expect(preview?.costs).toContain('工事材料 170');
   });
 
   it('warns that a daytime raid is unavailable', () => {
@@ -33,10 +33,11 @@ describe('action risk previews', () => {
     const stats = createInitialStats();
     stats.day = 5;
     stats.siegeMeter = 40;
+    if (stats.enemyOperation) stats.enemyOperation.turnsRemaining = 1;
     const preview = getActionPreview(stats, '休息整顿');
-    expect(preview?.threatIncrease).toBe(46);
-    expect(preview?.predictedThreat).toBe(86);
-    expect(preview?.risk).toBe('high');
+    expect(preview?.threatIncrease).toBe(28);
+    expect(preview?.predictedThreat).toBe(68);
+    expect(preview?.risk).toBe('critical');
   });
 
   it('previews sealing an exposed stairwell and its one-use cost', () => {
@@ -50,7 +51,7 @@ describe('action risk previews', () => {
       durationMinutes: 60,
       available: true,
     });
-    expect(preview?.costs).toEqual(['粮包 150', '手榴弹 20']);
+    expect(preview?.costs).toEqual(['工事材料 150', '手榴弹 20']);
   });
 
   it('previews a counterattack only for a reachable lost sector', () => {

@@ -6,7 +6,12 @@ import { getDayProfile } from '../data/dayProfiles';
 import { buildTurnSummary } from './turnSummary';
 import { advanceCampaignClock, formatCampaignDate } from './time';
 import { calculateCombatOutcomes, type AttackScale, type DamageType } from './combat';
-import { calculateAttackChance } from './threat';
+import { createEnemyOperation, getOperationIntel, progressEnemyOperation, revealEnemyOperation } from './battlefield';
+import { getFatigueCasualtyFactor, getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from './actionDynamics';
+import { hasSpecialist } from './specialists';
+import { resolveTacticalCard } from './tacticalCards';
+import { addConsequenceFlag, appendCampaignHistory } from './campaignProgress';
+import { resolveDilemma } from './dilemmaResolver';
 import {
     calculateCommanderDeathRisk,
     canRecaptureSector,
@@ -329,6 +334,12 @@ const runGameTurnInternal = (
             '地下室': 100,
         };
         calculatedStats.sealedApproaches = [];
+        calculatedStats.consequenceFlags = [];
+        calculatedStats.campaignHistory = [];
+        calculatedStats.fatigue = 12;
+        calculatedStats.searchExhaustion = 0;
+        calculatedStats.speechStreak = 0;
+        calculatedStats.reconBonus = 0;
         playSound('radio'); 
         
         return {
@@ -401,162 +412,31 @@ const runGameTurnInternal = (
         }
     }
 
+    // --- TACTICAL CARD RESOLUTION ---
+    // Cards resolve their advertised effects directly. They no longer borrow a
+    // normal command whose balance, time cost or effect can silently differ.
+    if (cmd.startsWith('card_resolve:')) {
+        const cardId = cmd.split(':')[1];
+        const resolution = resolveTacticalCard(currentStats, cardId);
+        if (resolution) {
+            Object.assign(calculatedStats, resolution.updatedStats);
+            appendCampaignHistory(currentStats, calculatedStats, resolution.historyTitle, resolution.historyDetail, 'good');
+            return { narrative: resolution.narrative, updatedStats: calculatedStats, eventTriggered: 'none' };
+        }
+        return { narrative: '这张战术卡已经失效。', updatedStats: { activeTacticalCard: null }, eventTriggered: 'none' };
+    }
+
     // --- DILEMMA RESOLUTION ---
-    if (cmd.startsWith("evt_resolve:")) {
-        const parts = cmd.split(':');
-        const evtId = parts[1];
-        const optionIdx = parseInt(parts[2]);
-        let resolveText = "";
-        
-        const prevEvents = calculatedStats.triggeredEvents || currentStats.triggeredEvents || [];
-        if (!prevEvents.includes(evtId)) calculatedStats.triggeredEvents = [...prevEvents, evtId];
-        
+    if (cmd.startsWith('evt_resolve:')) {
+        const [, eventId, rawOption] = cmd.split(':');
         playSound('click');
-
-        // ... (Dilemma logic largely same, just ensuring statsLog is used)
-        if (evtId === 'student_run') {
-            if (optionIdx === 0) { 
-                const died = Math.floor(random() * 16); 
-                calculatedStats.medkits = currentStats.medkits + 10;
-                calculatedStats.soldiers = Math.max(0, currentStats.soldiers - died);
-                handleSoldierDeaths(currentStats, calculatedStats, died, narrativeParts);
-                resolveText = `【惨烈接应】你下令机枪全线开火压制！在弹雨中，学生们把药品扔进了窗口。但日军的掷弹筒也砸了过来...`;
-                statsLog.push("📦 获得急救包 +10");
-                if (died > 0) {
-                     statsLog.push(`🔴 阵亡: ${died}人`);
-                     statsLog.push(`💔 士气 -${died * 2}`); // Penalty per death
-                     calculatedStats.morale = Math.max(0, currentStats.morale - (died * 2));
-                }
-                visualEffect = 'heavy-damage';
-            } else { 
-                calculatedStats.morale = Math.max(0, currentStats.morale - 3);
-                resolveText = "你痛苦地闭上了眼睛，没有下令开火。眼睁睁看着那几个年轻的身影倒在桥头。";
-                statsLog.push("💔 士气 -3");
-            }
-        } 
-        else if (evtId === 'smuggler_boat') {
-            if (optionIdx === 0) {
-                const isTrap = random() < 0.5;
-                if (isTrap) {
-                    const died = 10 + Math.floor(random() * 10);
-                    calculatedStats.soldiers = Math.max(0, currentStats.soldiers - died);
-                    handleSoldierDeaths(currentStats, calculatedStats, died, narrativeParts);
-                    resolveText = "【中计！】船刚靠岸，帆布揭开，露出的不是弹药，而是黑洞洞的机枪口！";
-                    statsLog.push(`🔴 伏击阵亡: ${died}人`);
-                    statsLog.push(`💔 士气 -${died * 2}`);
-                    calculatedStats.morale = Math.max(0, currentStats.morale - (died * 2));
-                    visualEffect = 'heavy-damage';
-                } else {
-                    calculatedStats.ammo = currentStats.ammo + 3000;
-                    resolveText = "【惊险交易】对方收了“金条”，把几个沉重的木箱推上了岸。里面是崭新的重机枪子弹！";
-                    statsLog.push("📦 获得七九弹 +3000");
-                }
-            } else {
-                resolveText = "“滚！”你朝天鸣枪。小船迅速消失在迷雾中。";
-            }
-        }
-        else if (evtId === 'puppet_defector') {
-             if (optionIdx === 0) {
-                const isTrap = random() < 0.3;
-                if (isTrap) {
-                     resolveText = "【自杀袭击】“板载！”那几个伪军突然拉响了身上的炸药包！巨大的爆炸震塌了仓库的一角。";
-                     const oldLv = currentStats.fortificationLevel['一楼入口'];
-                     const newLv = Math.max(0, oldLv - 1);
-                     const mitigationBefore = Math.round(getSectorDefenseProfile(currentStats, '一楼入口').mitigation * 100);
-                     calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, '一楼入口': newLv };
-                     calculatedStats.fortificationBuildCounts = {
-                         ...currentStats.fortificationBuildCounts,
-                         '一楼入口': Math.min(currentStats.fortificationBuildCounts['一楼入口'] || oldLv * 2, newLv * 2 + 1),
-                     };
-                     const stateAfterBlast: GameStats = {
-                         ...currentStats,
-                         fortificationLevel: calculatedStats.fortificationLevel,
-                         fortificationBuildCounts: calculatedStats.fortificationBuildCounts,
-                     };
-                     const mitigationAfter = Math.round(getSectorDefenseProfile(stateAfterBlast, '一楼入口').mitigation * 100);
-                     statsLog.push(`🏚️ 一楼掩体被炸开: 实际减伤 ${mitigationBefore}% → ${mitigationAfter}%`);
-                     visualEffect = 'heavy-damage';
-                     playSound('explosion');
-                } else {
-                    calculatedStats.grenades = currentStats.grenades + 50;
-                    resolveText = "他们是真的投诚。这几名伪军哭着跪在地上，把带来的手榴弹交给了我们。";
-                    statsLog.push("📦 获得手榴弹 +50");
-                }
-             } else {
-                 calculatedStats.morale = Math.max(0, currentStats.morale - 2);
-                 resolveText = "为了安全起见，你下令射击。几具尸体倒在门外。";
-             }
-        }
-        // NEW EVENT RESOLUTIONS
-        else if (evtId === 'wrecked_truck') {
-            if (optionIdx === 0) {
-                // High Risk, High Reward
-                const died = Math.floor(random() * 5) + 1;
-                calculatedStats.ammo = currentStats.ammo + 2000;
-                calculatedStats.soldiers = Math.max(0, currentStats.soldiers - died);
-                handleSoldierDeaths(currentStats, calculatedStats, died, narrativeParts);
-                
-                resolveText = "【生死抢运】烟雾弹掩护下，突击小组冲了出去。日军的狙击手盲射击倒了几名兄弟，但我们成功拖回了弹药箱。";
-                statsLog.push("📦 获得七九弹 +2000");
-                statsLog.push(`🔴 阵亡: ${died}人`);
-                statsLog.push(`💔 士气 -${died * 2}`);
-                calculatedStats.morale = Math.max(0, currentStats.morale - (died * 2));
-            } else {
-                calculatedStats.morale = Math.max(0, currentStats.morale - 2);
-                resolveText = "你放下了望远镜。那几箱弹药不值得用人命去填。";
-                statsLog.push("💔 士气 -2");
-            }
-        }
-        else if (evtId === 'stray_airdrop') {
-            if (optionIdx === 0) {
-                // Skill Check
-                const isSuccess = random() > 0.3; 
-                if (isSuccess) {
-                    calculatedStats.medkits = currentStats.medkits + 5;
-                    calculatedStats.sandbags = currentStats.sandbags + 100;
-                    resolveText = "【绝技】这名四川籍的小战士像猴子一样灵活，徒手爬上了避雷针，割断绳索，带着物资包安全滑下。大家爆发出欢呼！";
-                    statsLog.push("📦 获得急救包 +5");
-                    statsLog.push("📦 获得粮包 +100");
-                    statsLog.push("💪 士气 +5");
-                    calculatedStats.morale = Math.min(100, currentStats.morale + 5);
-                } else {
-                    calculatedStats.soldiers = Math.max(0, currentStats.soldiers - 1);
-                    resolveText = "【坠落】一阵横风吹过，战士脚下一滑，从三楼坠落... 物资包也随之掉落摔散。";
-                    statsLog.push("🔴 意外坠亡: 1人");
-                    statsLog.push("💔 士气 -5");
-                    calculatedStats.morale = Math.max(0, currentStats.morale - 5);
-                }
-            } else {
-                // Safe but less
-                calculatedStats.sandbags = currentStats.sandbags + 50;
-                resolveText = "神枪手一枪打断了绳索。包裹重重摔在地上，里面的药品碎了，只捡回一些干粮。";
-                statsLog.push("📦 获得粮包 +50");
-            }
-        }
-        else if (evtId === 'brit_ceasefire') {
-            if (optionIdx === 0) {
-                calculatedStats.morale = Math.max(0, currentStats.morale - 5);
-                calculatedStats.medkits = currentStats.medkits + 5;
-                resolveText = "【妥协】你咬着牙下令：“朝南面打的枪，都给我停了！”英军对此表示赞赏。";
-                statsLog.push("💔 士气 -5");
-                statsLog.push("📦 获得急救包 +5");
-            } else {
-                calculatedStats.morale = Math.min(100, currentStats.morale + 5);
-                resolveText = "【强硬】“这也是中国领土！”你拒绝了英军的要求。";
-                statsLog.push("💪 士气 +5");
-            }
-        }
-
-        let fullNarrative = narrativeParts.length > 0 ? (resolveText + "\n" + narrativeParts.join("")) : resolveText;
-        if (statsLog.length > 0) {
-            fullNarrative += "\n\n" + statsLog.join("\n");
-        }
-
-        return {
-            narrative: fullNarrative,
-            updatedStats: calculatedStats,
-            eventTriggered: 'none'
-        };
+        return resolveDilemma(
+            currentStats,
+            eventId,
+            Number(rawOption),
+            random,
+            (updates, deaths, eventNarrative) => handleSoldierDeaths(currentStats, updates, deaths, eventNarrative),
+        );
     }
 
     // --- Command Parsing & Action Logic ---
@@ -592,16 +472,17 @@ const runGameTurnInternal = (
             calculatedStats.ammo = currentStats.ammo - recaptureAmmoUsed;
             calculatedStats.grenades = currentStats.grenades - recaptureGrenadesUsed;
 
+            const assaultTeamReady = hasSpecialist(currentStats, 'assault', donor.location);
             const successChance = Math.min(
                 0.85,
-                0.22 + currentStats.morale / 300 + (currentStats.fortificationLevel[donor.location] || 0) * 0.03 + fireSupport * 0.23,
+                0.22 + currentStats.morale / 300 + (currentStats.fortificationLevel[donor.location] || 0) * 0.03 + fireSupport * 0.23 + (assaultTeamReady ? 0.12 : 0),
             );
             const success = random() < successChance;
             const supplyCasualtyPenalty = Math.round((1 - fireSupport) * 7);
             const casualties = success
                 ? 2 + Math.floor(random() * 5) + supplyCasualtyPenalty
                 : 8 + Math.floor(random() * 11) + supplyCasualtyPenalty;
-            const actualCasualties = Math.min(assaultForce, casualties);
+            const actualCasualties = Math.min(assaultForce, Math.max(0, casualties - (assaultTeamReady ? 2 : 0)));
             const distribution = { ...currentStats.soldierDistribution };
             distribution[donor.location] = Math.max(0, donor.soldiers - (success ? assaultForce : actualCasualties));
             if (success) distribution[target] = Math.max(0, assaultForce - actualCasualties);
@@ -613,6 +494,7 @@ const runGameTurnInternal = (
                 statsLog.push(`🔻 反冲锋消耗: 七九弹${recaptureAmmoUsed} / 手榴弹${recaptureGrenadesUsed}`);
             }
             if (bayonetAssault) statsLog.push('⚔️ 火力不足：突击队以手榴弹、刺刀和工兵铲近战夺楼');
+            if (assaultTeamReady) statsLog.push('🗡 敢死突击组带队：成功率提高 / 伤亡降低');
             statsLog.push(`🔴 反冲锋伤亡: ${actualCasualties}人`);
 
             if (success) {
@@ -622,6 +504,7 @@ const runGameTurnInternal = (
                 calculatedStats.morale = Math.min(100, currentStats.morale + 6);
                 narrativeParts.push(`【反冲锋成功】${assaultForce}名弟兄从${donor.location}冲入${target}，${bayonetAssault ? '在楼梯和房间里与敌军刺刀见血，逐屋夺回阵地' : '以步枪和手榴弹压住突破口，逐屋清剿'}。防区恢复到30%完整度，必须尽快加固。`);
                 statsLog.push(`↗ 夺回${target}: 防区完整度30% / 士气+6`);
+                appendCampaignHistory(currentStats, calculatedStats, `夺回${target}`, `${actualCasualties}人伤亡后重新建立30%完整度的防线。`, 'good');
             } else {
                 actionType = 'recapture_failed';
                 calculatedStats.morale = Math.max(0, currentStats.morale - 10);
@@ -647,7 +530,7 @@ const runGameTurnInternal = (
             actionType = 'seal_fail';
             timeCost = 0;
             siegeIncrease = 0;
-            narrativeParts.push('封锁楼梯需要150份粮包和20枚手榴弹，当前物资不足。');
+            narrativeParts.push('封锁楼梯需要150份工事材料和20枚手榴弹，当前库存不足。');
         } else {
             actionType = 'seal_approach';
             timeCost = 60;
@@ -656,7 +539,7 @@ const runGameTurnInternal = (
             calculatedStats.grenades = currentStats.grenades - 20;
             calculatedStats.sealedApproaches = [...currentStats.sealedApproaches, target];
             narrativeParts.push(`工兵用沙袋、木箱和手榴弹封死通往${target}的楼梯。敌军下一次从这里推进时，进攻规模会被削弱；障碍触发后即会失效。`);
-            statsLog.push(`⛓ 封锁通往${target}的楼梯: 粮包-150 / 手榴弹-20`);
+            statsLog.push(`⛓ 封锁通往${target}的楼梯: 工事材料-150 / 手榴弹-20`);
         }
     }
     // 1. RAID (Aggressive Action for Ending 2)
@@ -667,7 +550,10 @@ const runGameTurnInternal = (
             // Only a raid that actually leaves the warehouse counts as aggression.
             calculatedStats.aggressiveCount = (currentStats.aggressiveCount || 0) + 1;
             timeCost = 60; 
-            const isSuccess = random() < 0.4; 
+            const reconBonus = Math.max(0, currentStats.reconBonus || 0);
+            const successChance = getRaidSuccessChance(currentStats);
+            const isSuccess = random() < successChance;
+            calculatedStats.reconBonus = 0;
             if (isSuccess) {
                 const died = Math.floor(random() * 6); 
                 const ammoGain = random() > 0.3 ? Math.floor(random() * 600) : 0;
@@ -691,6 +577,7 @@ const runGameTurnInternal = (
                 if (died > 0) newMorale -= (died * 2);
                 calculatedStats.morale = Math.max(0, Math.min(100, newMorale));
                 statsLog.push("💪 突袭成功: 士气 +10");
+                if (reconBonus > 0) statsLog.push(`👁 侦察引导生效: 成功率提升${reconBonus}%`);
             } else {
                 const died = 10 + Math.floor(random() * 11);
                 calculatedStats.soldiers = Math.max(0, currentStats.soldiers - died);
@@ -717,23 +604,27 @@ const runGameTurnInternal = (
         actionType = "scavenge";
         siegeIncrease = 10;
         
+        const exhaustion = Math.max(0, currentStats.searchExhaustion || 0);
+        const yieldFactor = getSearchYieldFactor(exhaustion);
+        calculatedStats.searchExhaustion = Math.min(6, exhaustion + 1);
         const roll = random();
-        if (roll < 0.4) {
+        if (roll < 0.4 * yieldFactor) {
             // Success: Ammo
-            const gain = Math.floor(random() * 100) + 50;
+            const gain = Math.max(20, Math.floor((Math.floor(random() * 100) + 50) * yieldFactor));
             calculatedStats.ammo = currentStats.ammo + gain;
             narrativeParts.push("你在仓库深处的废墟里翻找，在一个被压扁的木箱里发现了一些散落的子弹。虽然不多，但聊胜于无。");
             statsLog.push(`📦 搜寻获得: 七九弹 +${gain}`);
-        } else if (roll < 0.6) {
+        } else if (roll < 0.4 * yieldFactor + 0.2 * yieldFactor) {
              // Success: Meds or Sandbags
              if (random() > 0.5) {
                  calculatedStats.medkits = currentStats.medkits + 2;
                  narrativeParts.push("在一个角落里，你找到了几卷还没受潮的绷带。");
                  statsLog.push(`📦 搜寻获得: 急救包 +2`);
              } else {
-                 calculatedStats.sandbags = currentStats.sandbags + 50;
-                 narrativeParts.push("这里还有几袋面粉！虽然有点发霉，但用来当沙袋正合适。");
-                 statsLog.push(`📦 搜寻获得: 粮包 +50`);
+                 const materialGain = Math.max(15, Math.floor(50 * yieldFactor));
+                 calculatedStats.sandbags = currentStats.sandbags + materialGain;
+                 narrativeParts.push("工兵从废墟里拆出一批还能使用的木料、铁皮和空沙袋。");
+                 statsLog.push(`📦 搜寻获得: 工事材料 +${materialGain}`);
              }
         } else if (roll < 0.9) {
             // Nothing
@@ -744,12 +635,16 @@ const runGameTurnInternal = (
             narrativeParts.push("一无所获。看着空空如也的箱子，大家的眼神里流露出一丝失望。");
             statsLog.push("💔 徒劳无功: 士气 -1");
         }
+        if (exhaustion >= 2) statsLog.push(`⌛ 仓库已被反复搜索：本次收益降至${Math.round(yieldFactor * 100)}%`);
     }
     // NEW ACTION: SCOUT
     else if (cmd.includes('侦察') || cmd.includes('观察')) {
         timeCost = 15;
         siegeIncrease = 5;
         actionType = "scout";
+        const operation = currentStats.enemyOperation || createEnemyOperation(currentStats, random);
+        calculatedStats.enemyOperation = revealEnemyOperation(operation);
+        calculatedStats.reconBonus = Math.min(30, (currentStats.reconBonus || 0) + 20);
         const intel = pick([
             "日军正在搬运尸体，看来刚才的战斗让他们也伤筋动骨了。",
             "西侧的日军机枪阵地似乎在换班，这可能是个射击的好机会。",
@@ -757,6 +652,8 @@ const runGameTurnInternal = (
             "有一小队日军正在挖掘战壕，似乎企图向大门逼近。",
         ]);
         narrativeParts.push(`你举起望远镜仔细观察敌情。\n\n“团附，看那边。”\n${intel}`);
+        narrativeParts.push(`\n\n【敌情确证】${getOperationIntel(calculatedStats.enemyOperation)}`);
+        statsLog.push('👁 侦察标记：下一次夜袭成功率 +20%');
         // Small chance to find a target
         if (random() < 0.2) {
              if (currentStats.ammo > 0) {
@@ -831,6 +728,28 @@ const runGameTurnInternal = (
             statsLog.push(`♜ ${squad.name}: ${previousLocation} → ${target}`);
         }
     }
+    // STRATEGIC ACTION: redeploy one specialist squad without changing total manpower.
+    else if (cmd.includes('部署小队') && cmd.includes('至')) {
+        const target = findLocations(cmd).at(-1);
+        const squads = [...currentStats.specialistSquads];
+        const squadIndex = squads.findIndex((squad) => cmd.includes(squad.name));
+        const squad = squadIndex >= 0 ? squads[squadIndex] : undefined;
+        if (!target || !squad || squad.status !== 'active' || squad.location === target || !isSectorHeld(currentStats, target)) {
+            actionType = 'specialist_redeploy_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('小队部署命令无法执行：请确认目标防区仍由我军控制。');
+        } else {
+            actionType = 'specialist_redeploy';
+            timeCost = 20;
+            siegeIncrease = 6;
+            const previousLocation = squad.location;
+            squads[squadIndex] = { ...squad, location: target };
+            calculatedStats.specialistSquads = squads;
+            narrativeParts.push(`${squad.name}从${previousLocation}转移到${target}。他们的专长只会在当前防区生效。`);
+            statsLog.push(`◆ ${squad.name}: ${previousLocation} → ${target}`);
+        }
+    }
     // ... (Supply blocked, Move logic preserved) ...
     else if (cmd.includes('补给') || cmd.includes('物资') && !cmd.includes('整理')) {
         narrativeParts.push("通讯兵无奈地摇摇头：“团附，租界那边被封锁了，上面也没有空投计划。只能靠自己了。”");
@@ -876,16 +795,19 @@ const runGameTurnInternal = (
             actionType = "build_max";
             timeCost = 5; 
         } else {
-            if (currentStats.sandbags >= 200) {
+            const engineerReady = hasSpecialist(currentStats, 'engineer', targetLoc);
+            const materialCost = engineerReady ? 170 : 200;
+            const integrityGain = engineerReady ? 24 : 18;
+            if (currentStats.sandbags >= materialCost) {
                 timeCost = 120; // 2 hours
                 actionType = "build";
                 const currentCount = currentStats.fortificationBuildCounts?.[targetLoc] || 0;
                 const newCount = currentCount + 1;
                 const newLevel = Math.min(3, Math.floor(newCount / 2));
-                const newSectorIntegrity = Math.min(100, currentSectorIntegrity + 18);
+                const newSectorIntegrity = Math.min(100, currentSectorIntegrity + integrityGain);
                 const mitigationBeforeBuild = Math.round(getSectorDefenseProfile(currentStats, targetLoc).mitigation * 100);
                 
-                calculatedStats.sandbags = currentStats.sandbags - 200;
+                calculatedStats.sandbags = currentStats.sandbags - materialCost;
                 calculatedStats.fortificationBuildCounts = { ...currentStats.fortificationBuildCounts, [targetLoc]: newCount };
                 calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, [targetLoc]: newLevel };
                 calculatedStats.sectorIntegrity = {
@@ -913,7 +835,7 @@ const runGameTurnInternal = (
                         statsLog.push(`💔 劳累: 士气 -${fatigueLoss}`);
                     }
                 }
-                statsLog.push(`🧱 消耗粮包: 200`);
+                statsLog.push(`🧱 工事材料 -${materialCost}${engineerReady ? '（工兵组节省30）' : ''}`);
                 statsLog.push(`🏢 ${targetLoc}完整度: ${currentSectorIntegrity}% → ${newSectorIntegrity}%`);
                 if (mitigationAfterBuild !== mitigationBeforeBuild) {
                     statsLog.push(`🛡 ${FORTIFICATION_NAMES[newLevel]}: 实际减伤 ${mitigationBeforeBuild}% → ${mitigationAfterBuild}%`);
@@ -927,7 +849,7 @@ const runGameTurnInternal = (
                 actionType = "fail";
                 timeCost = 0;
                 siegeIncrease = 0;
-                narrativeParts.push('工兵摊开空空的物资袋：“团附，筑垒用的粮包不够了，至少还需要200份。”');
+                narrativeParts.push(`工兵检查库存后摇头：“团附，工事材料不足，至少需要${hasSpecialist(currentStats, 'engineer', targetLoc) ? 170 : 200}份。”`);
             }
         }
     }
@@ -938,8 +860,11 @@ const runGameTurnInternal = (
         calculatedStats.morale = Math.min(100, currentStats.morale + 10);
         calculatedStats.health = Math.min(100, currentStats.health + 5);
         calculatedStats.lastRestTurn = currentStats.turnCount + 1;
+        calculatedStats.fatigue = Math.max(0, currentStats.fatigue - 35);
+        calculatedStats.speechStreak = 0;
         siegeIncrease = 35; 
         statsLog.push("💤 士气 +10");
+        statsLog.push(`🛏 疲劳 ${currentStats.fatigue}% → ${calculatedStats.fatigue}%`);
         if (calculatedStats.health !== currentStats.health) {
             statsLog.push(`🏥 总结构: ${currentStats.health}% → ${calculatedStats.health}%`);
         }
@@ -955,7 +880,8 @@ const runGameTurnInternal = (
             narrativeParts.push('地下室医院已经失守，伤员无法接受成体系救治。必须先夺回地下室。');
         } else if (currentWounded > 0 && currentStats.medkits > 0) {
             actionType = "heal";
-            const healPotential = Math.floor(random() * 4) + 2; 
+            const medicReady = hasSpecialist(currentStats, 'medic', '地下室');
+            const healPotential = Math.floor(random() * 4) + 2 + (medicReady ? 2 : 0);
             const actualHeal = Math.min(currentWounded, currentStats.medkits, healPotential);
             if (actualHeal > 0) {
                 calculatedStats.medkits = currentStats.medkits - actualHeal;
@@ -966,6 +892,7 @@ const runGameTurnInternal = (
                 calculatedStats.woundedTimer = Math.max(0, (currentStats.woundedTimer || 0) - (actualHeal * 90));
                 statsLog.push(`🩹 消耗急救包: ${actualHeal}`);
                 statsLog.push(`💚 治愈伤员: ${actualHeal}人`);
+                if (medicReady) statsLog.push('✚ 战地救护组：本次额外救回2人上限');
                 statsLog.push(`💪 士气 +${moraleBoost}`);
                 siegeIncrease = 10;
             } else {
@@ -994,9 +921,11 @@ const runGameTurnInternal = (
                     timeCost = 30;
                     actionType = "flag_success";
                     calculatedStats.hasFlagRaised = true;
+                    calculatedStats.consequenceFlags = addConsequenceFlag(currentStats.consequenceFlags, 'roof_flag_beacon');
                     calculatedStats.morale = Math.min(100, currentStats.morale + 30);
                     calculatedStats.minMorale = 30;
                     statsLog.push("💪 士气 +30");
+                    appendCampaignHistory(currentStats, calculatedStats, '屋顶升旗', '全军士气大振，但屋顶成为敌军航空兵的优先目标。', 'neutral');
                     siegeIncrease = 50; 
                 }
             } else {
@@ -1014,8 +943,13 @@ const runGameTurnInternal = (
     else if (['演讲', '训话', '鼓舞', '动员', '坚持', '顶住', '拼了', '万岁'].some(k => cmd.includes(k))) {
         timeCost = 60; 
         actionType = "speech";
-        calculatedStats.morale = Math.min(100, currentStats.morale + 3);
-        statsLog.push("💪 士气 +3");
+        const recentBattle = currentStats.turnCount - currentStats.lastAttackTurn <= 2;
+        const streak = currentStats.speechStreak || 0;
+        const moraleGain = getSpeechMoraleGain(currentStats);
+        calculatedStats.morale = Math.min(100, currentStats.morale + moraleGain);
+        calculatedStats.speechStreak = streak + 1;
+        statsLog.push(`💪 士气 +${moraleGain}${recentBattle ? '（战后动员）' : ''}`);
+        if (streak > 0) statsLog.push('⌛ 连续演讲效果递减，休整后恢复');
         siegeIncrease = 10;
     }
     
@@ -1027,13 +961,19 @@ const runGameTurnInternal = (
         siegeIncrease = 0;
     }
 
+    if (timeCost > 0 && actionType !== 'rest') {
+        const fatigueGain = Math.max(1, Math.ceil(timeCost / 45)) + (actionType === 'raid' || actionType.startsWith('recapture') ? 4 : 0);
+        calculatedStats.fatigue = Math.min(100, (calculatedStats.fatigue ?? currentStats.fatigue) + fatigueGain);
+        if (actionType !== 'speech') calculatedStats.speechStreak = 0;
+    }
+
     // --- Time & Siege Update ---
     const campaignClock = advanceCampaignClock(currentStats.day, currentStats.currentTime, timeCost);
     const nextTimeStr = campaignClock.time;
     const totalMinutesPassed = timeCost;
     const currentSiege = calculatedStats.siegeMeter ?? currentStats.siegeMeter ?? 0;
     const dayProfile = getDayProfile(currentStats.day);
-    const effectiveSiegeIncrease = Math.max(0, Math.ceil(siegeIncrease * dayProfile.threatMultiplier));
+    const effectiveSiegeIncrease = Math.max(0, Math.ceil(siegeIncrease * dayProfile.threatMultiplier * 0.6));
     let newSiege = Math.min(100, currentSiege + effectiveSiegeIncrease);
     const strategicStateAfterAction: GameStats = {
         ...currentStats,
@@ -1049,39 +989,30 @@ const runGameTurnInternal = (
     let attackTriggered = false;
     let damageType: DamageType = "INFANTRY";
     let attackScale: AttackScale = 'SMALL';
-    const flagActive = calculatedStats.hasFlagRaised ?? currentStats.hasFlagRaised;
-    const attackChance = calculateAttackChance(
-        newSiege,
-        currentStats.turnCount,
-        currentStats.lastAttackTurn ?? -99,
-    );
+    const contactAllowed = currentStats.turnCount > (currentStats.lastAttackTurn ?? -99);
+    let contactOperation = calculatedStats.enemyOperation
+        ?? currentStats.enemyOperation
+        ?? createEnemyOperation(strategicStateAfterAction, random);
 
-    if (timeCost > 0 && actionType !== 'idle' && attackChance > 0) {
-        // The meter now feeds one contact roll. Previously the game rolled once
-        // for a ground attack and then again for bombing, making attacks feel
-        // almost continuous in the late game.
-        if (random() < attackChance) {
+    if (timeCost > 0 && actionType !== 'idle') {
+        // Enemy movement is now turn-based and forecastable. Every meaningful
+        // action advances the visible operation one step; 100% threat compresses
+        // the countdown to one final warning action so old saves cannot stall.
+        contactOperation = progressEnemyOperation(contactOperation);
+        if (newSiege >= 100 && contactOperation.turnsRemaining > 1) {
+            contactOperation = { ...contactOperation, turnsRemaining: 1 };
+        }
+        calculatedStats.enemyOperation = contactOperation;
+        if (contactAllowed && contactOperation.turnsRemaining <= 0) {
             attackTriggered = true;
-            const threatAtContact = newSiege;
             newSiege = Math.max(10, newSiege - 65);
             calculatedStats.lastAttackTurn = currentStats.turnCount + 1;
-            
-            // Determine Scale and Type
+            attackScale = contactOperation.scale;
+            damageType = contactOperation.attackType;
+            // Aviation is unavailable at night; an already planned strike is
+            // converted to artillery rather than disappearing.
             const currentH = parseInt(nextTimeStr.split(':')[0]);
-            const isHeavyTime = currentH >= 8 && currentH <= 18;
-            
-            if (threatAtContact >= 90 || random() < dayProfile.largeAttackBonus) {
-                attackScale = 'LARGE'; // Massive wave
-            } else if (threatAtContact >= 58) {
-                attackScale = 'MEDIUM';
-            } else {
-                attackScale = 'SMALL';
-            }
-
-            const bombingChance = dayProfile.bombingChance * (flagActive ? 1 : 0.25);
-            if (isHeavyTime && random() < bombingChance) damageType = "BOMBING";
-            else if (isHeavyTime && random() < dayProfile.artilleryChance) damageType = "ARTILLERY";
-            else damageType = "INFANTRY";
+            if (damageType === 'BOMBING' && (currentH < 7 || currentH > 18)) damageType = 'ARTILLERY';
         }
     }
     
@@ -1134,21 +1065,23 @@ const runGameTurnInternal = (
         // enemy's route: after 1F falls, ground troops split toward 2F/B1.
         if (damageType === 'BOMBING') {
             narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.BOMBING));
-            attackLocation = (['屋顶', '二楼阵地', '一楼入口', '地下室'] as Location[])
-                .find((location) => isSectorHeld(strategicStateAfterAction, location)) ?? strategicStateAfterAction.location;
+            attackLocation = isSectorHeld(strategicStateAfterAction, contactOperation.target)
+                ? contactOperation.target
+                : (['屋顶', '二楼阵地', '一楼入口', '地下室'] as Location[])
+                    .find((location) => isSectorHeld(strategicStateAfterAction, location)) ?? strategicStateAfterAction.location;
         } else if (damageType === 'ARTILLERY') {
             narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.ARTILLERY));
             const artilleryTargets = (['一楼入口', '二楼阵地'] as Location[])
                 .filter((location) => isSectorHeld(strategicStateAfterAction, location));
             const fallbackTargets = getGroundAttackTargets(strategicStateAfterAction);
             const candidates = artilleryTargets.length > 0 ? artilleryTargets : fallbackTargets;
-            attackLocation = candidates.length > 1 && random() > 0.5
-                ? candidates[1]
+            attackLocation = candidates.includes(contactOperation.target)
+                ? contactOperation.target
                 : candidates[0] ?? strategicStateAfterAction.location;
         } else {
             const groundTargets = getGroundAttackTargets(strategicStateAfterAction);
-            attackLocation = groundTargets.length > 1 && random() > 0.7
-                ? groundTargets[1]
+            attackLocation = groundTargets.includes(contactOperation.target)
+                ? contactOperation.target
                 : groundTargets[0] ?? strategicStateAfterAction.location;
             if (attackScale === 'LARGE') narrativeParts.push("\n\n【日军总攻】鬼子发疯了！满山遍野的黄皮狗涌了上来！");
             else if (attackScale === 'MEDIUM') narrativeParts.push(`\n\n【日军强攻】日军组织了一个中队的兵力，沿突破口向${attackLocation}强行推进。`);
@@ -1238,7 +1171,12 @@ const runGameTurnInternal = (
         const currentHealthy = calculatedStats.soldiers ?? currentStats.soldiers;
         const currentWounded = calculatedStats.wounded ?? currentStats.wounded;
         
-        let totalDamage = outcome.casualtyCount;
+        const veteranReady = hasSpecialist(strategicStateAfterAction, 'veteran', attackLocation);
+        const fatigueAtContact = calculatedStats.fatigue ?? currentStats.fatigue;
+        const casualtyFactor = (veteranReady ? 0.85 : 1) * getFatigueCasualtyFactor(fatigueAtContact);
+        let totalDamage = Math.max(0, Math.ceil(outcome.casualtyCount * casualtyFactor));
+        if (veteranReady) statsLog.push('◆ 湖北老兵班稳住火线：本层伤亡降低15%');
+        if (fatigueAtContact >= 55) statsLog.push(`⚠ 守军疲劳${fatigueAtContact}%：战斗伤亡上升`);
         let deaths = 0;
         let injuries = 0;
 
@@ -1305,7 +1243,7 @@ const runGameTurnInternal = (
         calculatedStats.health = structureAfter;
         statsLog.push(`🏚 总结构: ${structureBefore}% → ${structureAfter}%`);
 
-        const baseSectorDamage = attackScale === 'LARGE' ? 28 : attackScale === 'MEDIUM' ? 16 : 8;
+        const baseSectorDamage = attackScale === 'LARGE' ? 42 : attackScale === 'MEDIUM' ? 24 : 10;
         const typeSectorDamage = damageType === 'BOMBING' ? 12 : damageType === 'ARTILLERY' ? 6 : 0;
         let sectorDamage = Math.max(
             3,
@@ -1369,6 +1307,15 @@ const runGameTurnInternal = (
             });
             calculatedStats.hmgSquads = ammoCheckSquads;
             calculatedStats.soldierDistribution = distributionAfterCombat;
+            calculatedStats.specialistSquads = (calculatedStats.specialistSquads || currentStats.specialistSquads).map((squad) => {
+                if (squad.status !== 'active' || squad.location !== attackLocation) return squad;
+                if (retreatDestination) {
+                    statsLog.push(`◆ ${squad.name}后撤至${retreatDestination}`);
+                    return { ...squad, location: retreatDestination };
+                }
+                statsLog.push(`◆ ${squad.name}被切断，失去专长作用`);
+                return { ...squad, status: 'depleted' };
+            });
 
             if (commanderLocationAtContact === attackLocation && retreatDestination) {
                 calculatedStats.location = retreatDestination;
@@ -1386,6 +1333,7 @@ const runGameTurnInternal = (
                 calculatedStats.medkits = Math.floor((calculatedStats.medkits ?? currentStats.medkits) * 0.75);
                 calculatedStats.ammo = Math.floor((calculatedStats.ammo ?? currentStats.ammo) * 0.9);
                 deaths += hospitalDeaths;
+                calculatedStats.consequenceFlags = addConsequenceFlag(calculatedStats.consequenceFlags || currentStats.consequenceFlags, 'hospital_lost');
                 statsLog.push(`⚕ 地下室医院失守: 重伤员死亡${hospitalDeaths}人 / 药品与弹药部分丢失`);
             }
 
@@ -1393,6 +1341,7 @@ const runGameTurnInternal = (
             currentMorale = Math.max(0, currentMorale - 12);
             narrativeParts.push(`\n\n【防区失守：${attackLocation}】\n敌军突破最后一道掩体。${retreatDestination ? `残余守军沿内部通道撤往${retreatDestination}。` : '所有退路均被切断，防线已经被分割。'}从现在起，敌军会沿新的突破口继续向仓库纵深推进。`);
             statsLog.push(`▼ ${attackLocation}失守: 总结构额外-8 / 士气-12`);
+            appendCampaignHistory(currentStats, calculatedStats, `${attackLocation}失守`, `${retreatingRiflemen}名残余守军${retreatDestination ? `撤往${retreatDestination}` : '被切断'}。`, 'bad');
         }
 
         if (commanderLocationAtContact === attackLocation) {
@@ -1477,6 +1426,17 @@ const runGameTurnInternal = (
 
         if (moraleGain > 0) statsLog.push(`💪 战果振奋: 士气 +${moraleGain}`);
         if (moraleLoss > 0) statsLog.push(`💔 伤亡惨重: 士气 -${moraleLoss}`);
+
+        const stateAfterContact: GameStats = {
+            ...strategicStateAfterAction,
+            ...calculatedStats,
+            soldierDistribution: calculatedStats.soldierDistribution || strategicStateAfterAction.soldierDistribution,
+            sectorIntegrity: calculatedStats.sectorIntegrity || strategicStateAfterAction.sectorIntegrity,
+            hmgSquads: calculatedStats.hmgSquads || strategicStateAfterAction.hmgSquads,
+            specialistSquads: calculatedStats.specialistSquads || strategicStateAfterAction.specialistSquads,
+            consequenceFlags: calculatedStats.consequenceFlags || strategicStateAfterAction.consequenceFlags,
+        };
+        calculatedStats.enemyOperation = createEnemyOperation(stateAfterContact, random, contactOperation.id + 1);
     }
 
     // --- Mutiny & Finalize (Preserved) ---
@@ -1621,7 +1581,12 @@ const runGameTurnInternal = (
 
     if (!calculatedStats.isGameOver && !eventTriggered.includes('attack') && random() < 0.2) {
         const alreadyTriggered = calculatedStats.triggeredEvents || currentStats.triggeredEvents || [];
-        const potentialDilemmas = ALL_DILEMMAS.filter(d => !alreadyTriggered.includes(d.id));
+        const flags = calculatedStats.consequenceFlags || currentStats.consequenceFlags || [];
+        const potentialDilemmas = ALL_DILEMMAS.filter(d =>
+            !alreadyTriggered.includes(d.id)
+            && (!d.requiresFlag || flags.includes(d.requiresFlag))
+            && (!d.excludesFlag || !flags.includes(d.excludesFlag))
+            && (d.minDay === undefined || finalDay >= d.minDay));
         if (potentialDilemmas.length > 0) {
             dilemmaToTrigger = pick(potentialDilemmas);
         }
@@ -1639,7 +1604,7 @@ const runGameTurnInternal = (
         visualEffect,
         attackLocation, 
         dilemma: dilemmaToTrigger,
-        enemyIntel: getDayProfile(finalDay).intel
+        enemyIntel: getOperationIntel(calculatedStats.enemyOperation ?? currentStats.enemyOperation)
     };
 };
 

@@ -75,7 +75,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
             
             <div className="mt-6 text-center text-xs font-mono leading-relaxed text-neutral-400">
                 建议佩戴耳机体验本地战场音效<br/>
-                v2.7.0 | 弹药实算 · 白刃防守 · 战斗重构
+                v2.8.0 | 动态战场 · 小队协同 · 长期因果
             </div>
         </div>
       </>
@@ -119,7 +119,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
       
       {/* Footer */}
       <div className="pointer-events-none absolute bottom-4 text-[11px] font-mono text-neutral-600">
-        &copy; 2024 孤军项目组
+        大嘴鸭游戏出品
       </div>
     </div>
   );

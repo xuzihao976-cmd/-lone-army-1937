@@ -71,9 +71,7 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<GameLog[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showMap, setShowMap] = useState(() =>
-    typeof window === 'undefined' ? true : window.matchMedia('(min-width: 640px)').matches,
-  );
+  const [showMap, setShowMap] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [aiSource, setAiSource] = useState<AiSource | 'auto'>('auto');
   const [aiEnabled, setAiEnabled] = useState(readAiPreference);
@@ -351,6 +349,8 @@ const App: React.FC = () => {
         if (typeof newStats.health === 'number') newStats.health = Math.floor(Math.min(100, Math.max(0, newStats.health)));
         if (typeof newStats.ammo === 'number') newStats.ammo = Math.floor(Math.max(0, newStats.ammo));
         if (typeof newStats.sandbags === 'number') newStats.sandbags = Math.floor(Math.max(0, newStats.sandbags));
+        if (typeof newStats.fatigue === 'number') newStats.fatigue = Math.floor(Math.min(100, Math.max(0, newStats.fatigue)));
+        if (typeof newStats.searchExhaustion === 'number') newStats.searchExhaustion = Math.floor(Math.min(6, Math.max(0, newStats.searchExhaustion)));
         
         if (response.updatedStats.fortificationLevel) {
              newStats.fortificationLevel = { ...prev.fortificationLevel, ...response.updatedStats.fortificationLevel };
@@ -495,7 +495,6 @@ const App: React.FC = () => {
   
   // Tactical Card Execution
   const handleTacticalCardExecute = async (cmd: string, title: string) => {
-      setStats(prev => ({...prev, activeTacticalCard: null}));
       handleCommand(undefined, cmd, title);
   };
 

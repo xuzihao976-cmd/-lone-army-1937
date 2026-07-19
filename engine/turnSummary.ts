@@ -9,7 +9,7 @@ const METRICS: Array<{ metric: SummaryMetric; label: string }> = [
   { metric: 'ammo', label: '七九弹' },
   { metric: 'machineGunAmmo', label: '机枪弹' },
   { metric: 'grenades', label: '手榴弹' },
-  { metric: 'sandbags', label: '粮包' },
+  { metric: 'sandbags', label: '工事材料' },
   { metric: 'medkits', label: '急救包' },
   { metric: 'enemiesKilled', label: '毙敌' },
 ];

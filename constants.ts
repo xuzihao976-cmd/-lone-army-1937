@@ -32,6 +32,12 @@ export const INITIAL_STATS: GameStats = {
       { name: '机枪一连', location: '一楼入口', count: 30, status: 'active' },
       { name: '机枪二连', location: '二楼阵地', count: 30, status: 'active' }
   ],
+  specialistSquads: [
+    { id: 'veteran', name: '湖北老兵班', role: 'veteran', location: '二楼阵地', count: 18, status: 'active' },
+    { id: 'engineer', name: '工兵抢修组', role: 'engineer', location: '一楼入口', count: 12, status: 'active' },
+    { id: 'medic', name: '战地救护组', role: 'medic', location: '地下室', count: 10, status: 'active' },
+    { id: 'assault', name: '敢死突击组', role: 'assault', location: '一楼入口', count: 16, status: 'active' },
+  ],
 
   morale: 80, // Start slightly lower for tutorial growth
   minMorale: 0, 
@@ -43,6 +49,10 @@ export const INITIAL_STATS: GameStats = {
   lastAttackTurn: -99,
   rngState: 19371026,
   lastStandUsed: false,
+  fatigue: 12,
+  searchExhaustion: 0,
+  speechStreak: 0,
+  reconBonus: 0,
   
   // New Mechanics Init
   tutorialStep: 0,
@@ -50,10 +60,10 @@ export const INITIAL_STATS: GameStats = {
   activeTacticalCard: null,
   
   // 资源修正
-  ammo: 45000,          
-  machineGunAmmo: 18000,
-  grenades: 1000,       
-  sandbags: 4500,       
+  ammo: 20000,
+  machineGunAmmo: 8000,
+  grenades: 500,
+  sandbags: 2600,
   medkits: 40,          
 
   hasFlagRaised: false,
@@ -61,6 +71,18 @@ export const INITIAL_STATS: GameStats = {
   enemiesKilled: 0,
   triggeredEvents: [],
   usedTacticalCards: [],
+  consequenceFlags: [],
+  campaignHistory: [],
+  enemyOperation: {
+    id: 1,
+    target: '一楼入口',
+    routeName: '北侧废墟 → 一楼正门',
+    attackType: 'INFANTRY',
+    scale: 'SMALL',
+    turnsRemaining: 7,
+    revealed: false,
+    confidence: 25,
+  },
   aggressiveCount: 0, // New Stat for Ending 2
   
   // 步兵分布 

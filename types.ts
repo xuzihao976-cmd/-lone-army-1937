@@ -27,7 +27,10 @@ export interface Dilemma {
     id: string;
     title: string;
     description: string;
-    options: DilemmaOption[];
+  options: DilemmaOption[];
+  requiresFlag?: string;
+  excludesFlag?: string;
+  minDay?: number;
 }
 
 export interface TacticalCard {
@@ -37,6 +40,40 @@ export interface TacticalCard {
     effectText: string;
     actionCmd: string;
     color: string; // 'gold' | 'red' | 'blue'
+}
+
+export type SpecialistRole = 'veteran' | 'engineer' | 'medic' | 'assault';
+
+export interface SpecialistSquad {
+  id: string;
+  name: string;
+  role: SpecialistRole;
+  location: Location;
+  count: number;
+  status: 'active' | 'depleted';
+}
+
+export type EnemyAttackType = 'INFANTRY' | 'ARTILLERY' | 'BOMBING';
+export type EnemyAttackScale = 'SMALL' | 'MEDIUM' | 'LARGE';
+
+export interface EnemyOperation {
+  id: number;
+  target: Location;
+  routeName: string;
+  attackType: EnemyAttackType;
+  scale: EnemyAttackScale;
+  turnsRemaining: number;
+  revealed: boolean;
+  confidence: number;
+}
+
+export interface CampaignHistoryEntry {
+  id: string;
+  day: number;
+  time: string;
+  title: string;
+  detail: string;
+  tone: 'good' | 'bad' | 'neutral';
 }
 
 // NEW: Define Ending Types
@@ -70,6 +107,8 @@ export interface GameStats {
 
   // Specialized Squads (The 60 men extracted)
   hmgSquads: HmgSquad[];
+  // These squads are subsets of the riflemen total, not extra manpower.
+  specialistSquads: SpecialistSquad[];
 
   morale: number; // 0-100
   minMorale: number; // Morale floor
@@ -81,6 +120,10 @@ export interface GameStats {
   lastAttackTurn: number; // Resulting turn number of the most recent enemy attack
   rngState: number; // Seeded random state, persisted for repeatable saves
   lastStandUsed: boolean; // First collapse becomes a recoverable warning instead of an instant ending
+  fatigue: number; // 0-100; repeated long actions reduce combat efficiency
+  searchExhaustion: number; // Looting the same warehouse repeatedly yields less
+  speechStreak: number; // Consecutive speeches have diminishing returns
+  reconBonus: number; // Improves raids and is consumed by one raid
   
   // NEW MECHANICS
   tutorialStep: number; // 0: Not started, 1: Fortify entrance, 2: Rest troops, 3: Done/skipped
@@ -100,6 +143,9 @@ export interface GameStats {
   enemiesKilled: number; // NEW: Track total enemies killed
   triggeredEvents: string[]; // NEW: Track IDs of unique events that have occurred
   usedTacticalCards: string[]; // NEW: Track used tactical cards
+  consequenceFlags: string[];
+  campaignHistory: CampaignHistoryEntry[];
+  enemyOperation: EnemyOperation | null;
   
   // NEW: Track Aggression for Ending 2
   aggressiveCount: number; 

@@ -27,6 +27,10 @@ describe('versioned saves', () => {
       lastStandUsed: _oldLastStand,
       sectorIntegrity: _oldSectorIntegrity,
       sealedApproaches: _oldSealedApproaches,
+      specialistSquads: _oldSpecialistSquads,
+      consequenceFlags: _oldConsequenceFlags,
+      campaignHistory: _oldCampaignHistory,
+      enemyOperation: _oldEnemyOperation,
       ...legacyStats
     } = oldStats;
     const migrated = migrateSaveData({
@@ -48,6 +52,10 @@ describe('versioned saves', () => {
       '地下室': 100,
     });
     expect(migrated?.stats.sealedApproaches).toEqual([]);
+    expect(migrated?.stats.specialistSquads).toHaveLength(4);
+    expect(migrated?.stats.consequenceFlags).toEqual([]);
+    expect(migrated?.stats.campaignHistory).toEqual([]);
+    expect(migrated?.stats.enemyOperation?.target).toBe('一楼入口');
     expect(migrated?.logs[0].isTyping).toBe(false);
   });
 

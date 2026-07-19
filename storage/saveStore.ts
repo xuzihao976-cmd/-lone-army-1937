@@ -1,7 +1,7 @@
 import { INITIAL_STATS } from '../constants';
 import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 7;
+export const SAVE_SCHEMA_VERSION = 8;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -71,8 +71,12 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     ...incoming,
     roster: Array.isArray(incoming.roster) ? incoming.roster : base.roster,
     hmgSquads: Array.isArray(incoming.hmgSquads) ? incoming.hmgSquads : base.hmgSquads,
+    specialistSquads: Array.isArray(incoming.specialistSquads) ? incoming.specialistSquads : base.specialistSquads,
     triggeredEvents: Array.isArray(incoming.triggeredEvents) ? incoming.triggeredEvents : [],
     usedTacticalCards: Array.isArray(incoming.usedTacticalCards) ? incoming.usedTacticalCards : [],
+    consequenceFlags: Array.isArray(incoming.consequenceFlags) ? incoming.consequenceFlags : [],
+    campaignHistory: Array.isArray(incoming.campaignHistory) ? incoming.campaignHistory : [],
+    enemyOperation: isRecord(incoming.enemyOperation) ? incoming.enemyOperation as unknown as GameStats['enemyOperation'] : base.enemyOperation,
     soldierDistribution: { ...base.soldierDistribution, ...(incoming.soldierDistribution ?? {}) },
     sectorIntegrity: { ...base.sectorIntegrity, ...(incoming.sectorIntegrity ?? {}) },
     sealedApproaches: Array.isArray(incoming.sealedApproaches)
