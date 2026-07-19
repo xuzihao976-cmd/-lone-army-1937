@@ -2,6 +2,8 @@
 import { GameStats, GameTurnResult, Dilemma, Location, EndingType } from "../types";
 import { playSound } from "../utils/sound";
 import { isExplicitRetreatCommand, isMoveCommand } from './intents';
+import { getDayProfile } from '../data/dayProfiles';
+import { buildTurnSummary } from './turnSummary';
 
 // Import Narrative Data Modules
 import { 
@@ -14,7 +16,7 @@ import {
 } from "../data/text/commands";
 
 import { 
-    ALL_DILEMMAS, MUTINY_SCENES, TACTICAL_CARDS, ENEMY_INTEL_BY_DAY 
+    ALL_DILEMMAS, MUTINY_SCENES, TACTICAL_CARDS
 } from "../data/text/events";
 
 import { 
@@ -541,10 +543,10 @@ const runGameTurnInternal = (
     // 1. RAID (Aggressive Action for Ending 2)
     if (cmd.includes('突袭') || cmd.includes('夜袭') || cmd.includes('偷袭') || cmd.includes('反击') || cmd.includes('进攻')) {
         const currentH = parseInt(currentStats.currentTime.split(':')[0]);
-        // Track aggression
-        calculatedStats.aggressiveCount = (currentStats.aggressiveCount || 0) + 1;
         
         if (currentH >= 0 && currentH < 5) {
+            // Only a raid that actually leaves the warehouse counts as aggression.
+            calculatedStats.aggressiveCount = (currentStats.aggressiveCount || 0) + 1;
             timeCost = 60; 
             const isSuccess = random() < 0.4; 
             if (isSuccess) {
@@ -586,6 +588,8 @@ const runGameTurnInternal = (
         } else {
             narrativeParts.push("副官拦住了你：“团附！现在天还亮着，外面全是鬼子的狙击手和观察哨。请等到深夜（00:00-05:00）再行动。”");
             actionType = "raid_blocked";
+            timeCost = 0;
+            siegeIncrease = 0;
         }
     }
     // NEW ACTION: SCAVENGE (SEARCH)
@@ -646,6 +650,8 @@ const runGameTurnInternal = (
     else if (cmd.includes('补给') || cmd.includes('物资') && !cmd.includes('整理')) {
         narrativeParts.push("通讯兵无奈地摇摇头：“团附，租界那边被封锁了，上面也没有空投计划。只能靠自己了。”");
         actionType = "supply_blocked";
+        timeCost = 0;
+        siegeIncrease = 0;
     }
     else if (isMoveCommand(cmd)) {
         timeCost = 15;
@@ -694,6 +700,8 @@ const runGameTurnInternal = (
                 siegeIncrease = 15;
             } else {
                 actionType = "fail";
+                timeCost = 0;
+                siegeIncrease = 0;
                 narrativeParts.push('工兵摊开空空的物资袋：“团附，筑垒用的粮包不够了，至少还需要200份。”');
             }
         }
@@ -733,6 +741,8 @@ const runGameTurnInternal = (
             }
         } else {
             actionType = "heal_fail"; 
+            timeCost = 0;
+            siegeIncrease = 0;
         }
     }
     // 7. Flag
@@ -784,7 +794,9 @@ const runGameTurnInternal = (
     const nextTimeStr = addMinutes(currentStats.currentTime, timeCost);
     const totalMinutesPassed = timeCost;
     const currentSiege = calculatedStats.siegeMeter ?? currentStats.siegeMeter ?? 0;
-    let newSiege = Math.min(100, currentSiege + siegeIncrease);
+    const dayProfile = getDayProfile(currentStats.day);
+    const effectiveSiegeIncrease = Math.max(0, Math.ceil(siegeIncrease * dayProfile.threatMultiplier));
+    let newSiege = Math.min(100, currentSiege + effectiveSiegeIncrease);
 
     // --- ATTACK TRIGGER LOGIC ---
     let attackTriggered = false;
@@ -795,21 +807,22 @@ const runGameTurnInternal = (
         const riskRoll = random() * 100;
         if (riskRoll < newSiege) {
             attackTriggered = true;
+            const threatAtContact = newSiege;
             newSiege = Math.max(0, newSiege - 50); 
             
             // Determine Scale and Type
             const currentH = parseInt(nextTimeStr.split(':')[0]);
             const isHeavyTime = currentH >= 8 && currentH <= 18;
             
-            if (newSiege > 80 || (currentStats.day >= 3 && random() < 0.3)) {
+            if (threatAtContact > 85 || random() < dayProfile.largeAttackBonus) {
                 attackScale = 'LARGE'; // Massive wave
-            } else if (newSiege > 40) {
+            } else if (threatAtContact > 48) {
                 attackScale = 'MEDIUM';
             } else {
                 attackScale = 'SMALL';
             }
 
-            if (isHeavyTime && random() < 0.6) damageType = "ARTILLERY";
+            if (isHeavyTime && random() < dayProfile.artilleryChance) damageType = "ARTILLERY";
             else damageType = "INFANTRY";
         }
     }
@@ -821,14 +834,11 @@ const runGameTurnInternal = (
     const currentHour = parseInt(nextTimeStr.split(':')[0]);
     
     if (!attackTriggered && actionType !== 'idle') {
-        if (flagActive && currentHour >= 6 && currentHour <= 17 && random() < 0.4) { 
+        const bombingChance = Math.min(0.65, dayProfile.bombingChance + (flagActive ? 0.15 : 0));
+        if (currentHour >= 6 && currentHour <= 17 && random() < bombingChance) {
              attackTriggered = true;
              damageType = "BOMBING";
-             attackScale = 'MEDIUM';
-        } else if (currentHour >= 8 && currentHour <= 16 && random() < 0.25) {
-             attackTriggered = true;
-             damageType = "BOMBING";
-             attackScale = 'SMALL';
+             attackScale = flagActive || currentStats.day >= 4 ? 'MEDIUM' : 'SMALL';
         }
     }
 
@@ -1037,7 +1047,8 @@ const runGameTurnInternal = (
     if (checkNewDay(currentStats.currentTime, nextTimeStr)) {
         calculatedStats.day = currentStats.day + 1;
         eventTriggered = "new_day";
-        narrativeParts.push(`\n\n夜色褪去，新的枪声从废墟间响起。战斗进入第 ${calculatedStats.day} 天。`);
+        const nextDayProfile = getDayProfile(calculatedStats.day);
+        narrativeParts.push(`\n\n【第 ${calculatedStats.day} 天 · ${nextDayProfile.title}】\n夜色褪去，新的枪声从废墟间响起。${nextDayProfile.description}`);
     }
 
     // ... (Tactical Card, Game Over, Narrative Gen Preserved) ...
@@ -1133,7 +1144,7 @@ const runGameTurnInternal = (
         visualEffect,
         attackLocation, 
         dilemma: dilemmaToTrigger,
-        enemyIntel: ENEMY_INTEL_BY_DAY[Math.min(finalDay, 6)]
+        enemyIntel: getDayProfile(finalDay).intel
     };
 };
 
@@ -1144,12 +1155,15 @@ export const runGameTurn = (currentStats: GameStats, userCommand: string): GameT
 
     try {
         const result = runGameTurnInternal(currentStats, userCommand);
+        const updatedStats = {
+            ...result.updatedStats,
+            rngState: seededRandom.getState(),
+        };
+        const afterStats: GameStats = { ...currentStats, ...updatedStats };
         return {
             ...result,
-            updatedStats: {
-                ...result.updatedStats,
-                rngState: seededRandom.getState(),
-            },
+            updatedStats,
+            summary: buildTurnSummary(currentStats, afterStats, result, userCommand),
         };
     } finally {
         activeRandomSource = previousRandomSource;

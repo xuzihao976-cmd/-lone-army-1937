@@ -5,11 +5,13 @@ import { SaveSlotMeta } from '../types';
 interface SaveLoadModalProps {
   mode: 'save' | 'load';
   slots: SaveSlotMeta[];
+  autoSave: SaveSlotMeta | null;
   onSelectSlot: (slotId: number) => void;
+  onSelectAutoSave: () => void;
   onClose: () => void;
 }
 
-const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, onSelectSlot, onClose }) => {
+const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, onSelectSlot, onSelectAutoSave, onClose }) => {
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString('zh-CN', {
         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
@@ -30,6 +32,28 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, onSelectSlot
 
         {/* Grid Area */}
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div className="mb-4">
+                {mode === 'load' && autoSave ? (
+                    <button
+                        onClick={onSelectAutoSave}
+                        className="w-full rounded border border-amber-800/60 bg-amber-950/15 p-3 text-left transition-colors hover:border-amber-600 hover:bg-amber-950/25"
+                    >
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold tracking-widest text-amber-500">⟳ 自动存档</span>
+                            <span className="text-[10px] font-mono text-neutral-500">{formatDate(autoSave.savedAt)}</span>
+                        </div>
+                        <div className="mt-2 flex justify-between text-xs text-neutral-400">
+                            <span>第 {autoSave.day} 天 · {autoSave.location}</span>
+                            <span>可战兵力 {autoSave.soldiers}</span>
+                        </div>
+                    </button>
+                ) : (
+                    <div className="rounded border border-neutral-800 bg-black/30 px-3 py-2 text-[10px] text-neutral-600">
+                        游戏会在每次命令结算后自动保存。下方 5 个位置用于手动保留关键节点。
+                    </div>
+                )}
+            </div>
+            <div className="mb-2 text-[10px] font-bold tracking-widest text-neutral-600">手动档案 · 5 个位置</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {slots.map((slot) => (
                     <button
@@ -74,7 +98,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, onSelectSlot
 
         {/* Footer */}
         <div className="p-3 border-t border-neutral-800 bg-neutral-900 text-center text-[10px] text-neutral-600 font-mono">
-            {mode === 'save' ? '选择一个位置保存当前进度。' : '选择一个档案以继续指挥。'}
+            {mode === 'save' ? '选择一个位置保存当前进度；自动存档不会被占用。' : '读取档案后会从该命令结算点继续。'}
         </div>
       </div>
     </div>

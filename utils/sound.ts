@@ -3,6 +3,28 @@
 // No external files required.
 
 let audioCtx: AudioContext | null = null;
+const SOUND_PREFERENCE_KEY = 'lone_army_sound';
+export type SoundType = 'type' | 'click' | 'alert' | 'explosion' | 'radio' | 'save' | 'success' | 'damage';
+
+let soundEnabled = (() => {
+    try {
+        return typeof window === 'undefined' || localStorage.getItem(SOUND_PREFERENCE_KEY) !== 'off';
+    } catch {
+        return true;
+    }
+})();
+
+export const getSoundEnabled = () => soundEnabled;
+
+export const setSoundEnabled = (enabled: boolean) => {
+    soundEnabled = enabled;
+    try {
+        localStorage.setItem(SOUND_PREFERENCE_KEY, enabled ? 'on' : 'off');
+    } catch {
+        // Keep the preference in memory when storage is unavailable.
+    }
+    if (enabled) unlockAudio();
+};
 
 const getAudioContext = (): AudioContext | null => {
     if (typeof window === 'undefined') return null;
@@ -19,6 +41,7 @@ const getAudioContext = (): AudioContext | null => {
 };
 
 const unlockAudio = (): void => {
+    if (!soundEnabled) return;
     const context = getAudioContext();
     if (!context) return;
     if (context.state === 'suspended') {
@@ -33,7 +56,8 @@ if (typeof window !== 'undefined') {
     window.addEventListener('keydown', unlockAudio, { passive: true });
 }
 
-export const playSound = (type: 'type' | 'click' | 'alert' | 'explosion' | 'radio') => {
+export const playSound = (type: SoundType) => {
+    if (!soundEnabled) return;
     if (!audioCtx || audioCtx.state !== 'running') return;
 
     const osc = audioCtx.createOscillator();
@@ -125,5 +149,32 @@ export const playSound = (type: 'type' | 'click' | 'alert' | 'explosion' | 'radi
         
         noise.start(now);
         noise.stop(now + 0.2);
+    }
+    else if (type === 'save') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.setValueAtTime(780, now + 0.09);
+        gainNode.gain.setValueAtTime(0.08, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+    else if (type === 'success') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(330, now);
+        osc.frequency.linearRampToValueAtTime(660, now + 0.28);
+        gainNode.gain.setValueAtTime(0.07, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        osc.start(now);
+        osc.stop(now + 0.32);
+    }
+    else if (type === 'damage') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.24);
+        gainNode.gain.setValueAtTime(0.12, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+        osc.start(now);
+        osc.stop(now + 0.26);
     }
 };

@@ -56,4 +56,30 @@ describe('local game engine endings', () => {
     expect(replay).toEqual(first);
     expect(first.updatedStats.rngState).not.toBe(stats.rngState);
   });
+
+  it('creates a separate settlement summary after an attack', () => {
+    const stats = createInitialStats(1937);
+    stats.tutorialStep = 3;
+    stats.day = 3;
+    stats.currentTime = '19:00';
+    stats.siegeMeter = 100;
+
+    const result = runGameTurn(stats, '侦察敌情');
+    expect(result.eventTriggered).toBe('attack');
+    expect(result.summary?.kind).toBe('battle');
+    expect(result.summary?.title).toBe('敌军进攻结算');
+    expect(result.summary?.notes.some((note) => note.includes('工事等级'))).toBe(true);
+  });
+
+  it('does not spend time or count aggression for a blocked daytime raid', () => {
+    const stats = createInitialStats(2026);
+    stats.tutorialStep = 3;
+    stats.currentTime = '14:00';
+    stats.siegeMeter = 0;
+
+    const result = runGameTurn(stats, '火力突袭');
+    expect(result.updatedStats.currentTime).toBe('14:00');
+    expect(result.updatedStats.aggressiveCount).toBeUndefined();
+    expect(result.summary).toBeUndefined();
+  });
 });

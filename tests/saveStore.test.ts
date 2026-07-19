@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialStats, migrateSaveData, readSaveSlot, SAVE_SCHEMA_VERSION, writeSaveSlot } from '../storage/saveStore';
+import {
+  createInitialStats,
+  getAutoSaveMeta,
+  listSaveSlots,
+  MAX_SAVE_SLOTS,
+  migrateSaveData,
+  readAutoSave,
+  readSaveSlot,
+  SAVE_SCHEMA_VERSION,
+  writeAutoSave,
+  writeSaveSlot,
+} from '../storage/saveStore';
 
 class MemoryStorage {
   private data = new Map<string, string>();
@@ -40,5 +51,24 @@ describe('versioned saves', () => {
   it('rejects malformed save data', () => {
     expect(migrateSaveData({ nope: true })).toBeNull();
     expect(migrateSaveData(null)).toBeNull();
+  });
+
+  it('exposes exactly five manual slots', () => {
+    const storage = new MemoryStorage();
+    expect(MAX_SAVE_SLOTS).toBe(5);
+    expect(listSaveSlots(storage)).toHaveLength(5);
+    expect(() => writeSaveSlot(storage, 5, createInitialStats(), [])).toThrow('Invalid save slot');
+  });
+
+  it('round-trips the independent auto-save', () => {
+    const storage = new MemoryStorage();
+    const stats = createInitialStats();
+    stats.day = 4;
+    stats.location = '屋顶';
+    writeAutoSave(storage, stats, [{ id: 'auto', sender: 'system', text: '自动战报', isTyping: true }]);
+
+    expect(getAutoSaveMeta(storage)).toMatchObject({ id: -1, day: 4, location: '屋顶' });
+    expect(readAutoSave(storage)?.logs[0]).toMatchObject({ text: '自动战报', isTyping: false });
+    expect(listSaveSlots(storage).every((slot) => slot.isEmpty)).toBe(true);
   });
 });

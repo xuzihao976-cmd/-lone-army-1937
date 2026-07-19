@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { GameStats } from '../types';
+import { getDayProfile } from '../data/dayProfiles';
 
 interface StatsPanelProps {
   stats: GameStats;
@@ -9,6 +10,7 @@ interface StatsPanelProps {
 
 const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
   const currentDate = 26 + stats.day;
+  const dayProfile = getDayProfile(stats.day);
   
   // Calculate total force
   const activeHmgCount = stats.hmgSquads ? stats.hmgSquads.reduce((acc, s) => acc + (s.status === 'active' ? s.count : 0), 0) : 0;
@@ -39,7 +41,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             {/* Intel Ticker */}
             <div className="w-[60%] bg-red-900/10 flex items-center px-2 gap-2 overflow-hidden relative border-r border-neutral-800">
                 <span className="text-[9px] font-bold text-red-700 whitespace-nowrap uppercase tracking-widest animate-pulse shrink-0">
-                    ⚠ 敌情
+                    ⚠ {dayProfile.title}
                 </span>
                 <div className="mask-gradient-right overflow-hidden w-full">
                     <span className="text-[10px] text-red-400/90 font-mono whitespace-nowrap animate-marquee inline-block">
@@ -80,7 +82,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             {/* Location & Flag Block */}
             <div className="flex-1 flex items-center justify-between px-3 border-r border-neutral-800 min-w-0">
                  <div className="flex flex-col justify-center min-w-0">
-                    <div className="text-[8px] text-neutral-600 tracking-wider uppercase truncate">Current Pos</div>
+                    <div className="text-[8px] text-neutral-600 tracking-wider truncate">当前阵地</div>
                     <div className="text-xs sm:text-sm text-amber-500/90 font-bold font-serif tracking-widest truncate">
                         {stats.location}
                     </div>
@@ -122,7 +124,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
         
         {/* Row 3: HMG Squads (Location Added) */}
         {stats.hmgSquads && stats.hmgSquads.length > 0 && (
-            <div className="flex bg-[#0f0f0f] border-b border-neutral-800 py-1 px-1 gap-1 h-8 items-center">
+            <div className="hidden sm:flex bg-[#0f0f0f] border-b border-neutral-800 py-1 px-1 gap-1 h-8 items-center">
                  <div className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest shrink-0 w-8 text-center leading-tight">
                     核心<br/>火力
                  </div>
@@ -143,7 +145,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
         )}
 
         {/* Row 4: Resources (Expanded to Fill) */}
-        <div className="flex w-full bg-neutral-900 border-b border-neutral-800 py-1 px-1 gap-1 h-9 items-stretch" title="资源耗尽将导致防御力大幅下降。">
+        <div className="hidden sm:flex w-full bg-neutral-900 border-b border-neutral-800 py-1 px-1 gap-1 h-9 items-stretch" title="资源耗尽将导致防御力大幅下降。">
              {[
                 { l: '七九弹', v: stats.ammo > 9999 ? '充足' : stats.ammo, c: stats.ammo < 5000 ? 'text-red-500 animate-pulse' : 'text-yellow-700' },
                 { l: '机枪弹', v: stats.machineGunAmmo > 5000 ? '充足' : stats.machineGunAmmo, c: 'text-orange-700' },
@@ -156,6 +158,23 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
                     <span className={`text-[10px] sm:text-xs font-bold font-mono ${item.c}`}>{item.v}</span>
                 </div>
              ))}
+        </div>
+
+        {/* Mobile condensed firepower/resources row */}
+        <div className="grid h-8 grid-cols-6 gap-px border-b border-neutral-800 bg-neutral-800 sm:hidden" title="左右滑动下方快捷命令可查看更多行动。">
+          {[
+            { l: '机枪组', v: stats.hmgSquads.filter((squad) => squad.status === 'active').length, c: 'text-orange-600' },
+            { l: '七九弹', v: stats.ammo > 9999 ? '足' : stats.ammo, c: stats.ammo < 5000 ? 'text-red-500' : 'text-yellow-700' },
+            { l: '机枪弹', v: stats.machineGunAmmo > 5000 ? '足' : stats.machineGunAmmo, c: 'text-orange-700' },
+            { l: '手榴弹', v: stats.grenades, c: 'text-neutral-300' },
+            { l: '粮包', v: stats.sandbags, c: 'text-stone-500' },
+            { l: '急救包', v: stats.medkits, c: stats.medkits < 10 ? 'text-red-500' : 'text-green-700' },
+          ].map((item) => (
+            <div key={item.l} className="flex min-w-0 flex-col items-center justify-center bg-black px-0.5">
+              <span className="text-[7px] text-neutral-600">{item.l}</span>
+              <span className={`max-w-full truncate text-[9px] font-bold font-mono ${item.c}`}>{item.v}</span>
+            </div>
+          ))}
         </div>
         
         {/* Row 5: Health Line */}

@@ -15,6 +15,7 @@ interface AiRequest {
 
 const REQUEST_TIMEOUT_MS = 8_000;
 let gatewayUnavailableUntil = 0;
+const isStaticHosting = () => typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
 
 const localAdvisorReply = (message: string): string => {
   const text = message.trim();
@@ -46,6 +47,9 @@ const localAdvisorReply = (message: string): string => {
 };
 
 const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<string | null> => {
+  // GitHub Pages cannot host a protected server-side API. Skip the request
+  // entirely there so the UI never waits for an endpoint that cannot exist.
+  if (isStaticHosting()) return null;
   if (Date.now() < gatewayUnavailableUntil) return null;
 
   const timeoutController = new AbortController();

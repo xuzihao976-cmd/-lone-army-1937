@@ -76,7 +76,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-        <div className="bg-[#1a1a1a] w-full max-w-md h-[500px] border border-neutral-600 rounded-sm shadow-2xl flex flex-col relative font-mono">
+        <div className="bg-[#1a1a1a] w-full max-w-md h-[min(500px,calc(100dvh-2rem))] border border-neutral-600 rounded-sm shadow-2xl flex flex-col relative font-mono">
             {/* Header */}
             <div className="bg-neutral-800 p-3 border-b border-neutral-700 flex justify-between items-center">
                 <div className="flex items-center gap-2">

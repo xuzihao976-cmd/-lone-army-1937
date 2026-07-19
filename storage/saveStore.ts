@@ -1,10 +1,11 @@
 import { INITIAL_STATS } from '../constants';
-import type { GameLog, GameStats, SaveData, SaveSlotMeta } from '../types';
+import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 3;
+export const SAVE_SCHEMA_VERSION = 4;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
-export const MAX_SAVE_SLOTS = 50;
+export const AUTO_SAVE_KEY = 'lone_army_autosave';
+export const MAX_SAVE_SLOTS = 5;
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -22,6 +23,34 @@ const createRandomSeed = (): number => {
   } catch {
     return (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
   }
+};
+
+const migrateSummary = (value: unknown): TurnSummary | undefined => {
+  if (!isRecord(value) || !Array.isArray(value.deltas) || !Array.isArray(value.notes)) return undefined;
+  if (!['action', 'battle', 'new_day', 'ending'].includes(String(value.kind))) return undefined;
+  if (typeof value.title !== 'string') return undefined;
+
+  const durationMinutes = typeof value.durationMinutes === 'number' ? value.durationMinutes : 0;
+  const threatBefore = typeof value.threatBefore === 'number' ? value.threatBefore : 0;
+  const threatAfter = typeof value.threatAfter === 'number' ? value.threatAfter : 0;
+  const deltas = value.deltas
+    .filter(isRecord)
+    .filter((delta) => typeof delta.metric === 'string' && typeof delta.label === 'string' && typeof delta.value === 'number')
+    .map((delta) => ({
+      metric: delta.metric as TurnSummary['deltas'][number]['metric'],
+      label: delta.label as string,
+      value: delta.value as number,
+    }));
+
+  return {
+    kind: value.kind as TurnSummary['kind'],
+    title: value.title,
+    durationMinutes,
+    threatBefore,
+    threatAfter,
+    deltas,
+    notes: value.notes.filter((note): note is string => typeof note === 'string'),
+  };
 };
 
 export const createInitialStats = (seed = createRandomSeed()): GameStats => {
@@ -58,6 +87,7 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
       sender: log.sender as GameLog['sender'],
       text: log.text as string,
       isTyping: false,
+      summary: migrateSummary(log.summary),
     }));
 
   return {
@@ -134,4 +164,42 @@ export const readSaveSlot = (storage: StorageLike, slotId: number): SaveData | n
     storage.setItem(`${SAVE_SLOT_PREFIX}${slotId}`, JSON.stringify(migrated));
   }
   return migrated;
+};
+
+const metaFromSave = (save: SaveData, id = -1): SaveSlotMeta => ({
+  id,
+  isEmpty: false,
+  savedAt: save.savedAt,
+  day: save.stats.day,
+  soldiers: save.stats.soldiers,
+  location: save.stats.location,
+});
+
+export const writeAutoSave = (
+  storage: StorageLike,
+  stats: GameStats,
+  logs: GameLog[],
+): SaveSlotMeta => {
+  const saveData: SaveData = {
+    schemaVersion: SAVE_SCHEMA_VERSION,
+    stats,
+    logs: logs.map((log) => ({ ...log, isTyping: false })),
+    savedAt: Date.now(),
+  };
+  storage.setItem(AUTO_SAVE_KEY, JSON.stringify(saveData));
+  return metaFromSave(saveData);
+};
+
+export const readAutoSave = (storage: StorageLike): SaveData | null => {
+  const parsed = parseJson(storage.getItem(AUTO_SAVE_KEY));
+  const migrated = migrateSaveData(parsed);
+  if (migrated && isRecord(parsed) && parsed.schemaVersion !== SAVE_SCHEMA_VERSION) {
+    storage.setItem(AUTO_SAVE_KEY, JSON.stringify(migrated));
+  }
+  return migrated;
+};
+
+export const getAutoSaveMeta = (storage: StorageLike): SaveSlotMeta | null => {
+  const save = readAutoSave(storage);
+  return save ? metaFromSave(save) : null;
 };

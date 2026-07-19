@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { GameStats } from '../types';
+import { getActionPreview } from '../engine/actionPreview';
 
 interface QuickActionsProps {
   onAction: (cmd: string) => void;
@@ -19,29 +20,24 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onAction, disabled, stats }
     { label: '🌙 夜袭', cmd: '火力突袭', color: 'border-purple-900 text-purple-400' }, 
   ];
 
-  // Split into two rows to ensure a balanced, filled layout
-  const row1 = actions.slice(0, 4);
-  const row2 = actions.slice(4);
-
-  const ButtonGroup = ({ items }: { items: typeof actions }) => (
-    <div className="flex gap-1 w-full">
-      {items.map((act) => (
+  return (
+    <div className="grid grid-flow-col auto-cols-[88px] gap-1 overflow-x-auto px-1 pb-2 sm:grid-flow-row sm:grid-cols-7 sm:overflow-visible no-scrollbar">
+      {actions.map((act) => {
+        const preview = getActionPreview(stats, act.cmd);
+        const unavailable = preview && !preview.available;
+        return (
         <button
             key={act.label}
             onClick={() => onAction(act.cmd)}
-            disabled={disabled}
-            className={`flex-1 flex items-center justify-center whitespace-nowrap px-1 py-2.5 rounded border bg-neutral-900/80 hover:bg-neutral-800 text-[10px] sm:text-xs font-mono transition-colors active:scale-95 disabled:opacity-50 shadow-sm ${act.color}`}
+            disabled={disabled || !!unavailable}
+            title={preview?.reason}
+            className={`min-w-0 flex flex-col items-center justify-center whitespace-nowrap px-1 py-1.5 rounded border bg-neutral-900/80 hover:bg-neutral-800 font-mono transition-colors active:scale-95 disabled:opacity-35 shadow-sm ${act.color}`}
         >
-            {act.label}
+            <span className="text-[10px] sm:text-xs">{act.label}</span>
+            <span className="mt-0.5 text-[8px] text-neutral-600">{preview?.short}</span>
         </button>
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="flex flex-col gap-1 w-full px-1 pb-2">
-      <ButtonGroup items={row1} />
-      <ButtonGroup items={row2} />
+        );
+      })}
     </div>
   );
 };

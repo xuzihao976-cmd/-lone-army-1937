@@ -5,12 +5,14 @@ import { ACHIEVEMENTS } from '../constants';
 
 interface StartScreenProps {
   onNewGame: () => void;
+  onContinueAutoSave: () => void;
   onOpenLoadMenu: () => void;
   hasSaves: boolean;
+  hasAutoSave: boolean;
   unlockedAchievements: EndingType[];
 }
 
-const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onOpenLoadMenu, hasSaves, unlockedAchievements }) => {
+const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave, onOpenLoadMenu, hasSaves, hasAutoSave, unlockedAchievements }) => {
   const [showAchievements, setShowAchievements] = useState(false);
 
   return (
@@ -47,6 +49,15 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onOpenLoadMenu, ha
             <span className="relative z-10">开始新战役</span>
             </button>
 
+            {hasAutoSave && (
+                <button
+                onClick={onContinueAutoSave}
+                className="w-full py-3 bg-amber-950/20 border border-amber-800/50 hover:bg-amber-950/40 hover:border-amber-600 text-amber-500 font-bold tracking-widest transition-all duration-300 shadow-lg active:scale-95"
+                >
+                继续最近战役
+                </button>
+            )}
+
             <button
             onClick={onOpenLoadMenu}
             disabled={!hasSaves}
@@ -63,8 +74,8 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onOpenLoadMenu, ha
             </button>
             
             <div className="text-[10px] text-neutral-600 text-center mt-6 font-mono leading-relaxed">
-                建议佩戴耳机体验沉浸式音效（脑补）<br/>
-                v2.0.0 | 本地引擎 · 离线可玩
+                建议佩戴耳机体验本地战场音效<br/>
+                v2.1.0 | 自动存档 · 本地引擎 · 离线可玩
             </div>
         </div>
       </>

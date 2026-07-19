@@ -111,6 +111,49 @@ export interface GameLog {
   sender: 'system' | 'user';
   text: string;
   isTyping?: boolean;
+  summary?: TurnSummary;
+}
+
+export type SummaryMetric =
+  | 'soldiers'
+  | 'wounded'
+  | 'morale'
+  | 'health'
+  | 'ammo'
+  | 'machineGunAmmo'
+  | 'grenades'
+  | 'sandbags'
+  | 'medkits'
+  | 'enemiesKilled';
+
+export interface TurnDelta {
+  metric: SummaryMetric;
+  label: string;
+  value: number;
+}
+
+export interface TurnSummary {
+  kind: 'action' | 'battle' | 'new_day' | 'ending';
+  title: string;
+  durationMinutes: number;
+  threatBefore: number;
+  threatAfter: number;
+  deltas: TurnDelta[];
+  notes: string[];
+}
+
+export interface ActionPreview {
+  action: string;
+  durationMinutes: number;
+  durationLabel: string;
+  threatIncrease: number;
+  predictedThreat: number;
+  risk: 'safe' | 'low' | 'medium' | 'high' | 'critical';
+  riskLabel: string;
+  costs: string[];
+  available: boolean;
+  reason?: string;
+  short: string;
 }
 
 export interface GameTurnResult {
@@ -121,6 +164,7 @@ export interface GameTurnResult {
   attackLocation?: Location | null; // NEW: Indicates which specific map node is under attack
   dilemma?: Dilemma; 
   enemyIntel?: string; 
+  summary?: TurnSummary;
 }
 
 export interface SaveData {

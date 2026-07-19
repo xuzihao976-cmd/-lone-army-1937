@@ -10,14 +10,18 @@ import QuickActions from './components/QuickActions';
 import DilemmaModal from './components/DilemmaModal';
 import TacticalCardDisplay from './components/TacticalCardDisplay'; 
 import GameOverModal from './components/GameOverModal'; 
+import BattleResultCard from './components/BattleResultCard';
+import ActionPreviewBar from './components/ActionPreviewBar';
 import { GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType } from './types';
 import { runGameTurn } from './engine/gameEngine';
+import { getActionPreview } from './engine/actionPreview';
 import { enhanceBattleNarrative, resetAiGatewayProbe, type AiSource } from './services/aiClient';
-import { createInitialStats, listSaveSlots, readSaveSlot, writeSaveSlot } from './storage/saveStore';
-import { playSound } from './utils/sound'; // Item 3: Sound
+import { createInitialStats, getAutoSaveMeta, listSaveSlots, readAutoSave, readSaveSlot, writeAutoSave, writeSaveSlot } from './storage/saveStore';
+import { getSoundEnabled, playSound, setSoundEnabled as persistSoundEnabled } from './utils/sound';
 
 const ACHIEVEMENTS_KEY = 'lone_army_achievements';
 const AI_PREFERENCE_KEY = 'lone_army_ai_enhancement';
+const IS_STATIC_HOSTING = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
 
 const createLogId = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -25,6 +29,7 @@ const createLogId = (): string =>
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const readAiPreference = (): boolean => {
+  if (IS_STATIC_HOSTING) return false;
   try {
     return typeof window !== 'undefined' && localStorage.getItem(AI_PREFERENCE_KEY) === 'on';
   } catch {
@@ -40,7 +45,9 @@ const App: React.FC = () => {
   const [showAdvisor, setShowAdvisor] = useState(false); 
   const [modalMode, setModalMode] = useState<'save' | 'load'>('save');
   const [saveSlots, setSaveSlots] = useState<SaveSlotMeta[]>([]);
+  const [autoSaveMeta, setAutoSaveMeta] = useState<SaveSlotMeta | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<EndingType[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState(getSoundEnabled);
   
   // NEW: UI State for Delayed Game Over Modal
   const [showGameOverModal, setShowGameOverModal] = useState(false);
@@ -78,6 +85,18 @@ const App: React.FC = () => {
   useEffect(() => {
     statsRef.current = stats;
   }, [stats]);
+
+  useEffect(() => {
+    if (view !== 'GAME' || logs.length === 0 || isLoading) return;
+    const timer = window.setTimeout(() => {
+      try {
+        setAutoSaveMeta(writeAutoSave(localStorage, stats, logs));
+      } catch (error) {
+        console.error('Auto-save failed', error);
+      }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [view, stats, logs, isLoading]);
 
   // --- Visual Effect Handler ---
   useEffect(() => {
@@ -137,17 +156,19 @@ const App: React.FC = () => {
   const refreshSaveSlots = () => {
     try {
         setSaveSlots(listSaveSlots(localStorage));
+        setAutoSaveMeta(getAutoSaveMeta(localStorage));
     } catch (e) {
         console.error("Error refreshing save slots", e);
     }
   };
 
-  const hasAnySave = () => saveSlots.some(s => !s.isEmpty);
+  const hasAnySave = () => !!autoSaveMeta || saveSlots.some(s => !s.isEmpty);
 
   const handleSaveToSlot = (slotId: number) => {
       try {
         playSound('click');
         setSaveSlots(writeSaveSlot(localStorage, slotId, stats, logs));
+        playSound('save');
         setShowSaveLoadModal(false);
         setShowGameMenu(false); 
         alert("战报已归档！");
@@ -181,6 +202,31 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLoadAutoSave = () => {
+      try {
+        playSound('click');
+        const data = readAutoSave(localStorage);
+        if (!data) throw new Error('No auto-save available');
+        aiAbortRef.current?.abort();
+        aiAbortRef.current = null;
+        setIsEnhancing(false);
+        gameSessionRef.current += 1;
+        statsRef.current = data.stats;
+        setStats(data.stats);
+        setLogs(data.logs);
+        setCurrentDilemma(null);
+        setAttackLocation(null);
+        setEnemyIntel('自动存档已恢复，侦察信息将在下一次行动后刷新。');
+        setAiSource('auto');
+        setView('GAME');
+        setShowSaveLoadModal(false);
+        setShowGameMenu(false);
+      } catch (error) {
+        console.error('Auto-save load failed', error);
+        alert('自动存档读取失败，文件可能已损毁。');
+      }
+  };
+
   const openSaveModal = () => {
     playSound('click');
     refreshSaveSlots();
@@ -205,7 +251,8 @@ const App: React.FC = () => {
   // Focus Input
   useEffect(() => {
     if (view === 'GAME' && !stats.isGameOver && !showSaveLoadModal && !showGameMenu && !showAdvisor && !currentDilemma) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      const hasPrecisePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
+      if (hasPrecisePointer) setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [view, stats.isGameOver, showSaveLoadModal, showGameMenu, showAdvisor, currentDilemma]);
 
@@ -224,7 +271,7 @@ const App: React.FC = () => {
     snapshot: GameStats,
     sessionId: number,
   ) => {
-    if (!aiEnabled || response.dilemma || response.updatedStats.isGameOver || command === 'start_game') return;
+    if (IS_STATIC_HOSTING || !aiEnabled || response.dilemma || response.updatedStats.isGameOver || command === 'start_game') return;
 
     aiAbortRef.current?.abort();
     const controller = new AbortController();
@@ -255,6 +302,7 @@ const App: React.FC = () => {
         sender: 'system',
         text: response.narrative,
         isTyping: true, 
+        summary: response.summary,
       },
     ]);
 
@@ -315,11 +363,20 @@ const App: React.FC = () => {
         return newStats;
       });
     }
+
+    if (response.eventTriggered === 'new_day' || response.eventTriggered === 'victory') {
+      playSound('success');
+    } else if (response.visualEffect === 'heavy-damage') {
+      playSound('damage');
+    }
   }, []);
 
   // --- Game Control Logic ---
 
   const handleNewGame = () => {
+    if (view === 'MENU' && autoSaveMeta && !window.confirm('开始新战役会覆盖当前自动存档，5 个手动档案不会受影响。确认继续吗？')) {
+      return;
+    }
     playSound('click');
     cancelNarrativeEnhancement();
     gameSessionRef.current += 1;
@@ -399,7 +456,8 @@ const App: React.FC = () => {
         setLogs(prev => [...prev, { id: Date.now().toString(), sender: 'system', text: "系统错误，请重试。", isTyping: false }]);
     } finally {
         setIsLoading(false);
-        if (!directCommand) setTimeout(() => inputRef.current?.focus(), 100);
+        const hasPrecisePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
+        if (!directCommand && hasPrecisePointer) setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
@@ -415,6 +473,7 @@ const App: React.FC = () => {
   };
 
   const toggleAiEnhancement = () => {
+    if (IS_STATIC_HOSTING) return;
     const next = !aiEnabled;
     setAiEnabled(next);
     try {
@@ -440,7 +499,9 @@ const App: React.FC = () => {
     visualEffect === 'shake' ? 'effect-shake' : 
     visualEffect === 'heavy-damage' ? 'effect-shake effect-damage' : '';
 
-  const aiStatusLabel = !aiEnabled
+  const aiStatusLabel = IS_STATIC_HOSTING
+    ? '本地叙事 · 无需 API'
+    : !aiEnabled
     ? 'AI 已关闭'
     : isEnhancing
       ? 'AI 润色中'
@@ -450,15 +511,19 @@ const App: React.FC = () => {
           ? '本地叙事兜底'
           : 'AI 自动增强';
 
+  const actionPreview = stats.isGameOver || currentDilemma ? null : getActionPreview(stats, input);
+
   return (
-    <div className={`flex flex-col h-[100dvh] max-w-4xl mx-auto bg-[#111] text-[#ddd] overflow-hidden shadow-2xl border-x border-neutral-800 relative ${containerEffectClass}`}>
+    <div className={`flex h-[100dvh] w-full max-w-4xl mx-auto flex-col bg-[#111] text-[#ddd] overflow-hidden shadow-2xl border-x border-neutral-800 relative ${containerEffectClass}`}>
       
       {/* Modals */}
       {showSaveLoadModal && (
           <SaveLoadModal 
             mode={modalMode} 
             slots={saveSlots} 
+            autoSave={autoSaveMeta}
             onClose={() => setShowSaveLoadModal(false)}
+            onSelectAutoSave={handleLoadAutoSave}
             onSelectSlot={(id) => {
                 if (modalMode === 'save') {
                     if (saveSlots[id].isEmpty || window.confirm(`确认覆盖 存档 ${id+1} 吗？`)) {
@@ -500,8 +565,10 @@ const App: React.FC = () => {
       {view === 'MENU' ? (
           <StartScreen 
             onNewGame={handleNewGame} 
+            onContinueAutoSave={handleLoadAutoSave}
             onOpenLoadMenu={openLoadModal} 
             hasSaves={hasAnySave()} 
+            hasAutoSave={!!autoSaveMeta}
             unlockedAchievements={unlockedAchievements}
           />
       ) : (
@@ -518,13 +585,24 @@ const App: React.FC = () => {
                                 <button onClick={openSaveModal} className="w-full py-3 bg-neutral-800 hover:bg-amber-900/30 text-amber-500 rounded border border-neutral-700 transition-colors">
                                     保存进度
                                 </button>
+                                <button
+                                    onClick={() => {
+                                      const next = !soundEnabled;
+                                      persistSoundEnabled(next);
+                                      setSoundEnabled(next);
+                                      if (next) playSound('click');
+                                    }}
+                                    className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-neutral-700 transition-colors"
+                                >
+                                    本地音效：{soundEnabled ? '开启' : '关闭'}
+                                </button>
                                 <button onClick={handleExitRequest} className="w-full py-3 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded border border-red-900/30 transition-colors">
                                     撤出战场
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-3 text-center">
-                                <p className="text-red-400 text-sm mb-4">确定要撤离吗？<br/>未归档的战报将会丢失。</p>
+                                <p className="text-red-400 text-sm mb-4">确定要返回主菜单吗？<br/><span className="text-neutral-500">最近一次命令已经自动保存。</span></p>
                                 <button onClick={handleConfirmExit} className="w-full py-3 bg-red-800 hover:bg-red-700 text-white rounded font-bold">
                                     确认撤离
                                 </button>
@@ -550,14 +628,14 @@ const App: React.FC = () => {
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
             {showMap && (
-                <div className="shrink-0 border-b border-neutral-800 bg-[#0a0a0a] max-h-[30vh] overflow-y-auto custom-scrollbar">
+                <div className="shrink-0 border-b border-neutral-800 bg-[#0a0a0a] max-h-[24vh] sm:max-h-[30vh] overflow-y-auto custom-scrollbar">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
             )}
 
             <div 
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth font-mono min-h-0"
+                className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-5 sm:space-y-6 scroll-smooth font-mono min-h-0"
                 onClick={() => {
                     const lastLog = logs[logs.length - 1];
                     if (lastLog?.isTyping) finishTyping(lastLog.id);
@@ -574,15 +652,27 @@ const App: React.FC = () => {
                         : 'text-gray-300 text-sm sm:text-base leading-loose'
                     }`}>
                     {log.sender === 'system' && log.isTyping ? (
-                        <Typewriter 
-                            text={log.text} 
-                            speed={15} 
-                            onComplete={() => finishTyping(log.id)} 
-                        />
+                        <>
+                            <Typewriter
+                                text={log.text}
+                                speed={15}
+                                onComplete={() => finishTyping(log.id)}
+                            />
+                            <button
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); finishTyping(log.id); }}
+                                className="ml-2 inline-flex rounded border border-neutral-700 px-1.5 py-0.5 align-middle text-[9px] leading-none text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                            >
+                                跳过
+                            </button>
+                        </>
                     ) : (
                         <span className="whitespace-pre-wrap">{log.text}</span>
                     )}
                     </div>
+                    {log.sender === 'system' && log.summary && !log.isTyping && (
+                        <BattleResultCard summary={log.summary} />
+                    )}
                 </div>
                 ))}
 
@@ -600,7 +690,7 @@ const App: React.FC = () => {
                 )}
             </div>
 
-            <div className="bg-[#1a1a1a] p-2 border-t border-neutral-700 z-20 relative flex flex-col gap-2 shrink-0">
+            <div className="bg-[#1a1a1a] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-neutral-700 z-20 relative flex flex-col gap-2 shrink-0">
                 
                 {!stats.isGameOver && (
                     <div className="flex justify-between items-center px-1 mb-1">
@@ -614,16 +704,19 @@ const App: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={toggleAiEnhancement}
+                                disabled={IS_STATIC_HOSTING}
                                 className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded border transition-colors ${
-                                  aiEnabled
+                                  IS_STATIC_HOSTING
+                                    ? 'text-green-700 bg-black border-green-950/70 cursor-default'
+                                    : aiEnabled
                                     ? 'text-amber-500/90 bg-neutral-900 border-amber-900/50 hover:border-amber-700'
                                     : 'text-neutral-600 bg-black border-neutral-800 hover:text-neutral-400'
                                 }`}
-                                title="免费 AI 只润色文字；关闭或连接失败时，游戏规则与本地叙事仍可完整运行"
+                                title={IS_STATIC_HOSTING ? 'GitHub Pages 使用完整本地叙事，不会请求不存在的 API' : '免费 AI 只润色文字；关闭或连接失败时，游戏规则与本地叙事仍可完整运行'}
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full ${aiSource === 'siliconflow' && aiEnabled ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${IS_STATIC_HOSTING || (aiSource === 'siliconflow' && aiEnabled) ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
                                 <span className="hidden sm:inline">{aiStatusLabel}</span>
-                                <span className="sm:hidden">AI</span>
+                                <span className="sm:hidden">{IS_STATIC_HOSTING ? '本地' : 'AI'}</span>
                             </button>
                         </div>
                         <button 
@@ -648,6 +741,8 @@ const App: React.FC = () => {
                     />
                 )}
 
+                <ActionPreviewBar preview={actionPreview} />
+
                 <form onSubmit={(e) => handleCommand(e)} className="relative flex gap-2">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-mono select-none">
                         {'>'}
@@ -664,7 +759,6 @@ const App: React.FC = () => {
                         autoComplete="off"
                         autoCorrect="off"
                         className="w-full bg-neutral-900 text-white pl-8 pr-4 py-2.5 rounded-md border border-neutral-700 focus:border-neutral-500 focus:outline-none font-mono placeholder-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                        autoFocus
                     />
                     <button 
                         type="submit" 
