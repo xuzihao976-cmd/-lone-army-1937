@@ -57,4 +57,20 @@ describe('ammunition-bound combat outcomes', () => {
     expect(outcome.enemiesKilled).toBeLessThanOrEqual(45);
     expect(outcome.grenadesUsed).toBeGreaterThan(0);
   });
+
+  it('does not create free grenade kills during a bombing run', () => {
+    const outcome = calculateCombatOutcomes({
+      attackScale: 'LARGE',
+      effectiveFortLevel: 2,
+      fireReadyHmgSquads: 0,
+      garrisonStrength: 160,
+      morale: 90,
+      damageType: 'BOMBING',
+      supply: { rifleAmmo: 0, machineGunAmmo: 0, grenades: 500 },
+    }, fixedRandom);
+
+    expect(outcome.grenadeKills).toBe(0);
+    expect(outcome.grenadesUsed).toBe(0);
+    expect(outcome.enemiesKilled).toBe(0);
+  });
 });

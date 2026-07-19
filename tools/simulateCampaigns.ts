@@ -20,6 +20,24 @@ interface CampaignResult {
 
 const LOCATIONS: Location[] = ['一楼入口', '二楼阵地', '地下室', '屋顶'];
 
+const assertValidState = (stats: GameStats, context: string): void => {
+  const nonNegativeKeys = ['soldiers', 'wounded', 'ammo', 'machineGunAmmo', 'grenades', 'sandbags', 'medkits', 'enemiesKilled'] as const;
+  for (const key of nonNegativeKeys) {
+    if (!Number.isFinite(stats[key]) || stats[key] < 0) throw new Error(`${context}: invalid ${key}=${stats[key]}`);
+  }
+  for (const key of ['morale', 'health', 'fatigue', 'siegeMeter'] as const) {
+    if (!Number.isFinite(stats[key]) || stats[key] < 0 || stats[key] > 100) throw new Error(`${context}: invalid ${key}=${stats[key]}`);
+  }
+  const deployed = LOCATIONS.reduce((sum, location) => sum + (stats.soldierDistribution[location] || 0), 0);
+  if (deployed !== stats.soldiers) throw new Error(`${context}: deployed=${deployed}, soldiers=${stats.soldiers}`);
+  for (const location of LOCATIONS) {
+    const integrity = stats.sectorIntegrity[location];
+    if (!Number.isFinite(integrity) || integrity < 0 || integrity > 100) {
+      throw new Error(`${context}: invalid ${location} integrity=${integrity}`);
+    }
+  }
+};
+
 const applyResult = (stats: GameStats, result: GameTurnResult): GameStats => ({
   ...stats,
   ...result.updatedStats,
@@ -27,7 +45,7 @@ const applyResult = (stats: GameStats, result: GameTurnResult): GameStats => ({
   fortificationBuildCounts: { ...stats.fortificationBuildCounts, ...(result.updatedStats.fortificationBuildCounts || {}) },
   soldierDistribution: { ...stats.soldierDistribution, ...(result.updatedStats.soldierDistribution || {}) },
   sectorIntegrity: { ...stats.sectorIntegrity, ...(result.updatedStats.sectorIntegrity || {}) },
-  turnCount: stats.turnCount + 1,
+  turnCount: stats.turnCount + (result.turnAdvanced ? 1 : 0),
 });
 
 const safestCommandPost = (stats: GameStats): Location => LOCATIONS
@@ -100,9 +118,12 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
   for (const command of ['start_game', 'skip_tutorial']) {
     const result = runGameTurn(stats, command);
     stats = applyResult(stats, result);
+    assertValidState(stats, `${policy}/${seed}/${command}`);
   }
 
-  while (!stats.isGameOver && stats.turnCount < 160) {
+  let decisions = 0;
+  while (!stats.isGameOver && stats.turnCount < 160 && decisions < 240) {
+    decisions += 1;
     let command: string;
     if (pendingDilemma) {
       command = pendingDilemma.options[0].actionCmd;
@@ -116,10 +137,15 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
     const beforeLost = LOCATIONS.filter((location) => !isSectorHeld(stats, location)).length;
     const result = runGameTurn(stats, command);
     stats = applyResult(stats, result);
+    assertValidState(stats, `${policy}/${seed}/decision-${decisions}/${command}`);
     if (result.eventTriggered === 'attack') attacks += 1;
     pendingDilemma = result.dilemma || null;
     const afterLost = LOCATIONS.filter((location) => !isSectorHeld(stats, location)).length;
     if (firstSectorLossDay === null && afterLost > beforeLost) firstSectorLossDay = stats.day;
+  }
+
+  if (!stats.isGameOver) {
+    throw new Error(`${policy}/${seed}: campaign stalled after ${decisions} decisions and ${stats.turnCount} timed turns`);
   }
 
   const hmgSurvivors = stats.hmgSquads.reduce((sum, squad) => sum + (squad.status === 'active' ? squad.count : 0), 0);

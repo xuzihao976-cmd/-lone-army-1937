@@ -9,19 +9,19 @@ interface DilemmaModalProps {
 
 const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
   return (
-    <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
-      <div className="bg-[#1a1a1a] border border-amber-900/50 w-full max-w-md rounded shadow-[0_0_30px_rgba(251,191,36,0.1)] flex flex-col relative overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm animate-fade-in sm:p-6">
+      <div className="relative flex max-h-[92vh] w-full max-w-md flex-col overflow-y-auto rounded border border-amber-900/50 bg-[#1a1a1a] shadow-[0_0_30px_rgba(251,191,36,0.1)] custom-scrollbar">
         
         {/* Urgent Header */}
-        <div className="bg-amber-900/20 border-b border-amber-900/30 p-4 flex items-center gap-3">
-            <span className="text-2xl animate-pulse">⚠️</span>
-            <h3 className="text-amber-500 font-bold tracking-widest text-lg font-serif">
+        <div className="flex items-start gap-3 border-b border-amber-900/30 bg-amber-900/20 p-4">
+            <span className="shrink-0 text-2xl animate-pulse">⚠️</span>
+            <h3 className="min-w-0 break-words font-serif text-base font-bold tracking-wider text-amber-500 sm:text-lg sm:tracking-widest">
                 突发事态: {dilemma.title}
             </h3>
         </div>
 
         {/* Content */}
-        <div className="p-6 text-neutral-300 font-serif leading-relaxed text-sm sm:text-base border-b border-neutral-800">
+        <div className="break-words border-b border-neutral-800 p-4 font-serif text-sm leading-relaxed text-neutral-300 sm:p-6 sm:text-base">
             {dilemma.description}
         </div>
 
@@ -31,13 +31,13 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
                 <button
                     key={idx}
                     onClick={() => onChoice(opt.actionCmd)}
-                    className="w-full text-left p-4 rounded border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-500 transition-all group"
+                    className="group min-w-0 w-full rounded border border-neutral-700 bg-neutral-800 p-3 text-left transition-all hover:border-neutral-500 hover:bg-neutral-700 sm:p-4"
                 >
-                    <div className="font-bold text-neutral-200 group-hover:text-white mb-1">
+                    <div className="mb-1 break-words font-bold leading-5 text-neutral-200 group-hover:text-white">
                         {String.fromCharCode(65 + idx)}. {opt.label}
                     </div>
                     {opt.riskText && (
-                        <div className="text-xs text-neutral-500 font-mono group-hover:text-amber-500/80">
+                        <div className="break-words font-mono text-xs leading-4 text-neutral-500 group-hover:text-amber-500/80">
                             后果: {opt.riskText}
                         </div>
                     )}

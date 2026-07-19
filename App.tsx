@@ -371,7 +371,9 @@ const App: React.FC = () => {
             newStats.roster = response.updatedStats.roster;
         }
         
-        newStats.turnCount = (prev.turnCount || 0) + 1;
+        // Menus, blocked commands and pending event choices do not move enemy
+        // operations. Only actions that consume battlefield time advance turns.
+        newStats.turnCount = (prev.turnCount || 0) + (response.turnAdvanced ? 1 : 0);
 
         // Check for Ending Unlock
         if (newStats.isGameOver && newStats.gameResult) {
@@ -682,7 +684,7 @@ const App: React.FC = () => {
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
             {showMap && (
-                <div className="max-h-[34vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[38vh]">
+                <div className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[32vh]">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
             )}

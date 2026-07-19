@@ -1,6 +1,7 @@
 import type { GameStats, GameTurnResult } from '../types';
 import { createEnemyOperation, revealEnemyOperation } from './battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from './campaignProgress';
+import { reconcileSoldierDistribution } from './roster';
 import { getSectorDefenseProfile } from './strategicDefense';
 
 type RandomSource = () => number;
@@ -109,6 +110,7 @@ export const resolveDilemma = (
     } else if (optionIndex === 0) {
       updates.soldiers = Math.max(0, stats.soldiers - 1);
       updates.morale = Math.max(0, stats.morale - 5);
+      recordDeaths(updates, 1, narrative);
       text = '【坠落】一阵横风吹过，战士脚下一滑，从三楼坠落，补给包也摔散了。';
       logs.push('🔴 意外坠亡: 1人', '💔 士气 -5');
     } else {
@@ -161,6 +163,17 @@ export const resolveDilemma = (
     text = '【侧翼预警】工兵把木料和沙袋运往地下室侧墙。代价不小，但敌军企图已经被标在作战图上。';
     logs.push(`🧱 工事材料 -${materialUsed}`);
     appendCampaignHistory(stats, updates, '南侧封锁的代价', '地下室侧翼攻势提前，但守军取得完整预警。', 'bad');
+  }
+
+  // Event casualties bypass the normal turn finalizer, so reconcile the map
+  // immediately instead of leaving total strength and floor garrisons out of
+  // sync until the player's next timed action.
+  if (typeof updates.soldiers === 'number') {
+    updates.soldierDistribution = reconcileSoldierDistribution(
+      updates.soldierDistribution || stats.soldierDistribution,
+      updates.soldiers,
+      stats.location,
+    );
   }
 
   const fullNarrative = `${text}${narrative.length ? `\n${narrative.join('')}` : ''}${logs.length ? `\n\n${logs.join('\n')}` : ''}`;

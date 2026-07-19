@@ -231,6 +231,8 @@ export interface GameTurnResult {
   attackLocation?: Location | null; // NEW: Indicates which specific map node is under attack
   dilemma?: Dilemma; 
   enemyIntel?: string; 
+  /** True only when the command consumed battlefield time. */
+  turnAdvanced?: boolean;
   summary?: TurnSummary;
 }
 

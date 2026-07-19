@@ -12,6 +12,17 @@ const applyTurnUpdate = (stats: GameStats, update: Partial<GameStats>): GameStat
 });
 
 describe('local game engine endings', () => {
+  it('advances turns only for actions that consume battlefield time', () => {
+    const stats = createInitialStats(79);
+    stats.tutorialStep = 3;
+    stats.location = '一楼入口';
+
+    expect(runGameTurn(stats, '询问当前情况').turnAdvanced).toBe(false);
+    expect(runGameTurn(stats, 'cancel_retreat').turnAdvanced).toBeUndefined();
+    expect(runGameTurn(stats, '升旗').turnAdvanced).toBe(false);
+    expect(runGameTurn(stats, '侦察敌情').turnAdvanced).toBe(true);
+  });
+
   it('resolves tactical cards with the exact advertised effects', () => {
     const moraleStats = createInitialStats(80);
     moraleStats.tutorialStep = 3;
@@ -41,6 +52,8 @@ describe('local game engine endings', () => {
     expect(rescue.updatedStats.consequenceFlags).toContain('students_rescued');
     expect(rescue.updatedStats.ammo).toBe(students.ammo - 600);
     expect(rescue.updatedStats.campaignHistory?.some((entry) => entry.title === '学生冲桥')).toBe(true);
+    expect(Object.values(rescue.updatedStats.soldierDistribution || {}).reduce((sum, count) => sum + count, 0))
+      .toBe(rescue.updatedStats.soldiers);
 
     const british = createInitialStats(84);
     british.tutorialStep = 3;

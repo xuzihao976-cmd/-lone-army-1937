@@ -23,15 +23,15 @@ const TacticalCardDisplay: React.FC<TacticalCardDisplayProps> = ({ card, onExecu
   }
 
   return (
-    <div className={`fixed bottom-20 right-4 z-40 w-64 animate-slide-up`}>
+    <div className="fixed bottom-20 right-4 z-40 w-[min(18rem,calc(100vw-2rem))] animate-slide-up">
        <div 
-         className={`relative p-4 rounded-lg border-2 ${borderColor} ${bgColor} backdrop-blur-md shadow-2xl overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-200`}
+         className={`relative max-h-[52vh] overflow-y-auto break-words rounded-lg border-2 p-4 ${borderColor} ${bgColor} cursor-pointer shadow-2xl backdrop-blur-md transition-transform duration-200 hover:scale-[1.02] custom-scrollbar`}
          onClick={() => onExecute(card.actionCmd)}
        >
           <div className="absolute top-0 right-0 p-1 opacity-20 text-4xl">★</div>
           
           <div className="flex items-center gap-2 mb-2">
-              <span className={`text-lg font-bold font-serif tracking-widest ${textColor}`}>
+              <span className={`min-w-0 break-words font-serif text-lg font-bold tracking-wider ${textColor}`}>
                   {card.title}
               </span>
           </div>

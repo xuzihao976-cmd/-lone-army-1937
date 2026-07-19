@@ -98,7 +98,11 @@ export const calculateCombatOutcomes = (
     : 0;
   const machineGunKills = Math.min(Math.floor(hmgPotential), Math.floor(machineGunAmmo / hmgRoundsPerKill));
 
-  const grenadePotential = grenades > 0
+  // A bombing run has no ground assault force within grenade range. The old
+  // formula still granted a small grenade kill potential while consumption
+  // was correctly zero, creating free kills during air raids.
+  const grenadesCanEngage = damageType !== 'BOMBING';
+  const grenadePotential = grenadesCanEngage && grenades > 0
     ? enemyCount * (closeCombat ? 0.18 : 0.1) * engagementFactor
     : 0;
   const grenadeKills = Math.min(Math.floor(grenadePotential), Math.floor(grenades * 0.5));
@@ -119,7 +123,7 @@ export const calculateCombatOutcomes = (
   const machineGunAmmoUsed = localHmgReady
     ? Math.min(machineGunAmmo, Math.ceil(machineGunKills * hmgRoundsPerKill + fireReadyHmgSquads * 180))
     : 0;
-  const grenadesUsed = grenades > 0 && damageType !== 'BOMBING'
+  const grenadesUsed = grenadesCanEngage && grenades > 0
     ? Math.min(grenades, Math.max(grenadeKills * 2, Math.ceil(enemyCount * (closeCombat ? 0.12 : 0.05))))
     : 0;
 
