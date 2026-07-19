@@ -31,7 +31,17 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let available = true;
   let reason: string | undefined;
 
-  if (command.startsWith('evt_resolve:')) {
+  if (command.includes('调派30人') || command.includes('增援30人')) {
+    action = '调派步兵';
+    durationMinutes = 30;
+    baseThreat = 8;
+    reason = '从兵力最充足的防区抽调，原防区至少保留20人';
+  } else if (command.includes('部署机枪') && command.includes('至')) {
+    action = '转移机枪组';
+    durationMinutes = 20;
+    baseThreat = 6;
+    reason = '机枪组只会支援其实际部署的防区';
+  } else if (command.startsWith('evt_resolve:')) {
     action = '事件抉择';
     reason = '抉择会立即生效，具体结果取决于事件风险';
   } else if (includesAny(command, ['突袭', '夜袭', '偷袭', '反击', '进攻'])) {

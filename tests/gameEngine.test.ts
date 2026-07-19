@@ -82,4 +82,96 @@ describe('local game engine endings', () => {
     expect(result.updatedStats.aggressiveCount).toBeUndefined();
     expect(result.summary).toBeUndefined();
   });
+
+  it('counts active HMG crews in the collapse check', () => {
+    const stats = createInitialStats(88);
+    stats.tutorialStep = 3;
+    stats.soldiers = 10;
+    stats.siegeMeter = 0;
+
+    const result = runGameTurn(stats, '询问当前情况');
+    expect(result.updatedStats.isGameOver).not.toBe(true);
+    expect(result.updatedStats.lastStandUsed).not.toBe(true);
+  });
+
+  it('gives one explicit last-stand recovery chance before defeat', () => {
+    const stats = createInitialStats(99);
+    stats.tutorialStep = 3;
+    stats.soldiers = 10;
+    stats.siegeMeter = 0;
+    stats.hmgSquads = stats.hmgSquads.map((squad) => ({ ...squad, status: 'destroyed', count: 0 }));
+
+    const warning = runGameTurn(stats, '询问当前情况');
+    expect(warning.updatedStats.isGameOver).not.toBe(true);
+    expect(warning.updatedStats.lastStandUsed).toBe(true);
+    expect(warning.narrative).toContain('最后防线');
+
+    const doomed = { ...stats, ...warning.updatedStats };
+    const ending = runGameTurn(doomed, '询问当前情况');
+    expect(ending.updatedStats.isGameOver).toBe(true);
+    expect(ending.updatedStats.gameOverReason).toBe('combat_force_collapsed');
+  });
+
+  it('turns the first structure collapse into a repairable last stand', () => {
+    const stats = createInitialStats(100);
+    stats.tutorialStep = 3;
+    stats.health = 0;
+    stats.siegeMeter = 0;
+
+    const warning = runGameTurn(stats, '询问当前情况');
+    expect(warning.updatedStats.isGameOver).not.toBe(true);
+    expect(warning.updatedStats.lastStandUsed).toBe(true);
+    expect(warning.updatedStats.health).toBe(1);
+    expect(warning.narrative).toContain('最后防线');
+  });
+
+  it('does not call surviving flag defenders fully martyred when only the position collapses', () => {
+    const stats = createInitialStats(101);
+    stats.tutorialStep = 3;
+    stats.health = 0;
+    stats.lastStandUsed = true;
+    stats.hasFlagRaised = true;
+    stats.siegeMeter = 0;
+
+    const ending = runGameTurn(stats, '询问当前情况');
+    expect(ending.updatedStats.isGameOver).toBe(true);
+    expect(ending.updatedStats.gameResult).toBe('defeat_generic');
+    expect(ending.updatedStats.gameOverReason).toBe('position_collapsed');
+    expect(ending.narrative).not.toContain('壮烈殉国');
+    expect(ending.narrative).toContain('幸存者');
+  });
+
+  it('keeps attack settlement when combat crosses midnight', () => {
+    const stats = createInitialStats(1937);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.currentTime = '23:45';
+    stats.siegeMeter = 100;
+
+    const result = runGameTurn(stats, '侦察敌情');
+    expect(result.updatedStats.day).toBe(3);
+    expect(result.updatedStats.currentTime).toBe('00:00');
+    expect(result.eventTriggered).toBe('attack');
+    expect(result.summary?.kind).toBe('battle');
+  });
+
+  it('moves infantry and HMG squads through strategic-map commands', () => {
+    const stats = createInitialStats(7);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.currentTime = '10:00';
+    stats.siegeMeter = 0;
+
+    const infantry = runGameTurn(stats, '调派30人从二楼阵地至屋顶');
+    expect(infantry.updatedStats.currentTime).toBe('10:30');
+    expect(infantry.updatedStats.soldierDistribution?.['二楼阵地']).toBe(150);
+    expect(infantry.updatedStats.soldierDistribution?.['屋顶']).toBeGreaterThan(10);
+    expect(Object.values(infantry.updatedStats.soldierDistribution ?? {}).reduce((sum, value) => sum + value, 0))
+      .toBe(infantry.updatedStats.soldiers);
+
+    const movedStats = { ...stats, ...infantry.updatedStats };
+    const hmg = runGameTurn(movedStats, '部署机枪一连至屋顶');
+    expect(hmg.updatedStats.currentTime).toBe('10:50');
+    expect(hmg.updatedStats.hmgSquads?.find((squad) => squad.name === '机枪一连')?.location).toBe('屋顶');
+  });
 });

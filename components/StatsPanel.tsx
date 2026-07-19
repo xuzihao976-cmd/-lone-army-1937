@@ -2,6 +2,7 @@
 import React from 'react';
 import { GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
+import { formatCampaignDate, minutesUntilMidnight } from '../engine/time';
 
 interface StatsPanelProps {
   stats: GameStats;
@@ -9,12 +10,14 @@ interface StatsPanelProps {
 }
 
 const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
-  const currentDate = 26 + stats.day;
+  const currentDate = formatCampaignDate(stats.day);
   const dayProfile = getDayProfile(stats.day);
   
   // Calculate total force
   const activeHmgCount = stats.hmgSquads ? stats.hmgSquads.reduce((acc, s) => acc + (s.status === 'active' ? s.count : 0), 0) : 0;
-  const totalLiving = stats.soldiers + stats.wounded + activeHmgCount;
+  const combatReady = stats.soldiers + activeHmgCount;
+  const untilMidnight = minutesUntilMidnight(stats.currentTime);
+  const countdownLabel = `${Math.floor(untilMidnight / 60)}h${untilMidnight % 60 ? `${untilMidnight % 60}m` : ''}`;
   
   // Siege Meter Color
   const siegePercent = stats.siegeMeter || 0;
@@ -41,7 +44,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             {/* Intel Ticker */}
             <div className="w-[60%] bg-red-900/10 flex items-center px-2 gap-2 overflow-hidden relative border-r border-neutral-800">
                 <span className="text-[9px] font-bold text-red-700 whitespace-nowrap uppercase tracking-widest animate-pulse shrink-0">
-                    ⚠ {dayProfile.title}
+                    ⚠ {stats.lastStandUsed ? '最后防线已用' : dayProfile.title}
                 </span>
                 <div className="mask-gradient-right overflow-hidden w-full">
                     <span className="text-[10px] text-red-400/90 font-mono whitespace-nowrap animate-marquee inline-block">
@@ -71,8 +74,8 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             {/* Time/Date Block */}
             <div className="flex flex-col justify-center px-2 border-r border-neutral-800 min-w-[70px] bg-[#111]" title="坚持到第6天即可获胜。">
                 <div className="flex items-baseline gap-1 leading-none mb-1">
-                    <span className="text-xs text-neutral-200 font-bold font-serif">{currentDate}日</span>
-                    <span className="text-[8px] text-red-800 font-bold">D{stats.day}</span>
+                    <span className="text-xs text-neutral-200 font-bold font-serif">{currentDate}</span>
+                    <span className="text-[8px] text-red-800 font-bold">D{stats.day} · 换日{countdownLabel}</span>
                 </div>
                 <span className="text-sm text-amber-500 font-mono font-bold tracking-widest leading-none">
                     {stats.currentTime}
@@ -105,9 +108,9 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
 
             {/* Soldiers/Morale (Horizontal Layout) */}
             <div className="flex items-center px-1 gap-1 bg-[#050505]">
-                <div className="flex flex-col items-center w-10" title="剩余战斗人员。低于20人游戏失败。">
-                    <span className="text-[8px] text-neutral-500">兵力</span>
-                    <span className={`text-xs font-bold font-mono ${totalLiving < 100 ? 'text-red-500' : 'text-neutral-300'}`}>{totalLiving}</span>
+                <div className="flex flex-col items-center w-10" title="普通步兵与仍在作战的机枪组之和。首次低于20人会触发最后防线警告。">
+                    <span className="text-[8px] text-neutral-500">可战</span>
+                    <span className={`text-xs font-bold font-mono ${combatReady < 100 ? 'text-red-500' : 'text-neutral-300'}`}>{combatReady}</span>
                 </div>
                 <div className="w-px h-6 bg-neutral-800"></div>
                 <div className="flex flex-col items-center w-10" title="等待救治的伤员。如不及时救治会阵亡。">
@@ -118,6 +121,11 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
                 <div className="flex flex-col items-center w-10" title="士气影响战斗力。过低会导致哗变。可以通过休息或演讲提升。">
                     <span className="text-[8px] text-neutral-500">士气</span>
                     <span className={`text-xs font-bold font-mono ${stats.morale < 30 ? 'text-red-500 animate-pulse' : 'text-neutral-300'}`}>{stats.morale}</span>
+                </div>
+                <div className="w-px h-6 bg-neutral-800"></div>
+                <div className="flex flex-col items-center w-10" title="仓库阵地完整度。首次归零会触发最后防线，之后再次归零才会失守。">
+                    <span className="text-[8px] text-neutral-500">阵地</span>
+                    <span className={`text-xs font-bold font-mono ${stats.health < 30 ? 'text-red-500 animate-pulse' : 'text-neutral-300'}`}>{stats.health}</span>
                 </div>
             </div>
         </div>
@@ -178,7 +186,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
         </div>
         
         {/* Row 5: Health Line */}
-        <div className="relative h-1 bg-neutral-900 border-b border-neutral-800 w-full" title="阵地完整度。归零时游戏失败。">
+        <div className="relative h-1 bg-neutral-900 border-b border-neutral-800 w-full" title="阵地完整度。首次归零会进入最后防线，不再无提示直接结束。">
             <div 
                 className={`absolute left-0 top-0 h-full transition-all duration-500 ${stats.health < 30 ? 'bg-red-900' : 'bg-neutral-600'}`} 
                 style={{ width: `${stats.health}%` }}

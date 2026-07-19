@@ -295,6 +295,7 @@ const App: React.FC = () => {
   }, [aiEnabled]);
 
   const handleGameResponse = useCallback((response: GameTurnResult, logId: string) => {
+    const logStats = { ...statsRef.current, ...response.updatedStats };
     setLogs((prev) => [
       ...prev,
       {
@@ -303,6 +304,8 @@ const App: React.FC = () => {
         text: response.narrative,
         isTyping: true, 
         summary: response.summary,
+        day: logStats.day,
+        time: logStats.currentTime,
       },
     ]);
 
@@ -432,13 +435,20 @@ const App: React.FC = () => {
     // Play sound for command send
     playSound('click');
 
+    const currentStats = statsRef.current;
+
     setLogs((prev) => [
       ...prev.map(l => ({ ...l, isTyping: false })),
-      { id: Date.now().toString(), sender: 'user', text: `> ${logText}` },
+      {
+        id: Date.now().toString(),
+        sender: 'user',
+        text: `> ${logText}`,
+        day: currentStats.day,
+        time: currentStats.currentTime,
+      },
     ]);
 
     try {
-        const currentStats = statsRef.current;
         const response = runGameTurn(currentStats, userCmd);
         const systemLogId = createLogId();
         handleGameResponse(response, systemLogId);
@@ -557,6 +567,7 @@ const App: React.FC = () => {
             stats={stats} 
             onRestart={handleNewGame} 
             onExit={handleConfirmExit} 
+            onReview={() => setShowGameOverModal(false)}
           />
       )}
       
@@ -622,13 +633,13 @@ const App: React.FC = () => {
                     onClick={() => { playSound('click'); setShowMap(!showMap); }}
                     className="text-[10px] text-neutral-500 hover:text-neutral-300 uppercase tracking-widest flex items-center gap-1"
                 >
-                    {showMap ? '▼ 隐藏地图' : '▲ 显示地图'}
+                    {showMap ? '▼ 隐藏战略地图' : '▲ 显示战略地图'}
                 </button>
             </div>
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
             {showMap && (
-                <div className="shrink-0 border-b border-neutral-800 bg-[#0a0a0a] max-h-[24vh] sm:max-h-[30vh] overflow-y-auto custom-scrollbar">
+                <div className="shrink-0 border-b border-neutral-800 bg-[#0a0a0a] max-h-[42vh] sm:max-h-[38vh] overflow-y-auto custom-scrollbar">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
             )}
@@ -646,6 +657,9 @@ const App: React.FC = () => {
                     key={log.id} 
                     className={`flex flex-col ${log.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
+                    {log.sender === 'user' && log.day !== undefined && log.time && (
+                        <div className="mb-1 text-[8px] font-mono text-neutral-700">D{log.day} · {log.time}</div>
+                    )}
                     <div className={`max-w-[95%] sm:max-w-[90%] ${
                     log.sender === 'user' 
                         ? 'text-neutral-400 font-mono text-sm border-l-2 border-neutral-600 pl-3' 
@@ -741,9 +755,34 @@ const App: React.FC = () => {
                     />
                 )}
 
-                <ActionPreviewBar preview={actionPreview} />
+                {stats.isGameOver ? (
+                  <div className="flex items-center justify-between gap-2 rounded border border-amber-900/40 bg-black/40 p-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold tracking-widest text-amber-600">战场复盘模式</div>
+                      <div className="truncate text-[8px] text-neutral-600">可滚动查看全部命令、战报与每回合结算</div>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowGameOverModal(true)}
+                        className="rounded border border-amber-900/60 px-2 py-1.5 text-[10px] text-amber-500 hover:bg-amber-950/30"
+                      >
+                        查看结局
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmExit}
+                        className="rounded border border-neutral-700 px-2 py-1.5 text-[10px] text-neutral-400 hover:bg-neutral-800"
+                      >
+                        主菜单
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ActionPreviewBar preview={actionPreview} />
 
-                <form onSubmit={(e) => handleCommand(e)} className="relative flex gap-2">
+                    <form onSubmit={(e) => handleCommand(e)} className="relative flex gap-2">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-mono select-none">
                         {'>'}
                     </div>
@@ -767,7 +806,9 @@ const App: React.FC = () => {
                     >
                         {isLoading ? '...' : '发送'}
                     </button>
-                </form>
+                    </form>
+                  </>
+                )}
             </div>
         </>
       )}

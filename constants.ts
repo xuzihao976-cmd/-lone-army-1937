@@ -41,6 +41,7 @@ export const INITIAL_STATS: GameStats = {
   turnCount: 0,
   lastRestTurn: 0,
   rngState: 19371026,
+  lastStandUsed: false,
   
   // New Mechanics Init
   tutorialStep: 0,
@@ -84,7 +85,8 @@ export const INITIAL_STATS: GameStats = {
   },
 
   isGameOver: false,
-  gameResult: 'ongoing'
+  gameResult: 'ongoing',
+  gameOverReason: undefined,
 };
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -104,7 +106,7 @@ export const ACHIEVEMENTS: Achievement[] = [
         id: 'defeat_assault',
         title: '反攻的号角',
         icon: '⚔️',
-        desc: '达成条件：频繁主动出击（突袭/夜袭），直到全军覆没。'
+        desc: '达成条件：频繁主动出击（突袭/夜袭），直到成建制战力崩溃。'
     },
     {
         id: 'defeat_martyr',

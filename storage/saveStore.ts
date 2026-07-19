@@ -1,7 +1,7 @@
 import { INITIAL_STATS } from '../constants';
 import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 4;
+export const SAVE_SCHEMA_VERSION = 5;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -88,6 +88,8 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
       text: log.text as string,
       isTyping: false,
       summary: migrateSummary(log.summary),
+      day: typeof log.day === 'number' ? log.day : undefined,
+      time: typeof log.time === 'string' ? log.time : undefined,
     }));
 
   return {

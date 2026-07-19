@@ -75,7 +75,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
             
             <div className="text-[10px] text-neutral-600 text-center mt-6 font-mono leading-relaxed">
                 建议佩戴耳机体验本地战场音效<br/>
-                v2.1.0 | 自动存档 · 本地引擎 · 离线可玩
+                v2.2.0 | 战略部署 · 结局复盘 · 离线可玩
             </div>
         </div>
       </>

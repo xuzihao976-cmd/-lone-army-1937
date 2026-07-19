@@ -33,6 +33,7 @@ describe('versioned saves', () => {
     expect(migrated?.stats.soldiers).toBe(233);
     expect(migrated?.stats.usedTacticalCards).toEqual([]);
     expect(migrated?.stats.rngState).toEqual(expect.any(Number));
+    expect(migrated?.stats.lastStandUsed).toBe(false);
     expect(migrated?.logs[0].isTyping).toBe(false);
   });
 
@@ -40,12 +41,13 @@ describe('versioned saves', () => {
     const storage = new MemoryStorage();
     const stats = createInitialStats();
     stats.day = 2;
-    writeSaveSlot(storage, 4, stats, [{ id: 'log', sender: 'system', text: '战报' }]);
+    writeSaveSlot(storage, 4, stats, [{ id: 'log', sender: 'system', text: '战报', day: 2, time: '13:30' }]);
 
     const loaded = readSaveSlot(storage, 4);
     expect(loaded?.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(loaded?.stats.day).toBe(2);
     expect(loaded?.logs[0].text).toBe('战报');
+    expect(loaded?.logs[0]).toMatchObject({ day: 2, time: '13:30' });
   });
 
   it('rejects malformed save data', () => {

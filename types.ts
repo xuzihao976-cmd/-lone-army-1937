@@ -49,6 +49,14 @@ export type EndingType =
   | 'defeat_generic'    // 普通战败
   | 'ongoing';
 
+export type GameOverReason =
+  | 'combat_force_collapsed'
+  | 'position_collapsed'
+  | 'total_collapse'
+  | 'early_retreat'
+  | 'historical_retreat'
+  | 'mission_complete';
+
 export interface GameStats {
   location: Location;
   soldiers: number; // Healthy Riflemen/Infantry
@@ -69,6 +77,7 @@ export interface GameStats {
   turnCount: number;
   lastRestTurn: number;
   rngState: number; // Seeded random state, persisted for repeatable saves
+  lastStandUsed: boolean; // First collapse becomes a recoverable warning instead of an instant ending
   
   // NEW MECHANICS
   tutorialStep: number; // 0: Start, 1: Need Fortify, 2: Need Supply, 3: Done
@@ -100,6 +109,7 @@ export interface GameStats {
 
   isGameOver: boolean;
   gameResult: EndingType; // Changed from simple string to Enum-like type
+  gameOverReason?: GameOverReason;
   
   // End Game Report
   finalRank?: string;
@@ -112,6 +122,8 @@ export interface GameLog {
   text: string;
   isTyping?: boolean;
   summary?: TurnSummary;
+  day?: number;
+  time?: string;
 }
 
 export type SummaryMetric =

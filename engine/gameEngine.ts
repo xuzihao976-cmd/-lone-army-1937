@@ -4,6 +4,7 @@ import { playSound } from "../utils/sound";
 import { isExplicitRetreatCommand, isMoveCommand } from './intents';
 import { getDayProfile } from '../data/dayProfiles';
 import { buildTurnSummary } from './turnSummary';
+import { advanceCampaignClock, formatCampaignDate } from './time';
 
 // Import Narrative Data Modules
 import { 
@@ -68,17 +69,42 @@ const getConversationalResponse = (input: string): string => {
     return pick(GENERAL_CHATTER.CONFUSED);
 };
 
-const addMinutes = (timeStr: string, mins: number): string => {
-    const [h, m] = timeStr.split(':').map(Number);
-    const date = new Date();
-    date.setHours(h, m + mins, 0, 0);
-    return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
-};
+const LOCATIONS: Location[] = ['屋顶', '二楼阵地', '一楼入口', '地下室'];
 
-const checkNewDay = (current: string, next: string) => {
-    const h1 = parseInt(current.split(':')[0]);
-    const h2 = parseInt(next.split(':')[0]);
-    return h2 < h1;
+const findLocations = (command: string): Location[] => LOCATIONS
+    .map((location) => {
+        const aliases = location === '屋顶' ? ['屋顶', '楼顶']
+            : location === '二楼阵地' ? ['二楼阵地', '二楼']
+                : location === '一楼入口' ? ['一楼入口', '一楼']
+                    : ['地下室', '地下'];
+        const indexes = aliases.map((alias) => command.indexOf(alias)).filter((index) => index >= 0);
+        return { location, index: indexes.length ? Math.min(...indexes) : -1 };
+    })
+    .filter((entry) => entry.index >= 0)
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.location);
+
+const reconcileSoldierDistribution = (
+    distribution: Record<string, number>,
+    totalSoldiers: number,
+    preferredLocation?: Location | null,
+): Record<string, number> => {
+    const next = Object.fromEntries(LOCATIONS.map((location) => [location, Math.max(0, Math.floor(distribution[location] || 0))]));
+    let difference = LOCATIONS.reduce((sum, location) => sum + next[location], 0) - Math.max(0, Math.floor(totalSoldiers));
+
+    while (difference > 0) {
+        const candidates = preferredLocation && next[preferredLocation] > 0
+            ? [preferredLocation, ...LOCATIONS.filter((location) => location !== preferredLocation)]
+            : [...LOCATIONS].sort((a, b) => next[b] - next[a]);
+        const target = candidates.find((location) => next[location] > 0);
+        if (!target) break;
+        const removed = Math.min(difference, next[target]);
+        next[target] -= removed;
+        difference -= removed;
+    }
+
+    if (difference < 0) next['地下室'] += Math.abs(difference);
+    return next;
 };
 
 // --- REBALANCED DEFENSE & DAMAGE LOGIC ---
@@ -86,6 +112,7 @@ const calculateCombatOutcomes = (
     attackScale: 'SMALL' | 'MEDIUM' | 'LARGE',
     avgFortLevel: number,
     activeHmgSquads: number,
+    garrisonStrength: number,
     damageType: 'INFANTRY' | 'ARTILLERY' | 'BOMBING',
     isBayonet: boolean
 ) => {
@@ -119,6 +146,10 @@ const calculateCombatOutcomes = (
     // HMG Suppression: Each squad adds 5% mitigation
     mitigation += (activeHmgSquads * 0.05);
 
+    // A properly manned sector is materially harder to overrun. This makes
+    // troop placement on the tactical map part of the actual combat model.
+    mitigation += Math.min(0.12, Math.max(0, garrisonStrength) / 1000);
+
     // Cap mitigation at 95%
     mitigation = Math.min(0.95, mitigation);
 
@@ -135,7 +166,8 @@ const calculateCombatOutcomes = (
     // 4. Calculate Enemies Killed
     // Better forts = better firing angles = more kills
     // HMGs = multiplier
-    const killEfficiency = 0.5 + (avgFortLevel * 0.2) + (activeHmgSquads * 0.3);
+    const rifleEfficiency = Math.min(1.2, Math.max(0, garrisonStrength) / 120);
+    const killEfficiency = ((0.5 + (avgFortLevel * 0.2)) * rifleEfficiency) + (activeHmgSquads * 0.3);
     let enemiesKilled = Math.floor(enemyCount * killEfficiency);
     
     // Cap kills at actual enemy count (but sometimes we overestimate/kill reserves)
@@ -154,7 +186,7 @@ const calculateScore = (stats: GameStats, endingType: EndingType): { rank: strin
     }
     
     if (endingType === 'defeat_assault') {
-        return { rank: "勇猛的莽夫", text: "你的勇气令人敬佩，但你的鲁莽葬送了全营。作为指挥官，你选择了最壮烈但也最惨痛的毁灭方式。" };
+        return { rank: "勇猛的莽夫", text: "你的勇气令人敬佩，但连续出击耗尽了全营的成建制战力。作为指挥官，你选择了最壮烈也最惨痛的道路。" };
     }
 
     if (endingType === 'defeat_martyr') {
@@ -175,7 +207,7 @@ const calculateScore = (stats: GameStats, endingType: EndingType): { rank: strin
     else if (totalSurvivors > 100) { rank = "血战到底"; text = `虽然伤亡过半（剩余${totalSurvivors}人），但那面旗帜始终飘扬。击毙日军${stats.enemiesKilled}人。`; }
     
     if (endingType === 'defeat_generic') {
-         text = "仓库失守，全军覆没。但你们让日军付出了沉重的代价。";
+         text = "仓库已经失守，但你们的抵抗让日军付出了沉重代价，幸存者仍会记住这场战斗。";
     }
 
     return { rank, text };
@@ -286,6 +318,7 @@ const runGameTurnInternal = (
     if (cmd === 'confirm_desertion' && currentStats.day <= 1 && !currentStats.isGameOver) {
             calculatedStats.isGameOver = true;
             calculatedStats.gameResult = 'defeat_deserter';
+            calculatedStats.gameOverReason = 'early_retreat';
             eventTriggered = 'game_over';
             const report = calculateScore({ ...currentStats, ...calculatedStats }, 'defeat_deserter');
             calculatedStats.finalRank = report.rank;
@@ -300,6 +333,7 @@ const runGameTurnInternal = (
     if (cmd === 'confirm_historical_retreat' && currentStats.day >= 4 && !currentStats.isGameOver) {
             calculatedStats.isGameOver = true;
             calculatedStats.gameResult = 'victory_retreat';
+            calculatedStats.gameOverReason = 'historical_retreat';
             eventTriggered = 'victory';
             const report = calculateScore({ ...currentStats, ...calculatedStats }, 'victory_retreat');
             calculatedStats.finalRank = report.rank;
@@ -338,10 +372,12 @@ const runGameTurnInternal = (
         calculatedStats.currentTime = "19:00"; 
         calculatedStats.triggeredEvents = []; 
         calculatedStats.usedTacticalCards = []; 
+        calculatedStats.lastStandUsed = false;
+        calculatedStats.gameOverReason = undefined;
         playSound('radio'); 
         
         return {
-            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨凄迷，苏州河水在黑暗中静静流淌。你刚刚接管防务。\n\n【战场仪表盘说明】\n● 兵力：你的核心生命值，低于20人判定失败。\n● 士气：影响战斗力。过低会导致逃兵或哗变。\n● 威胁值：顶部红条。充满时日军将发动进攻。\n● 战地顾问：右下角绿色按钮，不懂就问他。\n\n“团附！”副官冲过来，“一楼大门工事太薄弱了！鬼子坦克一炮就能轰开！请立即下令【加固一楼】！”",
+            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨凄迷，苏州河水在黑暗中静静流淌。你刚刚接管防务。\n\n【战场仪表盘说明】\n● 可战：步兵与仍在作战的机枪组总数；首次低于20人会触发最后防线。\n● 阵地：仓库结构完整度；首次归零同样会获得一次抢救机会。\n● 士气：影响战斗力。过低会导致逃兵或哗变。\n● 威胁值：顶部红条。耗时行动会提高遇袭风险。\n● 战略地图：调动步兵和机枪，部署会真实影响各防区战损。\n\n“团附！”副官冲过来，“一楼大门工事太薄弱了！鬼子坦克一炮就能轰开！请立即下令【加固一楼】！”",
             updatedStats: calculatedStats,
             eventTriggered: 'none',
             enemyIntel: "侦察兵报告：日军正在集结步兵，似乎准备进行试探性进攻。"
@@ -646,6 +682,61 @@ const runGameTurnInternal = (
              statsLog.push(`💀 狙击战果: 击毙 ${gain} 人`);
         }
     }
+    // STRATEGIC ACTION: move 30 riflemen between sectors.
+    else if (cmd.includes('调派30人') || cmd.includes('增援30人')) {
+        const locations = findLocations(cmd);
+        const source = locations[0];
+        const target = locations[1];
+        const distribution = { ...currentStats.soldierDistribution };
+
+        if (!source || !target || source === target) {
+            actionType = 'redeploy_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('副官没有看懂调兵路线。请从战略地图选择目标区域。');
+        } else {
+            const movable = Math.max(0, (distribution[source] || 0) - 20);
+            const transfer = Math.min(30, movable);
+            if (transfer <= 0) {
+                actionType = 'redeploy_fail';
+                timeCost = 0;
+                siegeIncrease = 0;
+                narrativeParts.push(`${source}的守军已经低于安全线，无法继续抽调。`);
+            } else {
+                actionType = 'redeploy';
+                timeCost = 30;
+                siegeIncrease = 8;
+                distribution[source] = Math.max(0, (distribution[source] || 0) - transfer);
+                distribution[target] = (distribution[target] || 0) + transfer;
+                calculatedStats.soldierDistribution = distribution;
+                narrativeParts.push(`你命令传令兵带队穿过仓库内部通道，将${transfer}名步兵从${source}调往${target}。新的交叉火力正在形成。`);
+                statsLog.push(`↔ 调兵: ${source} → ${target} (${transfer}人)`);
+            }
+        }
+    }
+    // STRATEGIC ACTION: redeploy one surviving HMG squad.
+    else if (cmd.includes('部署机枪') && cmd.includes('至')) {
+        const target = findLocations(cmd).at(-1);
+        const squads = [...currentStats.hmgSquads];
+        const squadIndex = squads.findIndex((squad) => cmd.includes(squad.name));
+        const squad = squadIndex >= 0 ? squads[squadIndex] : undefined;
+
+        if (!target || !squad || squad.status !== 'active' || squad.location === target) {
+            actionType = 'hmg_redeploy_fail';
+            timeCost = 0;
+            siegeIncrease = 0;
+            narrativeParts.push('机枪部署命令无法执行：请确认机枪组仍可作战，且目标阵位不同。');
+        } else {
+            actionType = 'hmg_redeploy';
+            timeCost = 20;
+            siegeIncrease = 6;
+            const previousLocation = squad.location;
+            squads[squadIndex] = { ...squad, location: target };
+            calculatedStats.hmgSquads = squads;
+            narrativeParts.push(`${squad.name}拆下枪架和水冷套筒，从${previousLocation}迅速转移到${target}。这支机枪组只会支援它所在的防区。`);
+            statsLog.push(`♜ ${squad.name}: ${previousLocation} → ${target}`);
+        }
+    }
     // ... (Supply blocked, Move logic preserved) ...
     else if (cmd.includes('补给') || cmd.includes('物资') && !cmd.includes('整理')) {
         narrativeParts.push("通讯兵无奈地摇摇头：“团附，租界那边被封锁了，上面也没有空投计划。只能靠自己了。”");
@@ -686,6 +777,10 @@ const runGameTurnInternal = (
                 calculatedStats.sandbags = currentStats.sandbags - 200;
                 calculatedStats.fortificationBuildCounts = { ...currentStats.fortificationBuildCounts, [targetLoc]: newCount };
                 calculatedStats.fortificationLevel = { ...currentStats.fortificationLevel, [targetLoc]: Math.min(3, newLevel) };
+                if (currentStats.health < 100) {
+                    calculatedStats.health = Math.min(100, currentStats.health + 4);
+                    statsLog.push('🏥 抢修承重结构: 阵地 +4');
+                }
                 
                 if (random() < 0.3) {
                     const fatigueLoss = Math.floor(random() * 6);
@@ -791,7 +886,8 @@ const runGameTurnInternal = (
     }
 
     // --- Time & Siege Update ---
-    const nextTimeStr = addMinutes(currentStats.currentTime, timeCost);
+    const campaignClock = advanceCampaignClock(currentStats.day, currentStats.currentTime, timeCost);
+    const nextTimeStr = campaignClock.time;
     const totalMinutesPassed = timeCost;
     const currentSiege = calculatedStats.siegeMeter ?? currentStats.siegeMeter ?? 0;
     const dayProfile = getDayProfile(currentStats.day);
@@ -876,7 +972,6 @@ const runGameTurnInternal = (
         
         // 1. Prepare Combat Variables
         let bayonetMode = false;
-        let ammoCheckSoldiers = calculatedStats.soldiers ?? currentStats.soldiers;
         let ammoCheckSquads = [...(calculatedStats.hmgSquads || currentStats.hmgSquads)];
         let currentAmmo = calculatedStats.ammo ?? currentStats.ammo;
         let currentMgAmmo = calculatedStats.machineGunAmmo ?? currentStats.machineGunAmmo;
@@ -892,21 +987,9 @@ const runGameTurnInternal = (
             statsLog.push(`⚔️ 弹尽粮绝! 刺刀冲锋!`);
         }
 
-        // 2. Get Defense Levels (Combined 1F + 2F)
-        const lv1 = calculatedStats.fortificationLevel?.['一楼入口'] ?? currentStats.fortificationLevel['一楼入口'];
-        const lv2 = calculatedStats.fortificationLevel?.['二楼阵地'] ?? currentStats.fortificationLevel['二楼阵地'];
-        const lvRoof = calculatedStats.fortificationLevel?.['屋顶'] ?? currentStats.fortificationLevel['屋顶'];
-        
-        // Combined Defense Logic
-        const avgDef = (lv1 + lv2) / 2; 
-
-        // 3. HMG Status
-        const activeSquadsCount = ammoCheckSquads.filter(s => s.status === 'active').length;
-
-        // 4. CALCULATE OUTCOME
-        const outcome = calculateCombatOutcomes(attackScale, avgDef, activeSquadsCount, damageType, bayonetMode);
-        
-        // Set Narrative Header
+        // 2. Resolve the attacked sector before calculating defense. In the
+        // previous engine every HMG and the average of 1F/2F defended every hit,
+        // so the tactical map had almost no gameplay effect.
         if (damageType === 'BOMBING') {
             narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.BOMBING));
             attackLocation = '屋顶';
@@ -914,12 +997,36 @@ const runGameTurnInternal = (
             narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.ARTILLERY));
             attackLocation = random() > 0.5 ? '一楼入口' : '二楼阵地';
         } else {
-            // Infantry
             if (attackScale === 'LARGE') narrativeParts.push("\n\n【日军总攻】鬼子发疯了！满山遍野的黄皮狗涌了上来！");
             else if (attackScale === 'MEDIUM') narrativeParts.push("\n\n【日军强攻】日军组织了一个中队的兵力，试图强行突破一楼大门。");
             else narrativeParts.push("\n\n" + pick(ATTACK_TEXTS.INFANTRY));
             attackLocation = '一楼入口';
         }
+
+        const lv1 = calculatedStats.fortificationLevel?.['一楼入口'] ?? currentStats.fortificationLevel['一楼入口'];
+        const lv2 = calculatedStats.fortificationLevel?.['二楼阵地'] ?? currentStats.fortificationLevel['二楼阵地'];
+        const lvRoof = calculatedStats.fortificationLevel?.['屋顶'] ?? currentStats.fortificationLevel['屋顶'];
+        const lvBasement = calculatedStats.fortificationLevel?.['地下室'] ?? currentStats.fortificationLevel['地下室'];
+        const fortByLocation: Record<Location, number> = {
+            '屋顶': lvRoof,
+            '二楼阵地': lv2,
+            '一楼入口': lv1,
+            '地下室': lvBasement,
+        };
+        const targetFort = fortByLocation[attackLocation];
+        const adjacentSupport = attackLocation === '一楼入口' ? lv2 * 0.2
+            : attackLocation === '二楼阵地' ? lv1 * 0.1
+                : 0;
+        const effectiveDefense = Math.min(3, targetFort + adjacentSupport);
+        const currentDistribution = calculatedStats.soldierDistribution || currentStats.soldierDistribution;
+        const targetGarrison = Math.max(0, currentDistribution[attackLocation] || 0);
+
+        // Only HMG squads physically deployed in the attacked sector contribute.
+        const activeSquadsCount = ammoCheckSquads.filter((squad) => squad.status === 'active' && squad.location === attackLocation).length;
+
+        // 4. CALCULATE OUTCOME
+        const outcome = calculateCombatOutcomes(attackScale, effectiveDefense, activeSquadsCount, targetGarrison, damageType, bayonetMode);
+        statsLog.push(`🛡️ ${attackLocation}: 驻军${targetGarrison}人 / 工事Lv.${targetFort} / 机枪组${activeSquadsCount}`);
 
         if (outcome.attackScale === 'LARGE' || damageType === 'BOMBING') visualEffect = "heavy-damage";
 
@@ -952,43 +1059,63 @@ const runGameTurnInternal = (
         let deaths = 0;
         let injuries = 0;
 
+        let woundedDeaths = 0;
+        let healthyDeaths = 0;
+        const exposedHealthy = Math.min(currentHealthy, targetGarrison);
+
         if (totalDamage > 0) {
-            const woundedDeaths = Math.min(currentWounded, Math.ceil(totalDamage * 0.3));
+            // Wounded are sheltered in the basement; only air raids have a
+            // small chance to reach them unless that sector is directly hit.
+            const woundedExposureRate = damageType === 'BOMBING' ? 0.1 : 0;
+            woundedDeaths = Math.min(currentWounded, Math.ceil(totalDamage * woundedExposureRate));
             deaths += woundedDeaths;
             totalDamage -= woundedDeaths;
 
             if (totalDamage > 0) {
-                const healthyDeaths = Math.floor(totalDamage * 0.4); 
-                const healthyInjuries = totalDamage - healthyDeaths;
-                
-                deaths += Math.min(currentHealthy, healthyDeaths);
-                injuries += Math.min(currentHealthy - deaths, healthyInjuries);
+                healthyDeaths = Math.min(exposedHealthy, Math.floor(totalDamage * 0.4));
+                const healthyInjuries = Math.min(exposedHealthy - healthyDeaths, totalDamage - healthyDeaths);
+                deaths += healthyDeaths;
+                injuries += healthyInjuries;
             }
         }
 
-        calculatedStats.wounded = Math.max(0, currentWounded - Math.min(currentWounded, Math.ceil(outcome.casualtyCount * 0.3)) + injuries);
-        calculatedStats.soldiers = Math.max(0, currentHealthy - (deaths - (Math.min(currentWounded, Math.ceil(outcome.casualtyCount * 0.3)))) - injuries);
+        calculatedStats.wounded = Math.max(0, currentWounded - woundedDeaths + injuries);
+        calculatedStats.soldiers = Math.max(0, currentHealthy - healthyDeaths - injuries);
         
         // HMG Destruction Risk 
         if (activeSquadsCount > 0 && (attackScale === 'LARGE' || damageType !== 'INFANTRY')) {
             if (random() < 0.3) {
-                const targetIdx = ammoCheckSquads.findIndex(s => s.status === 'active');
+                const targetIdx = ammoCheckSquads.findIndex((squad) => squad.status === 'active' && squad.location === attackLocation);
                 if (targetIdx !== -1) {
-                    ammoCheckSquads[targetIdx] = { ...ammoCheckSquads[targetIdx], status: 'destroyed', count: 0 };
+                    const destroyedSquad = ammoCheckSquads[targetIdx];
+                    const crewDeaths = Math.min(5, destroyedSquad.count);
+                    const survivingCrew = Math.max(0, destroyedSquad.count - crewDeaths);
+                    ammoCheckSquads[targetIdx] = { ...destroyedSquad, status: 'destroyed', count: 0 };
                     statsLog.push(`🔴 ${ammoCheckSquads[targetIdx].name}被毁!`);
                     
                     // Morale Penalty for HMG Loss
                     currentMorale = Math.max(0, currentMorale - 15);
                     statsLog.push(`💔 重火力折损: 士气 -15`);
                     
-                    deaths += 5; // Extra deaths from crew
+                    deaths += crewDeaths;
+                    if (survivingCrew > 0) {
+                        calculatedStats.soldiers = (calculatedStats.soldiers ?? currentStats.soldiers) + survivingCrew;
+                        const distributionAfterLoss = calculatedStats.soldierDistribution || currentStats.soldierDistribution;
+                        calculatedStats.soldierDistribution = {
+                            ...distributionAfterLoss,
+                            [attackLocation]: (distributionAfterLoss[attackLocation] || 0) + survivingCrew,
+                        };
+                        statsLog.push(`↪ ${survivingCrew}名幸存机枪手转为步兵`);
+                    }
                 }
                 calculatedStats.hmgSquads = ammoCheckSquads;
             }
         }
 
         // Structure Damage
-        const structureDmg = (attackScale === 'LARGE' ? 10 : 2) + (damageType === 'BOMBING' ? 15 : 0);
+        let structureDmg = (attackScale === 'LARGE' ? 10 : 2) + (damageType === 'BOMBING' ? 15 : 0);
+        structureDmg = Math.max(1, structureDmg - Math.floor(targetFort * 2));
+        if (targetGarrison < 30) structureDmg += 4;
         calculatedStats.health = Math.max(0, (calculatedStats.health ?? currentStats.health) - structureDmg);
 
         // Fortification Degradation
@@ -1043,12 +1170,14 @@ const runGameTurnInternal = (
         statsLog.push(`🏃 逃兵/失踪: ${lost}人`);
     }
 
-    if (!calculatedStats.currentTime) calculatedStats.currentTime = nextTimeStr; 
-    if (checkNewDay(currentStats.currentTime, nextTimeStr)) {
-        calculatedStats.day = currentStats.day + 1;
-        eventTriggered = "new_day";
-        const nextDayProfile = getDayProfile(calculatedStats.day);
-        narrativeParts.push(`\n\n【第 ${calculatedStats.day} 天 · ${nextDayProfile.title}】\n夜色褪去，新的枪声从废墟间响起。${nextDayProfile.description}`);
+    if (!calculatedStats.currentTime) calculatedStats.currentTime = campaignClock.time;
+    if (campaignClock.daysPassed > 0) {
+        calculatedStats.day = campaignClock.day;
+        // An attack that crosses midnight remains an attack result. Previously
+        // "new_day" overwrote it, hiding combat settlement and causing confusing transitions.
+        if (eventTriggered === 'none') eventTriggered = "new_day";
+        const nextDayProfile = getDayProfile(campaignClock.day);
+        narrativeParts.push(`\n\n【${formatCampaignDate(campaignClock.day)} · 第 ${campaignClock.day} 天 · ${nextDayProfile.title}】\n时间推进至 ${campaignClock.time}。${nextDayProfile.description}`);
     }
 
     // ... (Tactical Card, Game Over, Narrative Gen Preserved) ...
@@ -1065,16 +1194,45 @@ const runGameTurnInternal = (
     }
 
     const finalSoldiers = calculatedStats.soldiers ?? currentStats.soldiers;
+    calculatedStats.soldierDistribution = reconcileSoldierDistribution(
+        calculatedStats.soldierDistribution || currentStats.soldierDistribution,
+        finalSoldiers,
+        attackLocation || calculatedStats.location || currentStats.location,
+    );
     const finalHealth = calculatedStats.health ?? currentStats.health;
     const finalDay = calculatedStats.day ?? currentStats.day;
     const aggression = calculatedStats.aggressiveCount ?? currentStats.aggressiveCount ?? 0;
     const flagRaised = calculatedStats.hasFlagRaised ?? currentStats.hasFlagRaised ?? false;
+    const finalHmgSquads = calculatedStats.hmgSquads || currentStats.hmgSquads;
+    const activeHmgCrew = finalHmgSquads.reduce((sum, squad) => sum + (squad.status === 'active' ? squad.count : 0), 0);
+    const finalCombatants = finalSoldiers + activeHmgCrew;
+    const finalWounded = calculatedStats.wounded ?? currentStats.wounded;
+    const forceCollapsed = finalCombatants < 20;
+    const positionCollapsed = finalHealth <= 0;
+    const collapseDetected = forceCollapsed || positionCollapsed;
+    const immediateCollapse = finalCombatants <= 0;
+    const lastStandAlreadyUsed = calculatedStats.lastStandUsed ?? currentStats.lastStandUsed ?? false;
     
     // --- GAME OVER CHECKS (VICTORY / DEFEAT) ---
-    if (finalSoldiers < 20 || finalHealth <= 0) {
+    // The old build ended immediately when riflemen fell below 20, even while
+    // two HMG crews and wounded survivors were still visible in the UI. The
+    // first collapse now becomes an explicit, recoverable last-stand warning.
+    if (collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
+        calculatedStats.lastStandUsed = true;
+        if (positionCollapsed) calculatedStats.health = 1;
+        calculatedStats.siegeMeter = Math.min(35, calculatedStats.siegeMeter ?? currentStats.siegeMeter);
+        visualEffect = 'heavy-damage';
+        narrativeParts.push(`\n\n【最后防线】\n仓库已经逼近失守线：可战兵力 ${finalCombatants} 人，阵地完整度 ${Math.max(0, finalHealth)}%。副官组织起最后一道防线，为你争取到一次补救机会。请立即救治伤员、调整兵力或修复阵地；若再次跌破失守线，战役才会真正结束。`);
+        statsLog.push('⚠ 最后防线已启用：本局仅有一次补救机会');
+    } else if (collapseDetected) {
         calculatedStats.isGameOver = true;
         eventTriggered = 'game_over';
         visualEffect = 'heavy-damage';
+        calculatedStats.gameOverReason = forceCollapsed && positionCollapsed
+            ? 'total_collapse'
+            : forceCollapsed
+                ? 'combat_force_collapsed'
+                : 'position_collapsed';
         
         // CHECK ENDING 2: Counter-Attack
         // Threshold: Aggressive actions > 3
@@ -1082,10 +1240,10 @@ const runGameTurnInternal = (
             calculatedStats.gameResult = 'defeat_assault';
             const report = calculateScore({ ...currentStats, ...calculatedStats }, 'defeat_assault');
             calculatedStats.finalRank = report.rank;
-            narrativeParts.push(`\n\n【全军覆没】\n在无休止的反击中，最后一名士兵也倒在了冲锋的路上。你的勇猛令人动容，但四行仓库最终失守。\n\n结局达成：【反攻的号角】\n${report.text}`);
+            narrativeParts.push(`\n\n【反攻失败】\n连续主动出击耗尽了最后的成建制战斗力量。仍有伤员和失散士兵活着，但四行仓库已经无法继续防守。\n\n结局达成：【反攻的号角】\n${report.text}`);
         }
         // CHECK ENDING 5: Martyr (Flag Raised + Death)
-        else if (flagRaised) {
+        else if (flagRaised && immediateCollapse && finalWounded <= 0) {
             calculatedStats.gameResult = 'defeat_martyr';
             const report = calculateScore({ ...currentStats, ...calculatedStats }, 'defeat_martyr');
             calculatedStats.finalRank = report.rank;
@@ -1096,13 +1254,19 @@ const runGameTurnInternal = (
             calculatedStats.gameResult = 'defeat_generic';
             const report = calculateScore({ ...currentStats, ...calculatedStats }, 'defeat_generic');
             calculatedStats.finalRank = report.rank;
-            narrativeParts.push(`\n\n【战役结束】\n最终军衔评价：${report.rank}\n${report.text}`);
+            const collapseText = forceCollapsed && positionCollapsed
+                ? `可战兵力只剩 ${finalCombatants} 人，仓库结构完整度也已归零。残余人员被迫停止成建制抵抗。`
+                : forceCollapsed
+                    ? `可战兵力只剩 ${finalCombatants} 人，已经无法覆盖各处防线。伤员和幸存者仍在，但成建制防守宣告结束。`
+                    : `仓库结构完整度归零，主要防区被突破。仍有 ${finalCombatants} 名可战人员与伤员幸存，但阵地已经失守。`;
+            narrativeParts.push(`\n\n【战役结束】\n${collapseText}\n\n最终军衔评价：${report.rank}\n${report.text}`);
         }
 
     } else if (finalDay > 5) {
         // ENDING 1: Normal Hold
         calculatedStats.isGameOver = true;
         calculatedStats.gameResult = 'victory_hold';
+        calculatedStats.gameOverReason = 'mission_complete';
         eventTriggered = 'victory';
         const report = calculateScore({ ...currentStats, ...calculatedStats }, 'victory_hold');
         calculatedStats.finalRank = report.rank;
