@@ -69,15 +69,41 @@ export const revealEnemyOperation = (operation: EnemyOperation): EnemyOperation 
   confidence: 100,
 });
 
-export const progressEnemyOperation = (operation: EnemyOperation): EnemyOperation => ({
+/**
+ * Short battlefield actions still give the enemy one opportunity to move.
+ * Actions lasting 90 minutes or more consume two opportunities, preventing
+ * two-hour actions from being a strictly better use of one contact turn.
+ */
+export const getOperationAdvanceSteps = (durationMinutes: number): number => {
+  if (durationMinutes <= 0) return 0;
+  return durationMinutes >= 90 ? 2 : 1;
+};
+
+export const progressEnemyOperation = (operation: EnemyOperation, steps = 1): EnemyOperation => ({
   ...operation,
-  turnsRemaining: Math.max(0, operation.turnsRemaining - 1),
+  turnsRemaining: Math.max(0, operation.turnsRemaining - Math.max(0, steps)),
 });
+
+/**
+ * Single source of truth used by both the preview and the real settlement.
+ * Enemy pressure reaching 100% does not attack immediately; it compresses the
+ * remaining contact time to the final warning turn after normal movement.
+ */
+export const projectEnemyOperation = (
+  operation: EnemyOperation,
+  durationMinutes: number,
+  pressureAfterAction: number,
+): EnemyOperation => {
+  const projected = progressEnemyOperation(operation, getOperationAdvanceSteps(durationMinutes));
+  return pressureAfterAction >= 100 && projected.turnsRemaining > 1
+    ? { ...projected, turnsRemaining: 1 }
+    : projected;
+};
 
 export const getOperationIntel = (operation: EnemyOperation | null): string => {
   if (!operation) return '敌军正在重新集结，尚未形成明确攻势。';
-  if (!operation.revealed) return `观察哨发现敌军正在调动，预计 ${operation.turnsRemaining} 个行动后接触；目标尚未查明。`;
+  if (!operation.revealed) return `观察哨发现敌军正在调动，接敌时间约 ${operation.turnsRemaining} 回合；目标尚未查明。`;
   const type = operation.attackType === 'BOMBING' ? '航空轰炸' : operation.attackType === 'ARTILLERY' ? '炮击' : '步兵突击';
   const scale = operation.scale === 'LARGE' ? '大规模' : operation.scale === 'MEDIUM' ? '中等规模' : '小规模';
-  return `确证：${scale}${type}将沿“${operation.routeName}”进攻${operation.target}，预计 ${operation.turnsRemaining} 个行动后接触。`;
+  return `确证：${scale}${type}将沿“${operation.routeName}”进攻${operation.target}，接敌时间约 ${operation.turnsRemaining} 回合。`;
 };

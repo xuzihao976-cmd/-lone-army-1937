@@ -8,7 +8,7 @@ import { calculateCombatOutcomes, type AttackScale, type DamageType } from '../c
 import { pickWith, type RandomSource } from '../commandUtils';
 import { calculateCampaignScore } from '../endings/campaignScore';
 import { applyNamedSoldierDeaths } from '../roster';
-import { hasSpecialist } from '../specialists';
+import { getSpecialistEffectFactor } from '../specialists';
 import {
   calculateCommanderDeathRisk,
   formatCommanderRisk,
@@ -158,11 +158,12 @@ export const resolveAttack = ({
 
   const currentHealthy = calculatedStats.soldiers ?? currentStats.soldiers;
   const currentWounded = calculatedStats.wounded ?? currentStats.wounded;
-  const veteranReady = hasSpecialist(strategicStateAfterAction, 'veteran', attackLocation);
+  const veteranEffect = getSpecialistEffectFactor(strategicStateAfterAction, 'veteran', attackLocation);
   const fatigueAtContact = calculatedStats.fatigue ?? currentStats.fatigue;
-  const casualtyFactor = (veteranReady ? 0.85 : 1) * getFatigueCasualtyFactor(fatigueAtContact);
+  const veteranCasualtyReduction = 0.15 * veteranEffect;
+  const casualtyFactor = (1 - veteranCasualtyReduction) * getFatigueCasualtyFactor(fatigueAtContact);
   let totalDamage = Math.max(0, Math.ceil(outcome.casualtyCount * casualtyFactor));
-  if (veteranReady) statsLog.push('◆ 湖北老兵班稳住火线：本层伤亡降低15%');
+  if (veteranEffect > 0) statsLog.push(`◆ 湖北老兵班稳住火线：${Math.round(veteranEffect * 100)}%效能，本层伤亡降低${Math.round(veteranCasualtyReduction * 100)}%`);
   if (fatigueAtContact >= 55) statsLog.push(`⚠ 守军疲劳${fatigueAtContact}%：战斗伤亡上升`);
   let deaths = 0;
   let injuries = 0;

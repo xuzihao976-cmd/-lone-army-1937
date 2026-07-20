@@ -17,7 +17,13 @@ const ActionPreviewBar: React.FC<{ preview: ActionPreview | null }> = ({ preview
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-sm font-black text-neutral-100">{preview.action}</span>
         <span className="rounded bg-neutral-900 px-2 py-1 font-bold">耗时 {preview.durationLabel}</span>
-        <span className="rounded bg-neutral-900 px-2 py-1 font-bold">威胁 → {preview.predictedThreat}%</span>
+        <span className="rounded bg-neutral-900 px-2 py-1 font-bold">敌军压力 → {preview.predictedThreat}%</span>
+        {preview.projectedContactTurns !== null && (
+          <span className="rounded bg-neutral-900 px-2 py-1 font-bold">
+            {preview.enemyAdvanceSteps > 0 ? `敌军推进${preview.enemyAdvanceSteps}格 · ` : '敌军不推进 · '}
+            接敌{preview.projectedContactTurns}回合
+          </span>
+        )}
         <span className="rounded bg-neutral-900 px-2 py-1 font-black">{preview.available ? preview.riskLabel : '不可执行'}</span>
       </div>
       {preview.costs.length > 0 && <div className="mt-2 text-xs text-neutral-300">消耗：{preview.costs.join('、')}</div>}

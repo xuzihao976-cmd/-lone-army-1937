@@ -13,7 +13,7 @@ import {
 } from '../commandUtils';
 import { isMoveCommand } from '../intents';
 import { applyNamedSoldierDeaths } from '../roster';
-import { hasSpecialist } from '../specialists';
+import { getSpecialistEffectFactor } from '../specialists';
 import {
   canRecaptureSector,
   getRecaptureStagingSectors,
@@ -41,9 +41,9 @@ export const resolvePlayerAction = (
   const logs: string[] = [];
   const narrative: string[] = [];
   const pick = <T>(items: T[]): T => pickWith(items, random);
-  let timeCost = 5;
+  let timeCost = 0;
   let actionType = 'idle';
-  let siegeIncrease = 5;
+  let siegeIncrease = 0;
   let visualEffect: PlayerActionResolution['visualEffect'];
 
   if ((cmd.includes('夺回') || cmd.includes('反冲锋')) && findLocations(cmd).length > 0) {
@@ -73,20 +73,21 @@ export const resolvePlayerAction = (
       updatedStats.ammo = currentStats.ammo - ammoUsed;
       updatedStats.grenades = currentStats.grenades - grenadesUsed;
 
-      const assaultTeamReady = hasSpecialist(currentStats, 'assault', donor.location);
+      const assaultEffect = getSpecialistEffectFactor(currentStats, 'assault', donor.location);
       const successChance = Math.min(
         0.85,
         0.22 + currentStats.morale / 300
           + (currentStats.fortificationLevel[donor.location] || 0) * 0.03
           + fireSupport * 0.23
-          + (assaultTeamReady ? 0.12 : 0),
+          + 0.12 * assaultEffect,
       );
       const success = random() < successChance;
       const supplyCasualtyPenalty = Math.round((1 - fireSupport) * 7);
       const casualties = success
         ? 2 + Math.floor(random() * 5) + supplyCasualtyPenalty
         : 8 + Math.floor(random() * 11) + supplyCasualtyPenalty;
-      const actualCasualties = Math.min(assaultForce, Math.max(0, casualties - (assaultTeamReady ? 2 : 0)));
+      const assaultCasualtyReduction = Math.round(2 * assaultEffect);
+      const actualCasualties = Math.min(assaultForce, Math.max(0, casualties - assaultCasualtyReduction));
       const distribution = { ...currentStats.soldierDistribution };
       distribution[donor.location] = Math.max(0, donor.soldiers - (success ? assaultForce : actualCasualties));
       if (success) distribution[target] = Math.max(0, assaultForce - actualCasualties);
@@ -96,7 +97,7 @@ export const resolvePlayerAction = (
       applyNamedSoldierDeaths(currentStats, updatedStats, actualCasualties, narrative, random);
       if (ammoUsed > 0 || grenadesUsed > 0) logs.push(`🔻 反冲锋消耗: 七九弹${ammoUsed} / 手榴弹${grenadesUsed}`);
       if (bayonetAssault) logs.push('⚔️ 火力不足：突击队以手榴弹、刺刀和工兵铲近战夺楼');
-      if (assaultTeamReady) logs.push('🗡 敢死突击组带队：成功率提高 / 伤亡降低');
+      if (assaultEffect > 0) logs.push(`🗡 敢死突击组带队：${Math.round(assaultEffect * 100)}%效能 / 成功率提高 / 伤亡降低`);
       logs.push(`🔴 反冲锋伤亡: ${actualCasualties}人`);
 
       if (success) {
@@ -146,6 +147,7 @@ export const resolvePlayerAction = (
     if (currentHour >= 0 && currentHour < 5) {
       updatedStats.aggressiveCount = (currentStats.aggressiveCount || 0) + 1;
       timeCost = 60;
+      siegeIncrease = 5;
       const reconBonus = Math.max(0, currentStats.reconBonus || 0);
       const success = random() < getRaidSuccessChance(currentStats);
       updatedStats.reconBonus = 0;
@@ -335,6 +337,7 @@ export const resolvePlayerAction = (
     } else {
       timeCost = 15;
       actionType = 'move';
+      siegeIncrease = 5;
       updatedStats.location = target;
       playSound('click');
     }
@@ -353,11 +356,14 @@ export const resolvePlayerAction = (
       narrative.push(`${target}仍在敌军控制下，工兵无法进入施工。必须先夺回防区。`);
     } else if (currentLevel >= 3 && currentIntegrity >= 100) {
       actionType = 'build_max';
-      timeCost = 5;
+      timeCost = 0;
+      siegeIncrease = 0;
     } else {
-      const engineerReady = hasSpecialist(currentStats, 'engineer', target);
-      const materialCost = engineerReady ? 170 : 200;
-      const integrityGain = engineerReady ? 24 : 18;
+      const engineerEffect = getSpecialistEffectFactor(currentStats, 'engineer', target);
+      const materialDiscount = Math.round(30 * engineerEffect);
+      const integrityBonus = Math.round(6 * engineerEffect);
+      const materialCost = 200 - materialDiscount;
+      const integrityGain = 18 + integrityBonus;
       if (currentStats.sandbags < materialCost) {
         actionType = 'fail';
         timeCost = 0;
@@ -388,7 +394,7 @@ export const resolvePlayerAction = (
             logs.push(`💔 劳累: 士气 -${moraleLoss}`);
           }
         }
-        logs.push(`🧱 工事材料 -${materialCost}${engineerReady ? '（工兵组节省30）' : ''}`);
+        logs.push(`🧱 工事材料 -${materialCost}${engineerEffect > 0 ? `（工兵组${Math.round(engineerEffect * 100)}%效能，节省${materialDiscount}）` : ''}`);
         logs.push(`🏢 ${target}完整度: ${currentIntegrity}% → ${newIntegrity}%`);
         logs.push(mitigationAfter !== mitigationBefore
           ? `🛡 ${FORTIFICATION_NAMES[newLevel]}: 实际减伤 ${mitigationBefore}% → ${mitigationAfter}%`
@@ -419,8 +425,9 @@ export const resolvePlayerAction = (
     } else if (wounded > 0 && currentStats.medkits > 0) {
       actionType = 'heal';
       siegeIncrease = 10;
-      const medicReady = hasSpecialist(currentStats, 'medic', '地下室');
-      const actualHeal = Math.min(wounded, currentStats.medkits, Math.floor(random() * 4) + 2 + (medicReady ? 2 : 0));
+      const medicEffect = getSpecialistEffectFactor(currentStats, 'medic', '地下室');
+      const medicBonus = Math.round(2 * medicEffect);
+      const actualHeal = Math.min(wounded, currentStats.medkits, Math.floor(random() * 4) + 2 + medicBonus);
       if (actualHeal > 0) {
         updatedStats.medkits = currentStats.medkits - actualHeal;
         updatedStats.wounded = wounded - actualHeal;
@@ -428,7 +435,7 @@ export const resolvePlayerAction = (
         updatedStats.morale = Math.min(100, currentStats.morale + actualHeal * 2);
         updatedStats.woundedTimer = Math.max(0, (currentStats.woundedTimer || 0) - actualHeal * 90);
         logs.push(`🩹 消耗急救包: ${actualHeal}`, `💚 治愈伤员: ${actualHeal}人`);
-        if (medicReady) logs.push('✚ 战地救护组：本次额外救回2人上限');
+        if (medicEffect > 0) logs.push(`✚ 战地救护组：${Math.round(medicEffect * 100)}%效能，本次额外救回${medicBonus}人上限`);
         logs.push(`💪 士气 +${actualHeal * 2}`);
       } else {
         narrative.push('军医尽力了，但条件太差，这次没能让伤员恢复战斗力。');
@@ -446,7 +453,8 @@ export const resolvePlayerAction = (
       siegeIncrease = 0;
     } else if (!currentStats.hasFlagRaised && currentStats.location === '屋顶') {
       if (!currentStats.flagWarned) {
-        timeCost = 5;
+        timeCost = 0;
+        siegeIncrease = 0;
         updatedStats.flagWarned = true;
         actionType = 'flag_warn';
       } else {

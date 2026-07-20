@@ -215,6 +215,8 @@ export interface ActionPreview {
   threatIncrease: number;
   predictedThreat: number;
   attackChance: number;
+  enemyAdvanceSteps: number;
+  projectedContactTurns: number | null;
   risk: 'safe' | 'low' | 'medium' | 'high' | 'critical';
   riskLabel: string;
   costs: string[];

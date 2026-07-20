@@ -124,15 +124,17 @@ export const getSectorDefenseProfile = (stats: GameStats, location: Location): S
 };
 
 export const calculateCommanderDeathRisk = (stats: GameStats, location: Location): number => {
-  const fort = Math.max(0, Math.min(3, stats.fortificationLevel[location] ?? 0));
-  const garrison = Math.max(0, stats.soldierDistribution[location] ?? 0);
+  const defense = getSectorDefenseProfile(stats, location);
+  const fort = defense.localFortLevel;
+  const garrison = defense.garrison;
   const integrity = getSectorIntegrity(stats, location);
-  const localHmg = stats.hmgSquads.filter((squad) => squad.status === 'active' && squad.location === location).length;
 
   const fortFactor = [1.6, 1, 0.65, 0.35][fort];
   const garrisonFactor = garrison < 20 ? 1.6 : garrison < 60 ? 1.25 : garrison < 120 ? 1 : 0.75;
   const integrityFactor = integrity < 25 ? 1.5 : integrity < 50 ? 1.2 : 1;
-  const hmgFactor = Math.max(0.7, 1 - localHmg * 0.15);
+  // An HMG only shelters the command post when it has enough ammunition to
+  // sustain fire. An empty but otherwise active gun no longer grants cover.
+  const hmgFactor = Math.max(0.7, 1 - defense.fireReadyHmgSquads * 0.15);
 
   // 2% is the neutral baseline. Strong fortifications can push the risk down
   // to 0.3%; an exposed, collapsing command post can raise it to at most 5%.

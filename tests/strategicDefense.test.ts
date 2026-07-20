@@ -75,4 +75,25 @@ describe('strategic defense helpers', () => {
     expect(empty.fireReadyHmgSquads).toBe(0);
     expect(empty.mitigation).toBeLessThan(supplied.mitigation);
   });
+
+  it('does not let an unloaded HMG reduce commander death risk', () => {
+    const loaded = createInitialStats(5);
+    loaded.fortificationLevel['一楼入口'] = 1;
+    loaded.soldierDistribution['一楼入口'] = 80;
+    loaded.hmgSquads = loaded.hmgSquads.map((squad, index) => ({
+      ...squad,
+      location: index === 0 ? '一楼入口' : '二楼阵地',
+    }));
+    loaded.machineGunAmmo = 200;
+
+    const empty = structuredClone(loaded);
+    empty.machineGunAmmo = 0;
+    const noGun = structuredClone(empty);
+    noGun.hmgSquads = noGun.hmgSquads.map((squad) => ({ ...squad, location: '二楼阵地' }));
+
+    expect(calculateCommanderDeathRisk(empty, '一楼入口'))
+      .toBeCloseTo(calculateCommanderDeathRisk(noGun, '一楼入口'), 8);
+    expect(calculateCommanderDeathRisk(empty, '一楼入口'))
+      .toBeGreaterThan(calculateCommanderDeathRisk(loaded, '一楼入口'));
+  });
 });

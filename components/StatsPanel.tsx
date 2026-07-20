@@ -85,9 +85,9 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
               <span className="truncate text-xs text-neutral-300" title={enemyIntel}>{enemyIntel || '通讯中断……'}</span>
             </div>
           </div>
-          <div className="border-l border-neutral-800 px-3 py-2" title="敌军按回合推进；威胁达到100%时，下一次行动后必定接敌。">
+          <div className="border-l border-neutral-800 px-3 py-2" title="敌军压力影响攻势规模；达到100%时，会把接敌时间压缩至最后1回合。">
             <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className="text-neutral-400">敌袭威胁</span>
+              <span className="text-neutral-400">敌军压力</span>
               <span className={siegePercent >= 80 ? 'text-red-400' : 'text-neutral-200'}>{siegePercent}%</span>
             </div>
             <div className="mt-1.5 h-2 overflow-hidden rounded-full border border-neutral-800 bg-black">
@@ -101,7 +101,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
             <span>守军疲劳</span><span className={stats.fatigue >= 55 ? 'text-red-400' : 'text-cyan-300'}>{stats.fatigue}%</span>
           </div>
           <div className="flex items-center justify-between px-3 py-1.5 text-neutral-400">
-            <span>接敌倒计时</span><span className={stats.enemyOperation?.turnsRemaining === 1 ? 'text-red-400' : 'text-amber-300'}>{stats.enemyOperation ? `${stats.enemyOperation.turnsRemaining} 回合` : '重整中'}</span>
+            <span>接敌时间</span><span className={stats.enemyOperation?.turnsRemaining === 1 ? 'text-red-400' : 'text-amber-300'}>{stats.enemyOperation ? `${stats.enemyOperation.turnsRemaining} 回合` : '重整中'}</span>
           </div>
         </div>
 

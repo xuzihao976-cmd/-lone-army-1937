@@ -40,6 +40,39 @@ describe('action risk previews', () => {
     expect(preview?.risk).toBe('critical');
   });
 
+  it('uses the same pressure compression and long-action progress as settlement', () => {
+    const stats = createInitialStats(1937);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.siegeMeter = 90;
+    stats.enemyOperation!.turnsRemaining = 7;
+
+    const preview = getActionPreview(stats, '休息整顿');
+    expect(preview).toMatchObject({
+      durationMinutes: 120,
+      predictedThreat: 100,
+      enemyAdvanceSteps: 2,
+      projectedContactTurns: 1,
+      risk: 'high',
+    });
+    expect(preview?.short).toContain('接敌1回合');
+    expect(preview?.riskLabel).toContain('压至1回合');
+  });
+
+  it('does not advance contact time for a flag-risk confirmation', () => {
+    const stats = createInitialStats(1937);
+    stats.location = '屋顶';
+    stats.flagWarned = false;
+    stats.enemyOperation!.turnsRemaining = 7;
+
+    const preview = getActionPreview(stats, '升旗');
+    expect(preview).toMatchObject({
+      durationMinutes: 0,
+      enemyAdvanceSteps: 0,
+      projectedContactTurns: 7,
+    });
+  });
+
   it('previews sealing an exposed stairwell and its one-use cost', () => {
     const stats = createInitialStats();
     stats.day = 2;

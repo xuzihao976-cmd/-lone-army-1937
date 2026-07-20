@@ -6,7 +6,7 @@ import { getDayProfile } from '../data/dayProfiles';
 import { buildTurnSummary } from './turnSummary';
 import { advanceCampaignClock, formatCampaignDate } from './time';
 import { type AttackScale, type DamageType } from './combat';
-import { createEnemyOperation, getOperationIntel, progressEnemyOperation } from './battlefield';
+import { createEnemyOperation, getOperationIntel, projectEnemyOperation } from './battlefield';
 import { resolveTacticalCard } from './tacticalCards';
 import { appendCampaignHistory } from './campaignProgress';
 import { resolveDilemma } from './dilemmaResolver';
@@ -322,14 +322,11 @@ const runGameTurnInternal = (
         ?? currentStats.enemyOperation
         ?? createEnemyOperation(strategicStateAfterAction, random);
 
-    if (timeCost > 0 && actionType !== 'idle') {
+    const turnAdvanced = timeCost > 0 && actionType !== 'idle';
+    if (turnAdvanced) {
         // Enemy movement is now turn-based and forecastable. Every meaningful
-        // action advances the visible operation one step; 100% threat compresses
-        // the countdown to one final warning action so old saves cannot stall.
-        contactOperation = progressEnemyOperation(contactOperation);
-        if (newSiege >= 100 && contactOperation.turnsRemaining > 1) {
-            contactOperation = { ...contactOperation, turnsRemaining: 1 };
-        }
+        // action uses the same duration/pressure projection as the UI preview.
+        contactOperation = projectEnemyOperation(contactOperation, timeCost, newSiege);
         calculatedStats.enemyOperation = contactOperation;
         if (contactAllowed && contactOperation.turnsRemaining <= 0) {
             attackTriggered = true;
@@ -350,7 +347,7 @@ const runGameTurnInternal = (
     const currentWoundedCount = calculatedStats.wounded ?? currentStats.wounded;
     let currentTimer = calculatedStats.woundedTimer ?? currentStats.woundedTimer;
     
-    if (currentWoundedCount > 0) {
+    if (turnAdvanced && currentWoundedCount > 0) {
         const hospitalHeld = isSectorHeld(strategicStateAfterAction, '地下室');
         const treatmentWindow = hospitalHeld ? 720 : 360;
         currentTimer += totalMinutesPassed;
@@ -369,7 +366,7 @@ const runGameTurnInternal = (
                 currentTimer = hospitalHeld ? 660 : 300;
             }
         }
-    } else {
+    } else if (currentWoundedCount <= 0) {
         currentTimer = 0;
     }
     calculatedStats.woundedTimer = currentTimer;
@@ -412,6 +409,7 @@ const runGameTurnInternal = (
         narrativeParts,
         statsLog,
         random,
+        allowRandomEvents: turnAdvanced,
     });
 
     return {
@@ -421,7 +419,7 @@ const runGameTurnInternal = (
         visualEffect: finalized.visualEffect,
         attackLocation, 
         dilemma: finalized.dilemma,
-        turnAdvanced: timeCost > 0,
+        turnAdvanced,
         enemyIntel: getOperationIntel(calculatedStats.enemyOperation ?? currentStats.enemyOperation)
     };
 };

@@ -19,6 +19,7 @@ interface FinalizeTurnInput {
   narrativeParts: string[];
   statsLog: string[];
   random: RandomSource;
+  allowRandomEvents: boolean;
 }
 
 interface FinalizeTurnResult {
@@ -43,20 +44,21 @@ export const finalizeTurn = ({
   narrativeParts,
   statsLog,
   random,
+  allowRandomEvents,
 }: FinalizeTurnInput): FinalizeTurnResult => {
   const pick = <T>(items: T[]): T => pickWith(items, random);
   let eventTriggered = initialEvent;
   let visualEffect = initialVisualEffect;
 
   const finalMorale = calculatedStats.morale ?? currentStats.morale;
-  if (!calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
+  if (allowRandomEvents && !calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
     narrativeParts.push('\n\n' + pick(MUTINY_SCENES));
     const lost = Math.floor(random() * 10) + 5;
     calculatedStats.soldiers = Math.max(0, (calculatedStats.soldiers ?? currentStats.soldiers) - lost);
     statsLog.push(`🏃 逃兵/失踪: ${lost}人`);
   }
 
-  if (!currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
+  if (allowRandomEvents && !currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
     const used = calculatedStats.usedTacticalCards || currentStats.usedTacticalCards || [];
     const availableCards = TACTICAL_CARDS.filter((card) => !used.includes(card.id));
     if (availableCards.length > 0) {
@@ -159,7 +161,7 @@ export const finalizeTurn = ({
   if (responseText) narrativeParts.unshift(responseText);
 
   let dilemma: Dilemma | undefined;
-  if (!calculatedStats.isGameOver && !eventTriggered.includes('attack') && random() < 0.2) {
+  if (allowRandomEvents && !calculatedStats.isGameOver && !eventTriggered.includes('attack') && random() < 0.2) {
     const alreadyTriggered = calculatedStats.triggeredEvents || currentStats.triggeredEvents || [];
     const flags = calculatedStats.consequenceFlags || currentStats.consequenceFlags || [];
     const potentialDilemmas = ALL_DILEMMAS.filter((candidate) =>

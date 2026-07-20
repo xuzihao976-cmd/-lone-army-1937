@@ -23,6 +23,36 @@ describe('local game engine endings', () => {
     expect(runGameTurn(stats, '侦察敌情').turnAdvanced).toBe(true);
   });
 
+  it('never draws world events from ordinary chat or other zero-time input', () => {
+    for (let seed = 1; seed <= 160; seed += 1) {
+      const stats = createInitialStats(seed);
+      stats.tutorialStep = 3;
+      stats.morale = 10;
+      stats.enemyOperation!.turnsRemaining = 7;
+
+      const result = runGameTurn(stats, '副官，你吃饭了吗？');
+      expect(result.turnAdvanced, `seed ${seed}`).toBe(false);
+      expect(result.dilemma, `seed ${seed}`).toBeUndefined();
+      expect(result.updatedStats.activeTacticalCard, `seed ${seed}`).toBeUndefined();
+      expect(result.updatedStats.soldiers, `seed ${seed}`).toBeUndefined();
+      expect(result.updatedStats.enemyOperation, `seed ${seed}`).toBeUndefined();
+      expect(result.updatedStats.currentTime, `seed ${seed}`).toBe(stats.currentTime);
+    }
+  });
+
+  it('treats the first flag command as a free confirmation, not a hidden turn', () => {
+    const stats = createInitialStats(1601);
+    stats.tutorialStep = 3;
+    stats.location = '屋顶';
+    stats.enemyOperation!.turnsRemaining = 7;
+
+    const result = runGameTurn(stats, '升旗');
+    expect(result.turnAdvanced).toBe(false);
+    expect(result.updatedStats.flagWarned).toBe(true);
+    expect(result.updatedStats.enemyOperation).toBeUndefined();
+    expect(result.updatedStats.currentTime).toBe(stats.currentTime);
+  });
+
   it('resolves tactical cards with the exact advertised effects', () => {
     const moraleStats = createInitialStats(80);
     moraleStats.tutorialStep = 3;
@@ -91,6 +121,19 @@ describe('local game engine endings', () => {
     expect(second.attackLocation).toBe('一楼入口');
   });
 
+  it('advances long actions two contact steps and matches the action preview', () => {
+    const stats = createInitialStats(8601);
+    stats.tutorialStep = 3;
+    stats.day = 2;
+    stats.siegeMeter = 90;
+    stats.enemyOperation!.turnsRemaining = 7;
+
+    const result = runGameTurn(stats, '休息整顿');
+    expect(result.eventTriggered).not.toBe('attack');
+    expect(result.updatedStats.enemyOperation?.turnsRemaining).toBe(1);
+    expect(result.updatedStats.siegeMeter).toBe(100);
+  });
+
   it('makes specialist squads matter without adding phantom soldiers', () => {
     const stats = createInitialStats(87);
     stats.tutorialStep = 3;
@@ -105,6 +148,24 @@ describe('local game engine endings', () => {
     const redeploy = runGameTurn(stats, '部署小队湖北老兵班至屋顶');
     expect(redeploy.updatedStats.specialistSquads?.find((squad) => squad.id === 'veteran')?.location).toBe('屋顶');
     expect(stats.soldiers).toBe(beforeTotal);
+  });
+
+  it('uses reduced engineer strength consistently in previewed and real costs', () => {
+    const stats = createInitialStats(8701);
+    stats.tutorialStep = 3;
+    stats.siegeMeter = 0;
+    stats.sectorIntegrity['一楼入口'] = 70;
+    stats.soldierDistribution = {
+      '一楼入口': 8,
+      '二楼阵地': 312,
+      '屋顶': 10,
+      '地下室': 24,
+    };
+
+    const result = runGameTurn(stats, '加固一楼入口');
+    expect(result.updatedStats.sandbags).toBe(stats.sandbags - 185);
+    expect(result.updatedStats.sectorIntegrity?.['一楼入口']).toBe(91);
+    expect(result.narrative).toContain('工兵组50%效能');
   });
 
   it('applies diminishing returns to repeated speeches and searches', () => {

@@ -11,7 +11,11 @@ import {
   isApproachExposed,
   isSectorHeld,
 } from '../engine/strategicDefense';
-import { SPECIALIST_EFFECTS } from '../engine/specialists';
+import {
+  getSpecialistEffectDescription,
+  getSpecialistReadiness,
+  SPECIALIST_READINESS_LABELS,
+} from '../engine/specialists';
 
 interface TacticalMapProps {
   stats: GameStats;
@@ -283,11 +287,18 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
               </div>
               {selectedSpecialists.length > 0 && (
                 <div className="mt-1.5 space-y-1">
-                  {selectedSpecialists.map((squad) => (
-                    <div key={squad.id} className="rounded bg-cyan-950/30 px-1.5 py-1 text-[11px] text-cyan-200">
-                      <b>◆ {squad.name}</b> · {SPECIALIST_EFFECTS[squad.role]}
-                    </div>
-                  ))}
+                  {selectedSpecialists.map((squad) => {
+                    const readiness = getSpecialistReadiness(stats, squad);
+                    return (
+                      <div key={squad.id} className="rounded bg-cyan-950/30 px-1.5 py-1 text-[11px] text-cyan-200">
+                        <b>◆ {squad.name}</b>
+                        <span className={`ml-1 font-black ${readiness.readiness === 'inactive' ? 'text-red-300' : readiness.readiness === 'full' ? 'text-green-300' : 'text-amber-300'}`}>
+                          {SPECIALIST_READINESS_LABELS[readiness.readiness]} {readiness.availableMembers}/{readiness.requiredMembers}
+                        </span>
+                        <span> · {getSpecialistEffectDescription(stats, squad)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               {stats.location === selectedLocation && (

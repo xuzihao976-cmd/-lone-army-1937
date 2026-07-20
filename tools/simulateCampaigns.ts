@@ -1,7 +1,13 @@
 import { runGameTurn } from '../engine/gameEngine';
 import { createInitialStats } from '../storage/saveStore';
 import type { Dilemma, GameStats, GameTurnResult, Location } from '../types';
-import { getSectorDefenseProfile, isSectorHeld } from '../engine/strategicDefense';
+import {
+  canRecaptureSector,
+  getRecaptureStagingSectors,
+  getSectorDefenseProfile,
+  isSectorHeld,
+} from '../engine/strategicDefense';
+import { getSpecialistEffectFactor, getSpecialistReadiness } from '../engine/specialists';
 
 type Policy = 'defensive' | 'balanced' | 'aggressive' | 'novice';
 
@@ -34,6 +40,12 @@ const assertValidState = (stats: GameStats, context: string): void => {
     const integrity = stats.sectorIntegrity[location];
     if (!Number.isFinite(integrity) || integrity < 0 || integrity > 100) {
       throw new Error(`${context}: invalid ${location} integrity=${integrity}`);
+    }
+    const supportedSpecialists = stats.specialistSquads
+      .filter((squad) => squad.status === 'active' && squad.location === location)
+      .reduce((sum, squad) => sum + getSpecialistReadiness(stats, squad).availableMembers, 0);
+    if (supportedSpecialists > (stats.soldierDistribution[location] || 0)) {
+      throw new Error(`${context}: ${location} specialist members=${supportedSpecialists} exceed garrison=${stats.soldierDistribution[location] || 0}`);
     }
   }
 };
@@ -79,8 +91,11 @@ const chooseAction = (stats: GameStats, policy: Policy): string => {
     return choices[stats.rngState % choices.length];
   }
 
-  const lost = LOCATIONS.find((location) => !isSectorHeld(stats, location));
-  if (lost) return `反冲锋夺回${lost}`;
+  const reclaimable = LOCATIONS.find((location) =>
+    canRecaptureSector(stats, location)
+    && getRecaptureStagingSectors(stats, location)
+      .some((staging) => (stats.soldierDistribution[staging] || 0) >= 40));
+  if (reclaimable) return `反冲锋夺回${reclaimable}`;
 
   if (stats.wounded >= (policy === 'aggressive' ? 28 : 8) && stats.medkits > 0 && isSectorHeld(stats, '地下室')) return '治疗伤员';
   if (stats.fatigue >= (policy === 'aggressive' ? 78 : 62)) return '休息整顿';
@@ -99,7 +114,7 @@ const chooseAction = (stats: GameStats, policy: Policy): string => {
   const weakest = LOCATIONS
     .filter((location) => isSectorHeld(stats, location))
     .sort((a, b) => (stats.sectorIntegrity[a] || 0) - (stats.sectorIntegrity[b] || 0))[0];
-  const engineerCost = stats.specialistSquads.some((squad) => squad.status === 'active' && squad.role === 'engineer' && squad.location === weakest) ? 170 : 200;
+  const engineerCost = 200 - Math.round(30 * getSpecialistEffectFactor(stats, 'engineer', weakest));
   if (weakest && stats.sandbags >= engineerCost && (stats.sectorIntegrity[weakest] < 90 || stats.fortificationLevel[weakest] < 2)) {
     return `加固${weakest}`;
   }

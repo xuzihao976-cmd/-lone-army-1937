@@ -57,9 +57,9 @@ export const buildTurnSummary = (
   }
 
   if (after.siegeMeter < before.siegeMeter && result.eventTriggered === 'attack') {
-    notes.push('敌军发动进攻后，威胁值已回落');
+    notes.push('敌军发动进攻后，压力已回落');
   } else if (after.siegeMeter > before.siegeMeter) {
-    notes.push(`本次行动令威胁值上升 ${after.siegeMeter - before.siegeMeter}`);
+    notes.push(`本次行动令敌军压力上升 ${after.siegeMeter - before.siegeMeter}`);
   }
 
   (['屋顶', '二楼阵地', '一楼入口', '地下室'] as Location[]).forEach((location) => {

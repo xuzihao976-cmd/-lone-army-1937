@@ -3,6 +3,8 @@ import { getDayProfile } from '../data/dayProfiles';
 import { isMoveCommand } from './intents';
 import { canRecaptureSector, getRecaptureStagingSectors, isApproachExposed, isSectorHeld } from './strategicDefense';
 import { getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from './actionDynamics';
+import { getOperationAdvanceSteps, projectEnemyOperation } from './battlefield';
+import { getSpecialistEffectFactor } from './specialists';
 import type { Location } from '../types';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
@@ -23,9 +25,10 @@ const formatDuration = (minutes: number): string => {
   return remainder ? `${hours}小时${remainder}分` : `${hours}小时`;
 };
 
-const riskFor = (turnsAfterAction: number | null, threatForcesContact: boolean): Pick<ActionPreview, 'risk' | 'riskLabel'> => {
+const riskFor = (turnsAfterAction: number | null, pressureCompressed = false): Pick<ActionPreview, 'risk' | 'riskLabel'> => {
   if (turnsAfterAction !== null && turnsAfterAction <= 0) return { risk: 'critical', riskLabel: '本次行动后接敌' };
-  if (threatForcesContact || turnsAfterAction === 1) return { risk: 'high', riskLabel: '下一回合必定接敌' };
+  if (pressureCompressed) return { risk: 'high', riskLabel: '压力100%：接敌时间压至1回合' };
+  if (turnsAfterAction === 1) return { risk: 'high', riskLabel: '下次有效行动将接敌' };
   if (turnsAfterAction !== null && turnsAfterAction <= 3) return { risk: 'medium', riskLabel: `预计${turnsAfterAction}回合后接敌` };
   if (turnsAfterAction !== null) return { risk: 'low', riskLabel: `预计${turnsAfterAction}回合后接敌` };
   return { risk: 'safe', riskLabel: '敌军仍在重整' };
@@ -126,19 +129,21 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
             : stats.location;
     const level = stats.fortificationLevel[target] ?? 0;
     const integrity = stats.sectorIntegrity[target] ?? 100;
-    const engineerReady = stats.specialistSquads.some((squad) => squad.status === 'active' && squad.role === 'engineer' && squad.location === target);
-    const materialCost = engineerReady ? 170 : 200;
-    const repair = engineerReady ? 24 : 18;
+    const engineerFactor = getSpecialistEffectFactor(stats, 'engineer', target);
+    const materialDiscount = Math.round(30 * engineerFactor);
+    const repairBonus = Math.round(6 * engineerFactor);
+    const materialCost = 200 - materialDiscount;
+    const repair = 18 + repairBonus;
     available = isSectorHeld(stats, target) && (level < 3 || integrity < 100) && stats.sandbags >= materialCost;
     durationMinutes = available ? 120 : 0;
     baseThreat = available ? 15 : 0;
     costs = level >= 3 && integrity >= 100 ? [] : [`工事材料 ${materialCost}`];
-    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `恢复${repair}%防区完整度；每两次施工强化一次实际减伤${engineerReady ? '（工兵组生效）' : ''}`;
+    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `恢复${repair}%防区完整度；每两次施工强化一次实际减伤${engineerFactor > 0 ? `（工兵效能${Math.round(engineerFactor * 100)}%）` : ''}`;
   } else if (includesAny(command, ['休息', '睡', '整顿'])) {
     action = '轮换休整';
     durationMinutes = 120;
     baseThreat = 35;
-    reason = `恢复士气、仓库结构与35%疲劳，但敌军会推进一回合（当前疲劳${stats.fatigue}%）`;
+    reason = `恢复士气、仓库结构与35%疲劳；耗时较长，敌军推进2格（当前疲劳${stats.fatigue}%）`;
   } else if (includesAny(command, ['治疗', '抢救', '救', '医'])) {
     action = '救治伤员';
     available = isSectorHeld(stats, '地下室') && stats.wounded > 0 && stats.medkits > 0;
@@ -149,7 +154,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   } else if (command.includes('升旗')) {
     action = '升起国旗';
     available = stats.location === '屋顶' && !stats.hasFlagRaised;
-    durationMinutes = available ? (stats.flagWarned ? 30 : 5) : 0;
+    durationMinutes = available && stats.flagWarned ? 30 : 0;
     baseThreat = available && stats.flagWarned ? 50 : 0;
     reason = stats.hasFlagRaised ? '国旗已经升起' : stats.location !== '屋顶' ? '必须先移动到屋顶' : stats.flagWarned ? '士气大增，但白天会招致轰炸' : '副官会要求再次确认风险';
   } else if (includesAny(command, ['演讲', '训话', '鼓舞', '动员', '坚持', '顶住', '拼了', '万岁'])) {
@@ -167,18 +172,27 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   const multiplier = getDayProfile(stats.day).threatMultiplier;
   const threatIncrease = Math.max(0, Math.ceil(baseThreat * multiplier * 0.6));
   const predictedThreat = Math.min(100, stats.siegeMeter + threatIncrease);
-  const turnsAfterAction = stats.enemyOperation && available && durationMinutes > 0
-    ? Math.max(0, stats.enemyOperation.turnsRemaining - 1)
-    : stats.enemyOperation?.turnsRemaining ?? null;
+  const enemyAdvanceSteps = available ? getOperationAdvanceSteps(durationMinutes) : 0;
+  const projectedOperation = stats.enemyOperation && enemyAdvanceSteps > 0
+    ? projectEnemyOperation(stats.enemyOperation, durationMinutes, predictedThreat)
+    : stats.enemyOperation;
+  const turnsAfterAction = projectedOperation?.turnsRemaining ?? null;
+  const turnsAfterMovement = stats.enemyOperation
+    ? Math.max(0, stats.enemyOperation.turnsRemaining - enemyAdvanceSteps)
+    : null;
+  const pressureCompressed = predictedThreat >= 100
+    && turnsAfterMovement !== null
+    && turnsAfterMovement > 1
+    && turnsAfterAction === 1;
   const operationDue = turnsAfterAction === 0;
   const attackChance = available && durationMinutes > 0
     ? operationDue
       ? 1
       : 0
     : 0;
-  const risk = riskFor(turnsAfterAction, predictedThreat >= 100 && !operationDue);
+  const risk = riskFor(turnsAfterAction, pressureCompressed);
   const short = available
-    ? `${formatDuration(durationMinutes)} · ${stats.enemyOperation ? `接敌${Math.max(0, stats.enemyOperation.turnsRemaining - 1)}回合` : `威胁${threatIncrease > 0 ? `+${threatIncrease}` : '不变'}`}`
+    ? `${formatDuration(durationMinutes)} · ${stats.enemyOperation ? `接敌${turnsAfterAction}回合` : `压力${threatIncrease > 0 ? `+${threatIncrease}` : '不变'}`}`
     : '当前不可执行';
 
   return {
@@ -188,6 +202,8 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     threatIncrease,
     predictedThreat,
     attackChance,
+    enemyAdvanceSteps,
+    projectedContactTurns: turnsAfterAction,
     ...risk,
     costs,
     available,

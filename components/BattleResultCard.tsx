@@ -43,7 +43,7 @@ const BattleResultCard: React.FC<{ summary: TurnSummary }> = ({ summary }) => {
       )}
 
       <div className="mt-3 flex items-center gap-2 text-xs font-mono text-neutral-400">
-        <span>威胁</span>
+        <span>敌军压力</span>
         <div className="h-1.5 flex-1 overflow-hidden rounded bg-neutral-900">
           <div className="h-full bg-red-700 transition-all" style={{ width: `${summary.threatAfter}%` }} />
         </div>
