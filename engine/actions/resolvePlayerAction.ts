@@ -1,3 +1,4 @@
+import { resolveNaturalCommand } from '../naturalCommands';
 import type { GameStats } from '../../types';
 import { playSound } from '../../utils/sound';
 import { RAID_FAIL_TEXTS, RAID_SUCCESS_TEXTS } from '../../data/text/combat';
@@ -37,6 +38,8 @@ export const resolvePlayerAction = (
   cmd: string,
   random: RandomSource,
 ): PlayerActionResolution => {
+  const natural = resolveNaturalCommand(currentStats, cmd);
+  if (natural) return natural;
   const updatedStats: Partial<GameStats> = {};
   const logs: string[] = [];
   const narrative: string[] = [];

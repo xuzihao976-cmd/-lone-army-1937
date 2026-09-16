@@ -1,4 +1,6 @@
-export type AiMode = 'narrate' | 'freeform' | 'advisor';
+import type { GameStats } from '../types';
+import { validateAiOrder } from './aiOrders';
+export type AiMode = 'narrate' | 'freeform' | 'advisor' | 'intent';
 export type AiSource = 'siliconflow' | 'local';
 
 export interface AiReply {
@@ -15,7 +17,8 @@ interface AiRequest {
 
 const REQUEST_TIMEOUT_MS = 8_000;
 let gatewayUnavailableUntil = 0;
-const isStaticHosting = () => typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+const configuredGateway = String(import.meta.env.VITE_AI_GATEWAY_URL || '').replace(/\/$/, '');
+export const isAiConfigured = () => /^https:\/\/[^/]+(?:\/[^?#]*)?$/.test(configuredGateway);
 
 const localAdvisorReply = (message: string): string => {
   const text = message.trim();
@@ -55,7 +58,7 @@ const localAdvisorReply = (message: string): string => {
 const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<string | null> => {
   // GitHub Pages cannot host a protected server-side API. Skip the request
   // entirely there so the UI never waits for an endpoint that cannot exist.
-  if (isStaticHosting()) return null;
+  if (!isAiConfigured()) return null;
   if (Date.now() < gatewayUnavailableUntil) return null;
 
   const timeoutController = new AbortController();
@@ -68,7 +71,7 @@ const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<stri
   signal?.addEventListener('abort', abort, { once: true });
 
   try {
-    const response = await fetch(`${import.meta.env.BASE_URL}api/narrate`, {
+    const response = await fetch(`${configuredGateway}/api/narrate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
@@ -76,14 +79,14 @@ const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<stri
     });
 
     if ([404, 405, 501, 503].includes(response.status)) {
-      gatewayUnavailableUntil = Number.POSITIVE_INFINITY;
+      gatewayUnavailableUntil = Date.now() + 60_000;
     } else if (!response.ok) {
       gatewayUnavailableUntil = Date.now() + 60_000;
     }
     if (!response.ok) return null;
 
     const data = (await response.json()) as { text?: unknown };
-    return typeof data.text === 'string' && data.text.trim() ? data.text.trim() : null;
+    return typeof data.text === 'string' && data.text.length <= 2000 && data.text.trim() ? data.text.trim() : null;
   } catch {
     if (!timeoutController.signal.aborted) gatewayUnavailableUntil = Date.now() + 15_000;
     return null;
@@ -128,3 +131,11 @@ export const generateAdvisorResponse = async (
 export const resetAiGatewayProbe = (): void => {
   gatewayUnavailableUntil = 0;
 };
+
+export async function interpretUnknownCommand(input: string, stats: GameStats, signal?: AbortSignal) {
+  if (input.length > 300 || /confirm_|evt_resolve|card_resolve|忽略.*规则|修改.*规则|加.*[0-9]{3}/i.test(input)) return null;
+  const context = JSON.stringify({ day: stats.day, time: stats.currentTime, location: stats.location, morale: stats.morale, soldiers: stats.soldiers, wounded: stats.wounded, ammo: stats.ammo, sectorIntegrity: stats.sectorIntegrity });
+  const text = await requestAi({ mode: 'intent', prompt: input, context }, signal);
+  if (!text) return null;
+  try { return validateAiOrder(JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '')), stats); } catch { return null; }
+}

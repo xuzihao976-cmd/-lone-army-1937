@@ -11,7 +11,7 @@ export const pickWith = <T>(items: T[], random: RandomSource): T =>
 
 export const findLocations = (command: string): Location[] => LOCATIONS
   .map((location) => {
-    const aliases = location === '屋顶' ? ['屋顶', '楼顶']
+    const aliases = location === '屋顶' ? ['屋顶', '楼顶', '顶楼']
       : location === '二楼阵地' ? ['二楼阵地', '二楼']
         : location === '一楼入口' ? ['一楼入口', '一楼']
           : ['地下室', '地下'];

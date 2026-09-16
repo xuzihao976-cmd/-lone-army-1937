@@ -1,3 +1,4 @@
+import { ORDER_LABELS } from '../naturalCommands';
 import type { EnemyOperation, GameStats, Location } from '../../types';
 import { playSound } from '../../utils/sound';
 import { ATTACK_TEXTS, BAYONET_FIGHT_TEXTS, FORT_DAMAGE_SCENES } from '../../data/text/combat';
@@ -109,7 +110,15 @@ export const resolveAttack = ({
   const activeSquadsCount = defenseProfile.activeHmgSquads;
   const fireReadySquadsCount = defenseProfile.fireReadyHmgSquads;
 
+  const order = damageType === 'INFANTRY' ? strategicStateAfterAction.preparedOrders?.[attackLocation] : undefined;
+  if (order) {
+    calculatedStats.preparedOrders = { ...strategicStateAfterAction.preparedOrders };
+    delete calculatedStats.preparedOrders[attackLocation];
+    statsLog.push(`预备军令生效：${ORDER_LABELS[order]}，本次交战后解除`);
+    if (order === 'hold') calculatedStats.fatigue = Math.min(100, (calculatedStats.fatigue ?? currentStats.fatigue) + 5);
+  }
   const outcome = calculateCombatOutcomes({
+    order,
     attackScale,
     effectiveFortLevel: defenseProfile.effectiveFortLevel,
     fireReadyHmgSquads: fireReadySquadsCount,

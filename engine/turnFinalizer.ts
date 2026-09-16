@@ -78,7 +78,7 @@ export const finalizeTurn = ({
   );
   const finalDay = calculatedStats.day ?? currentStats.day;
   const aggression = calculatedStats.aggressiveCount ?? currentStats.aggressiveCount ?? 0;
-  const flagRaised = calculatedStats.hasFlagRaised ?? currentStats.hasFlagRaised ?? false;
+  const flagRaised = (calculatedStats.hasFlagRaised ?? currentStats.hasFlagRaised ?? false) || (calculatedStats.consequenceFlags || currentStats.consequenceFlags || []).includes('roof_flag_beacon');
   const finalHmgSquads = calculatedStats.hmgSquads || currentStats.hmgSquads;
   const activeHmgCrew = finalHmgSquads.reduce(
     (sum, squad) => sum + (squad.status === 'active' ? squad.count : 0),
@@ -98,6 +98,14 @@ export const finalizeTurn = ({
   if (calculatedStats.gameOverReason === 'commander_killed') {
     eventTriggered = 'game_over';
     visualEffect = 'heavy-damage';
+  } else if (finalDay > 5 && finalCombatants > 0) {
+    calculatedStats.isGameOver = true;
+    calculatedStats.gameResult = 'victory_hold';
+    calculatedStats.gameOverReason = 'mission_complete';
+    eventTriggered = 'victory';
+    const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_hold');
+    calculatedStats.finalRank = report.rank;
+    narrativeParts.push(`\n\n【战役胜利】坚守至第六天，孤军完成了任务。\n结局达成：【固若金汤】\n${report.text}`);
   } else if (collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
     calculatedStats.lastStandUsed = true;
     calculatedStats.siegeMeter = Math.min(35, calculatedStats.siegeMeter ?? currentStats.siegeMeter);
@@ -107,7 +115,7 @@ export const finalizeTurn = ({
       : '一楼、二楼与地下室已经全部失守';
     narrativeParts.push(`\n\n【最后防线】\n${collapseWarning}，但残余守军仍在抵抗。副官为你争取到一次补救机会：立即救治伤员或从仍控制的楼层发动反攻，夺回一个核心防区；若局面仍未恢复，战役才会结束。`);
     statsLog.push('⚠ 最后防线已启用：本局仅有一次补救机会');
-  } else if (collapseDetected) {
+  } else if (collapseDetected && (allowRandomEvents || immediateCollapse)) {
     calculatedStats.isGameOver = true;
     eventTriggered = 'game_over';
     visualEffect = 'heavy-damage';
@@ -117,16 +125,16 @@ export const finalizeTurn = ({
         ? 'combat_force_collapsed'
         : 'position_collapsed';
 
-    if (aggression > 3) {
+    if (flagRaised && immediateCollapse) {
+      calculatedStats.gameResult = 'defeat_martyr';
+      const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_martyr');
+      calculatedStats.finalRank = report.rank;
+      narrativeParts.push(`\n\n【壮烈殉国】\n成建制战斗力量已经耗尽。那面曾经升起的国旗，成为这场抵抗留下的见证。伤员与失散人员的命运尚未确定。\n\n结局达成：【血染孤旗】\n${report.text}`);
+    } else if (aggression > 3) {
       calculatedStats.gameResult = 'defeat_assault';
       const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_assault');
       calculatedStats.finalRank = report.rank;
       narrativeParts.push(`\n\n【反攻失败】\n连续主动出击耗尽了最后的成建制战斗力量。仍有伤员和失散士兵活着，但四行仓库已经无法继续防守。\n\n结局达成：【反攻的号角】\n${report.text}`);
-    } else if (flagRaised && immediateCollapse && finalWounded <= 0) {
-      calculatedStats.gameResult = 'defeat_martyr';
-      const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_martyr');
-      calculatedStats.finalRank = report.rank;
-      narrativeParts.push(`\n\n【壮烈殉国】\n四行仓库被攻破了。但在顶楼，那面旗帜依然在硝烟中飘扬。日军指挥官看着旗帜，久久没有下令降旗。\n\n结局达成：【血染孤旗】\n${report.text}`);
     } else {
       calculatedStats.gameResult = 'defeat_generic';
       const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_generic');

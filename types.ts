@@ -138,6 +138,9 @@ export interface GameStats {
   medkits: number; 
 
   // State
+  preparedOrders?: Partial<Record<Location, 'rapid' | 'conserve' | 'close' | 'bayonet' | 'hold'>>;
+  lastEncourageTurn?: number;
+  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 
   enemiesKilled: number; // NEW: Track total enemies killed

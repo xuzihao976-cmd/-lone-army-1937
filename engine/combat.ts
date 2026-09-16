@@ -10,6 +10,7 @@ export interface CombatSupply {
 }
 
 export interface CombatParameters {
+  order?: 'rapid' | 'conserve' | 'close' | 'bayonet' | 'hold';
   attackScale: AttackScale;
   effectiveFortLevel: number;
   fireReadyHmgSquads: number;
@@ -50,6 +51,9 @@ export const calculateCombatOutcomes = (
     morale,
     damageType,
   } = parameters;
+  const order = parameters.damageType === 'INFANTRY' ? parameters.order : undefined;
+  const fireFactor = order === 'rapid' ? 1.25 : order === 'conserve' ? 0.8 : order === 'close' ? 1.15 : 1;
+  const ammoFactor = order === 'rapid' ? 1.35 : order === 'conserve' ? 0.7 : 1;
   const rifleAmmo = clampStock(parameters.supply.rifleAmmo);
   const machineGunAmmo = clampStock(parameters.supply.machineGunAmmo);
   const grenades = clampStock(parameters.supply.grenades);
@@ -85,11 +89,11 @@ export const calculateCombatOutcomes = (
 
   const engagementFactor = damageType === 'INFANTRY' ? 1 : damageType === 'ARTILLERY' ? 0.55 : 0.15;
   const rifleEfficiency = Math.min(1.15, garrison / 120);
-  const rifleRoundsPerKill = 26 + Math.floor(random() * 15);
+  const rifleRoundsPerKill = Math.ceil((26 + Math.floor(random() * 15)) * ammoFactor);
   const hmgRoundsPerKill = 45 + Math.floor(random() * 31);
 
   const riflePotential = rifleHasRounds
-    ? enemyCount * (0.3 + Math.max(0, effectiveFortLevel) * 0.08) * rifleEfficiency * engagementFactor
+    ? enemyCount * (0.3 + Math.max(0, effectiveFortLevel) * 0.08) * rifleEfficiency * engagementFactor * fireFactor
     : 0;
   const rifleKills = Math.min(Math.floor(riflePotential), Math.floor(rifleAmmo / rifleRoundsPerKill));
 
@@ -109,7 +113,7 @@ export const calculateCombatOutcomes = (
 
   const moraleFactor = 0.75 + Math.max(0, Math.min(100, morale)) / 200;
   const closeCombatKills = closeCombat
-    ? Math.min(Math.floor(enemyCount * 0.32), Math.floor(garrison * 0.1 * moraleFactor))
+    ? Math.min(Math.floor(enemyCount * 0.32), Math.floor(garrison * 0.1 * moraleFactor * (order === 'bayonet' ? 1.25 : 1)))
     : 0;
 
   const enemiesKilled = Math.min(
@@ -127,6 +131,7 @@ export const calculateCombatOutcomes = (
     ? Math.min(grenades, Math.max(grenadeKills * 2, Math.ceil(enemyCount * (closeCombat ? 0.12 : 0.05))))
     : 0;
 
+  casualtyCount = Math.ceil(casualtyCount * (order === 'hold' ? 0.9 : order === 'close' ? 1.15 : order === 'bayonet' && closeCombat ? 0.85 : 1));
   return {
     casualtyCount,
     enemiesKilled,

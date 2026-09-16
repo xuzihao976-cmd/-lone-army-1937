@@ -1,4 +1,5 @@
 
+import { canonicalCommand } from './naturalCommands';
 import { GameStats, GameTurnResult, Location } from "../types";
 import { playSound } from "../utils/sound";
 import { isExplicitRetreatCommand } from './intents';
@@ -62,14 +63,20 @@ const runGameTurnInternal = (
     let attackLocation: Location | null = null;
     let narrativeParts: string[] = [];
     
-    const cmd = userCommand.toLowerCase();
+    const cmd = canonicalCommand(userCommand);
+    if (cmd.startsWith('confirm_') && currentStats.pendingRetreat !== cmd) return { narrative: '未收到有效的撤退确认请求，命令未执行。', updatedStats: {}, eventTriggered: 'none' };
+    if (currentStats.isGameOver) return { narrative: '本次战役已结束。', updatedStats: {}, eventTriggered: 'none' };
+    if (currentStats.day >= 6) {
+      const final = finalizeTurn({currentStats, calculatedStats, actionType:'idle', attackLocation:null, eventTriggered:'none', visualEffect:'none', narrativeParts, statsLog, random, allowRandomEvents:false});
+      return {narrative:final.narrative, updatedStats:calculatedStats,eventTriggered:final.eventTriggered};
+    }
 
     // --- ENDING CHECK: RETREAT COMMANDS ---
     const isRetreat = isExplicitRetreatCommand(cmd);
     if (cmd === 'cancel_retreat') {
         return {
             narrative: '你收回了命令。副官松了一口气，阵地上的弟兄重新握紧了枪。',
-            updatedStats: {},
+            updatedStats: { pendingRetreat: null },
             eventTriggered: 'none'
         };
     }
@@ -79,7 +86,7 @@ const runGameTurnInternal = (
         if (currentStats.day <= 1) {
             return {
                 narrative: '撤离阵地将立即结束本次战役，而且无法撤销。副官盯着你，等待最后命令。',
-                updatedStats: {},
+                updatedStats: { pendingRetreat: 'confirm_desertion' },
                 eventTriggered: 'none',
                 dilemma: {
                     id: 'confirm_desertion',
@@ -96,7 +103,7 @@ const runGameTurnInternal = (
         if (currentStats.day >= 4) {
             return {
                 narrative: '师部的撤退命令已经送达。跨过新垃圾桥后，孤军的命运将进入另一个篇章。',
-                updatedStats: {},
+                updatedStats: { pendingRetreat: 'confirm_historical_retreat' },
                 eventTriggered: 'none',
                 dilemma: {
                     id: 'confirm_historical_retreat',
@@ -113,12 +120,12 @@ const runGameTurnInternal = (
         narrativeParts.push(pick(GENERAL_CHATTER.DESERTION));
         return {
             narrative: narrativeParts.join(""),
-            updatedStats: {},
+            updatedStats: { pendingRetreat: null },
             eventTriggered: 'none'
         };
     }
 
-    if (cmd === 'confirm_desertion' && currentStats.day <= 1 && !currentStats.isGameOver) {
+    if (cmd === 'confirm_desertion' && currentStats.pendingRetreat === cmd && currentStats.day <= 1 && !currentStats.isGameOver) {
             calculatedStats.isGameOver = true;
             calculatedStats.gameResult = 'defeat_deserter';
             calculatedStats.gameOverReason = 'early_retreat';
@@ -133,7 +140,7 @@ const runGameTurnInternal = (
             };
     }
 
-    if (cmd === 'confirm_historical_retreat' && currentStats.day >= 4 && !currentStats.isGameOver) {
+    if (cmd === 'confirm_historical_retreat' && currentStats.pendingRetreat === cmd && currentStats.day >= 4 && !currentStats.isGameOver) {
             calculatedStats.isGameOver = true;
             calculatedStats.gameResult = 'victory_retreat';
             calculatedStats.gameOverReason = 'historical_retreat';
@@ -148,21 +155,11 @@ const runGameTurnInternal = (
     }
 
     // --- EASTER EGGS ---
-    if (cmd.includes("88师万岁") || cmd.includes("八十八师万岁")) {
-        playSound('alert');
-        statsLog.push("💪 士气 +100");
-        return {
-            narrative: "【军魂觉醒】你的怒吼唤醒了所有人的记忆。这里是德械师，是国军精锐！无论结局如何，我们都将载入史册！",
-            updatedStats: { morale: 100, health: Math.min(100, currentStats.health + 10) },
-            eventTriggered: 'none',
-            visualEffect: 'shake'
-        };
-    }
     if (cmd.includes("谢晋元")) {
         playSound('type');
         return {
             narrative: "【指挥官】谢晋元，字中民，广东梅县人。黄埔四期。他看着镜子里的自己，整理了一下军容。这场仗，是他人生的高光，也是他的绝唱。",
-            updatedStats: {},
+            updatedStats: { pendingRetreat: null },
             eventTriggered: 'none'
         };
     }
@@ -433,7 +430,8 @@ export const runGameTurn = (currentStats: GameStats, userCommand: string): GameT
         const result = runGameTurnInternal(currentStats, userCommand);
         const updatedStats = {
             ...result.updatedStats,
-            rngState: seededRandom.getState(),
+            pendingRetreat: result.updatedStats.pendingRetreat ?? null,
+            rngState: result.turnAdvanced || result.eventTriggered === 'attack' || userCommand.startsWith('evt_resolve:') ? seededRandom.getState() : currentStats.rngState,
         };
         const afterStats: GameStats = { ...currentStats, ...updatedStats };
         return {

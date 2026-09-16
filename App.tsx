@@ -16,14 +16,15 @@ import TutorialGuide from './components/TutorialGuide';
 import { GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType } from './types';
 import { runGameTurn } from './engine/gameEngine';
 import { getActionPreview } from './engine/actionPreview';
-import { enhanceBattleNarrative, resetAiGatewayProbe, type AiSource } from './services/aiClient';
+import { enhanceBattleNarrative, resetAiGatewayProbe, interpretUnknownCommand, isAiConfigured, type AiSource } from './services/aiClient';
+import { resolveNaturalCommand } from './engine/naturalCommands';
 import { createInitialStats, getAutoSaveMeta, listSaveSlots, readAutoSave, readSaveSlot, writeAutoSave, writeSaveSlot } from './storage/saveStore';
 import { getSoundEnabled, playSound, setSoundEnabled as persistSoundEnabled } from './utils/sound';
 
 const ACHIEVEMENTS_KEY = 'lone_army_achievements';
 const AI_PREFERENCE_KEY = 'lone_army_ai_enhancement';
 const MAP_HINT_SEEN_KEY = 'lone_army_map_hint_seen';
-const IS_STATIC_HOSTING = typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+const IS_STATIC_HOSTING = !isAiConfigured();
 
 const createLogId = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -274,7 +275,7 @@ const App: React.FC = () => {
     snapshot: GameStats,
     sessionId: number,
   ) => {
-    if (IS_STATIC_HOSTING || !aiEnabled || response.dilemma || response.updatedStats.isGameOver || command === 'start_game') return;
+    if (IS_STATIC_HOSTING || !aiEnabled || response.dilemma || response.updatedStats.isGameOver || !['attack', 'new_day'].includes(response.eventTriggered || '')) return;
 
     aiAbortRef.current?.abort();
     const controller = new AbortController();
@@ -468,6 +469,26 @@ const App: React.FC = () => {
     ]);
 
     try {
+        const sessionId = gameSessionRef.current;
+        if (!directCommand && aiEnabled && isAiConfigured() && currentStats.tutorialStep >= 3
+          && !resolveNaturalCommand(currentStats, userCmd)
+          && getActionPreview(currentStats, userCmd)?.action === '交谈 / 询问'
+          && !/撤退|撤离|逃跑|confirm_|card_|evt_/.test(userCmd)) {
+          const controller = new AbortController();
+          aiAbortRef.current?.abort();
+          aiAbortRef.current = controller;
+          const interpreted = await interpretUnknownCommand(userCmd, currentStats, controller.signal);
+          if (controller.signal.aborted || gameSessionRef.current !== sessionId || statsRef.current !== currentStats) return;
+          if (interpreted) {
+            setAiSource('siliconflow');
+            const preview = interpreted.command ? getActionPreview(currentStats, interpreted.command) : null;
+            handleGameResponse({ narrative: `【AI 副官 · 尚未执行军令】\n${interpreted.reply}`, updatedStats: {}, eventTriggered: 'none',
+              dilemma: interpreted.command ? { id: 'ai_order_confirmation', title: '确认副官理解的军令', description: `${interpreted.reply}\n${preview?.short || ''}\n${preview?.reason || ''}`, options: [{ label: '确认执行', actionCmd: interpreted.command }, { label: '取消', actionCmd: 'cancel_retreat' }] } : undefined,
+            }, createLogId());
+            return;
+          }
+          setAiSource('local');
+        }
         const response = runGameTurn(currentStats, userCmd);
         const systemLogId = createLogId();
         handleGameResponse(response, systemLogId);
@@ -528,7 +549,7 @@ const App: React.FC = () => {
     visualEffect === 'heavy-damage' ? 'effect-shake effect-damage' : '';
 
   const aiStatusLabel = IS_STATIC_HOSTING
-    ? '本地叙事 · 无需 API'
+    ? '本地模式 · AI 未配置'
     : !aiEnabled
     ? 'AI 已关闭'
     : isEnhancing
@@ -771,7 +792,7 @@ const App: React.FC = () => {
                                     ? 'text-amber-500/90 bg-neutral-900 border-amber-900/50 hover:border-amber-700'
                                     : 'text-neutral-600 bg-black border-neutral-800 hover:text-neutral-400'
                                 }`}
-                                title={IS_STATIC_HOSTING ? 'GitHub Pages 使用完整本地叙事，不会请求不存在的 API' : '免费 AI 只润色文字；关闭或连接失败时，游戏规则与本地叙事仍可完整运行'}
+                                title={IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况发送至 Cloudflare AI；AI 军令经确认才执行，失败回退本地。不发送存档或身份信息。'}
                             >
                                 <span className={`w-1.5 h-1.5 rounded-full ${IS_STATIC_HOSTING || (aiSource === 'siliconflow' && aiEnabled) ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
                                 <span className="hidden sm:inline">{aiStatusLabel}</span>

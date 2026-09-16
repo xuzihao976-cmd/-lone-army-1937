@@ -237,7 +237,8 @@ describe('local game engine endings', () => {
     expect(warning.updatedStats.isGameOver).not.toBe(true);
     expect(warning.dilemma?.id).toBe('confirm_desertion');
 
-    const ending = runGameTurn(stats, 'confirm_desertion');
+    expect(runGameTurn(stats, 'confirm_desertion').updatedStats.isGameOver).not.toBe(true);
+    const ending = runGameTurn({ ...stats, ...warning.updatedStats }, 'confirm_desertion');
     expect(ending.updatedStats.isGameOver).toBe(true);
     expect(ending.updatedStats.gameResult).toBe('defeat_deserter');
   });
@@ -253,7 +254,7 @@ describe('local game engine endings', () => {
     late.day = 4;
     const warning = runGameTurn(late, '撤入租界');
     expect(warning.dilemma?.id).toBe('confirm_historical_retreat');
-    const ending = runGameTurn(late, 'confirm_historical_retreat');
+    const ending = runGameTurn({ ...late, ...warning.updatedStats }, 'confirm_historical_retreat');
     expect(ending.updatedStats.gameResult).toBe('victory_retreat');
   });
 
@@ -333,7 +334,8 @@ describe('local game engine endings', () => {
     expect(warning.narrative).toContain('最后防线');
 
     const doomed = { ...stats, ...warning.updatedStats };
-    const ending = runGameTurn(doomed, '询问当前情况');
+    expect(runGameTurn(doomed, '询问当前情况').updatedStats.isGameOver).not.toBe(true);
+    const ending = runGameTurn(doomed, '侦察敌情');
     expect(ending.updatedStats.isGameOver).toBe(true);
     expect(ending.updatedStats.gameOverReason).toBe('combat_force_collapsed');
   });

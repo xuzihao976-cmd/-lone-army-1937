@@ -146,6 +146,12 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
     } else if (stats.activeTacticalCard) {
       command = stats.activeTacticalCard.actionCmd;
     } else {
+      if (process.argv.includes('--orders') && stats.enemyOperation && decisions % 4 === 0) {
+        const orders = ['猛烈射击', '节约弹药', '近距开火', '刺刀准备', '死守阵位'];
+        const prepared = runGameTurn(stats, `${stats.enemyOperation.target}${orders[decisions % orders.length]}`);
+        stats = applyResult(stats, prepared);
+        assertValidState(stats, `${policy}/${seed}/prepared-order`);
+      }
       command = chooseAction(stats, policy);
     }
 

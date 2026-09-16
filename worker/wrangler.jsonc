@@ -1,0 +1,9 @@
+{
+  "name": "lone-army-1937-ai",
+  "main": "index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "ai": { "binding": "AI" },
+  "vars": { "ALLOWED_ORIGIN": "https://xuzihao976-cmd.github.io" },
+  "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1937", "simple": { "limit": 6, "period": 60 } }]
+}

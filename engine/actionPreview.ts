@@ -1,3 +1,4 @@
+import { canonicalCommand, resolveNaturalCommand } from './naturalCommands';
 import type { ActionPreview, GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { isMoveCommand } from './intents';
@@ -35,7 +36,7 @@ const riskFor = (turnsAfterAction: number | null, pressureCompressed = false): P
 };
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
-  const command = rawCommand.trim().toLowerCase();
+  const command = canonicalCommand(rawCommand);
   if (!command) return null;
 
   let action = '交谈 / 询问';
@@ -45,7 +46,11 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let available = true;
   let reason: string | undefined;
 
-  if ((command.includes('夺回') || command.includes('反冲锋')) && commandLocation(command)) {
+  const natural = resolveNaturalCommand(stats, command);
+  if (natural) {
+    action = natural.actionType === 'encourage' ? '简短鼓励' : '交流 / 预备军令';
+    durationMinutes = natural.timeCost; baseThreat = natural.siegeIncrease; costs = natural.logs; reason = natural.narrative.join('');
+  } else if ((command.includes('夺回') || command.includes('反冲锋')) && commandLocation(command)) {
     const target = commandLocation(command)!;
     const maxMovableForce = Math.max(0, ...getRecaptureStagingSectors(stats, target)
       .map((location) => (stats.soldierDistribution[location] || 0) - 20));

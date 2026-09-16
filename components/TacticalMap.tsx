@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { GameStats, Location } from '../types';
+import { ORDER_LABELS, ORDER_HELP } from '../engine/naturalCommands';
 import { getActionPreview } from '../engine/actionPreview';
 import {
   calculateCommanderDeathRisk,
@@ -365,6 +366,14 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
             )}
           </div>
 
+          {selectedHeld && <details className="mt-2 rounded-md border border-neutral-800 p-2 text-xs">
+            <summary className="cursor-pointer text-amber-500">预备军令：{stats.preparedOrders?.[selectedLocation] ? ORDER_LABELS[stats.preparedOrders[selectedLocation]!] : '常规交战'} ▾</summary>
+            <p className="my-2 text-neutral-400">不耗时、不叠加；该层下次步兵接战生效后解除。</p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(ORDER_LABELS).map(([key, label]) => <button key={key} type="button" title={ORDER_HELP[key as keyof typeof ORDER_HELP]} className="rounded border border-neutral-700 p-2 text-left" onClick={() => onAction?.(`${selectedLocation}${label}`)}>{label}</button>)}
+              <button type="button" className="rounded border border-neutral-700 p-2" onClick={() => onAction?.(`取消${selectedLocation}预备军令`)}>恢复常规</button>
+            </div>
+          </details>}
           {selectedHeld && (availableHmgTransfers.length > 0 || availableSpecialistTransfers.length > 0) && (
             <details className="group mt-2 rounded-md border border-neutral-800 bg-black/30">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-xs font-black text-neutral-300 hover:bg-neutral-900">
