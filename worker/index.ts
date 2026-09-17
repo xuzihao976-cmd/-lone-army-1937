@@ -4,6 +4,22 @@ interface Env {
   ALLOWED_ORIGIN: string;
 }
 const ACTIONS = 'rapid猛烈射击,conserve节约弹药,close近距开火,bayonet刺刀准备,hold死守阵位,encourage鼓励,scout侦察,heal治疗,rest休息,build加固,move移动';
+// Qwen's official enable_thinking=false template, sent through Workers AI raw mode.
+// Escape user-supplied special-token delimiters before inserting JSON into ChatML.
+export function nonThinkingPrompt(system: string, input: string, context: string): string {
+  const user = JSON.stringify({ input, context }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+  return `<|im_start|>system\n${system}<|im_end|>\n<|im_start|>user\n${user}\n/no_think<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n`;
+}
+export function modelReply(output: unknown): string | null {
+  if (!output || typeof output !== 'object') return null;
+  const x = output as { response?: unknown; choices?: { text?: unknown; message?: { content?: unknown } }[] };
+  const candidates = [x.choices?.[0]?.message?.content, x.response, x.choices?.[0]?.text];
+  const content = candidates.find(value => typeof value === 'string' && value.trim());
+  if (typeof content !== 'string') return null;
+  // Never expose unfinished reasoning as the final reply.
+  const text = content.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*$/g, '').replace(/<\|im_end\|>[\s\S]*$/g, '').trim();
+  return text && text.length <= 2000 ? text : null;
+}
 // Expose documented error numbers only, never raw provider messages or prompts.
 const PROVIDER_CODES = new Set([10000, 3023, 3036, 3040, 3041, 3042, 3007, 3008, 5007, 5016, 5018, 5035]);
 function providerCode(error: unknown): number | undefined {
@@ -40,17 +56,17 @@ export default {
       if (!env.AI || typeof env.AI.run !== 'function') return reply({ error: 'ai_binding_missing' }, 503);
       let output: unknown;
       try {
-        output = await env.AI.run('@cf/qwen/qwen3-30b-a3b-fp8', { messages: [{ role: 'system', content: system }, { role: 'user', content: JSON.stringify({ input: body.prompt, context }) }], max_tokens: 320, temperature: 0.3 });
+        output = await env.AI.run('@cf/qwen/qwen3-30b-a3b-fp8', {
+          prompt: nonThinkingPrompt(system, body.prompt, context), raw: true, stream: false,
+          max_tokens: 512, temperature: 0.7, top_p: 0.8, top_k: 20,
+        });
       } catch (error) {
         const upstreamCode = providerCode(error);
         console.error(JSON.stringify({ event: 'ai_inference_failed', upstreamCode: upstreamCode ?? 'unknown' }));
         return reply({ error: 'ai_inference_failed', upstreamCode }, 503);
       }
-      const x = output as { response?: unknown; choices?: { message?: { content?: unknown } }[] } | null;
-      const content = x?.response || x?.choices?.[0]?.message?.content;
-      if (typeof content !== 'string') return reply({ error: 'invalid_model_reply' }, 502);
-      const text = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-      if (!text || text.length > 2000) return reply({ error: 'empty_model_reply' }, 502);
+      const text = modelReply(output);
+      if (!text) return reply({ error: 'invalid_model_reply' }, 502);
       return reply({ text });
     } catch { return reply({ error: 'gateway_error' }, 500); }
   },
