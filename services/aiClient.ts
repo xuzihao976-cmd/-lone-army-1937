@@ -1,8 +1,26 @@
 import type { GameStats } from '../types';
 import { validateAiOrder } from './aiOrders';
-export interface AiFailure { code: 'unconfigured' | 'timeout' | 'network' | 'http' | 'invalid_response' | 'invalid_order' | 'input_rejected' | 'cancelled'; status?: number; }
+export interface AiFailure { code: 'unconfigured' | 'timeout' | 'network' | 'http' | 'invalid_response' | 'invalid_order' | 'input_rejected' | 'cancelled'; status?: number; upstreamCode?: number; gatewayCode?: string; }
 export const describeAiFailure = (failure: AiFailure): string => {
   if (failure.code === 'http') {
+    const providerMessages: Record<number, string> = {
+      10000: 'Cloudflare 模型调用鉴权失败',
+      3023: 'Cloudflare 未允许此账户使用 AI 服务',
+      3036: 'Cloudflare 账户今日免费 AI 额度已用完，需等待额度重置',
+      3040: 'Cloudflare 模型当前容量不足',
+      3041: '此账户没有该模型的访问权限',
+      5018: '此账户没有该模型的访问权限',
+      5016: '模型要求先接受使用条款',
+      5035: '模型要求付费计划，本游戏未自动升级套餐',
+      5007: 'Cloudflare 找不到配置的模型',
+      3042: 'Cloudflare 模型名称无效',
+      3007: 'Cloudflare 模型推理超时',
+      3008: 'Cloudflare 模型推理被中止',
+    };
+    if (failure.upstreamCode && providerMessages[failure.upstreamCode]) return `${providerMessages[failure.upstreamCode]}（CF ${failure.upstreamCode}）。`;
+    if (failure.gatewayCode === 'ai_binding_missing') return 'AI 网关缺少模型绑定，需要修复服务端配置。';
+    if (failure.gatewayCode === 'ai_inference_failed') return 'Cloudflare 模型调用失败（HTTP 503，未提供已知错误编号），需要检查服务端日志。';
+    if (failure.gatewayCode === 'invalid_model_reply' || failure.gatewayCode === 'empty_model_reply') return '模型未返回可用文本（HTTP 502）。';
     if (failure.status === 429) return 'AI 请求受到限流（HTTP 429），请稍后再试。';
     if (failure.status === 401 || failure.status === 403) return `AI 网关拒绝访问（HTTP ${failure.status}），需要检查服务权限或访问规则。`;
     if (failure.status === 503) return 'AI 网关暂时无法调用模型（HTTP 503），需要检查服务端权限、额度或模型状态。';
@@ -106,7 +124,16 @@ const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<{ te
       signal: timeoutController.signal,
     });
 
-    if (!response.ok) return fail({ code: 'http', status: response.status }, 60_000);
+    if (!response.ok) {
+      let details: { upstreamCode?: unknown; error?: unknown } | null = null;
+      try { details = await response.json(); } catch {
+        if (timeoutController.signal.aborted) throw new Error('aborted');
+      }
+      const failure: AiFailure = { code: 'http', status: response.status };
+      if (details && typeof details.upstreamCode === 'number' && Number.isInteger(details.upstreamCode)) failure.upstreamCode = details.upstreamCode;
+      if (details && typeof details.error === 'string' && ['ai_binding_missing', 'ai_inference_failed', 'invalid_model_reply', 'empty_model_reply'].includes(details.error)) failure.gatewayCode = details.error;
+      return fail(failure, 60_000);
+    }
 
     let data: { text?: unknown } | null;
     try { data = await response.json(); } catch {

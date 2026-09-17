@@ -13,6 +13,13 @@ beforeEach(async () => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 const interpret = () => client.interpretUnknownCommand('副官，家乡的桂花开了吗', createInitialStats());
 describe('AI failure diagnostics and safe fallback', () => {
+  it('shows the provider cause instead of a generic 503', async () => {
+    fetchMock.mockResolvedValue(Response.json({error:'ai_inference_failed',upstreamCode:3036,detail:'private'}, {status:503}));
+    const result=await interpret();
+    expect(client.describeAiFailure(result.failure!)).toContain('CF 3036');
+    expect(client.describeAiFailure(result.failure!)).toContain('额度');
+    expect(JSON.stringify(result)).not.toContain('private');
+  });
   it.each([401, 403, 429, 503])('preserves HTTP %i and does not retry during backoff', async status => {
     fetchMock.mockResolvedValue(new Response('unavailable', { status }));
     const result = await interpret();

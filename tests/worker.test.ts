@@ -11,5 +11,23 @@ describe('Worker gateway', () => {
   it('limits actual body size', async () => { const e=env(); expect((await worker.fetch(request({mode:'intent',prompt:'a',context:'a'.repeat(10000)}),e)).status).toBe(413); expect(e.AI.run).not.toHaveBeenCalled(); });
   it('uses Qwen and returns structured content', async () => { const e=env(); const r=await worker.fetch(request({mode:'intent',prompt:'给屋顶的弟兄鼓劲'}),e); expect(r.status).toBe(200); expect((await r.json() as {text:string}).text).toContain('收到'); expect(e.AI.run.mock.calls[0][0]).toBe('@cf/qwen/qwen3-30b-a3b-fp8'); });
   it('fails closed when upstream fails or quota ends', async () => { const e=env(); e.AI.run.mockRejectedValue(new Error('quota')); expect((await worker.fetch(request({mode:'intent',prompt:'hello'}),e)).status).toBe(503); });
+  it('preserves provider code without leaking raw error text', async () => {
+    const e=env(); e.AI.run.mockRejectedValue(new Error('AI_ERROR: 3036: private text and credentials'));
+    const r=await worker.fetch(request({mode:'intent',prompt:'hello'}),e);
+    expect(r.status).toBe(503);
+    expect(await r.json()).toEqual({error:'ai_inference_failed',upstreamCode:3036});
+  });
+  it('separates malformed input from inference failure', async () => {
+    const e=env(); const r=await worker.fetch(new Request('https://example.workers.dev/api/narrate',{method:'POST',headers:{Origin:origin},body:'{' }),e);
+    expect(r.status).toBe(400); expect(e.AI.run).not.toHaveBeenCalled();
+  });
+  it('rejects null input before inference', async () => {
+    const e=env(); expect((await worker.fetch(request(null),e)).status).toBe(400); expect(e.AI.run).not.toHaveBeenCalled();
+  });
+  it('separates invalid model payload from inference failure', async () => {
+    const e=env(); e.AI.run.mockResolvedValue({response:{unexpected:true}});
+    const r=await worker.fetch(request({mode:'intent',prompt:'hello'}),e);
+    expect(r.status).toBe(502); expect(await r.json()).toEqual({error:'invalid_model_reply'});
+  });
   it('strips thinking and accepts response-style outputs', async () => { const e=env(); e.AI.run.mockResolvedValue({response:'<think>private chain</think>收到'}); const r=await worker.fetch(request({mode:'advisor',prompt:'hello'}),e); expect(await r.json()).toEqual({text:'收到'}); });
 });
