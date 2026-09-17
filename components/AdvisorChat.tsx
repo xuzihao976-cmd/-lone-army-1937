@@ -115,7 +115,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
             <div className="p-3 bg-neutral-800 border-t border-neutral-700">
                 <div className="mb-2 flex items-center justify-between text-[11px] font-mono">
                     <span className={source === 'cloudflare' ? 'text-green-500' : 'text-neutral-500'}>
-                        {source === 'cloudflare' ? '● Cloudflare AI 增强' : '● 本地规则顾问'}
+                        {source === 'cloudflare' ? '● 千问 AI 增强' : '● 本地规则顾问'}
                     </span>
                     {isLoading && (
                       <button type="button" onClick={() => requestRef.current?.abort()} className="text-red-500/70 hover:text-red-400">

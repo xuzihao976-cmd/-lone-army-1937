@@ -1,4 +1,6 @@
-interface Env {
+import { callDashscope, DASHSCOPE_MODEL, type DashscopeEnv } from './dashscope';
+interface Env extends DashscopeEnv {
+  AI_PROVIDER?: string;
   AI: { run(model: string, input: unknown): Promise<unknown> };
   RATE_LIMITER: { limit(options: { key: string }): Promise<{ success: boolean }> };
   ALLOWED_ORIGIN: string;
@@ -36,7 +38,7 @@ export default {
     const headers = { 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Vary': 'Origin', 'Cache-Control': 'no-store' };
     const reply = (body: unknown, status = 200) => Response.json(body, { status, headers });
     const path = new URL(request.url).pathname;
-    if (path === '/health' && request.method === 'GET') return reply({ service: 'lone-army-ai', version: '3.0.0', configured: !!env.AI });
+    if (path === '/health' && request.method === 'GET') return reply({ service: 'lone-army-ai', version: '3.0.0', provider: env.AI_PROVIDER || 'cloudflare', model: env.AI_PROVIDER === 'dashscope' ? DASHSCOPE_MODEL : '@cf/qwen/qwen3-30b-a3b-fp8', configured: env.AI_PROVIDER === 'dashscope' ? !!env.DASHSCOPE_API_KEY && env.DASHSCOPE_FREE_ONLY_CONFIRMED === 'true' : !!env.AI });
     if (origin !== env.ALLOWED_ORIGIN) return reply({ error: 'origin_not_allowed' }, 403);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     if (request.method !== 'POST' || path !== '/api/narrate') return reply({ error: 'not_found' }, 404);
@@ -53,8 +55,13 @@ export default {
       if (!body || !['intent', 'advisor', 'narrate'].includes(body.mode) || typeof body.prompt !== 'string' || !body.prompt.trim() || body.prompt.length > 1600) return reply({ error: 'invalid_input' }, 400);
       const context = typeof body.context === 'string' ? body.context.slice(0, 2000) : '';
       const system = body.mode === 'intent' ? ORDER_PROMPT : '你是四行仓库游戏副官。仅依据给定战况简短回应，不编造数值、执行结果或隐藏敌情，不改写规则。不确定就说明。最多120字。/no_think';
-      if (!env.AI || typeof env.AI.run !== 'function') return reply({ error: 'ai_binding_missing' }, 503);
       let output: unknown;
+      if (env.AI_PROVIDER === 'dashscope') {
+        const result = await callDashscope(env, system, body.prompt, context, body.mode);
+        if (result.error) return reply({ error: result.error }, result.status || 503);
+        output = result.output;
+      } else {
+      if (!env.AI || typeof env.AI.run !== 'function') return reply({ error: 'ai_binding_missing' }, 503);
       try {
         output = await env.AI.run('@cf/qwen/qwen3-30b-a3b-fp8', {
           prompt: nonThinkingPrompt(system, body.prompt, context), raw: true, stream: false,
@@ -64,6 +71,7 @@ export default {
         const upstreamCode = providerCode(error);
         console.error(JSON.stringify({ event: 'ai_inference_failed', upstreamCode: upstreamCode ?? 'unknown' }));
         return reply({ error: 'ai_inference_failed', upstreamCode }, 503);
+      }
       }
       const text = modelReply(output);
       if (!text) return reply({ error: 'invalid_model_reply' }, 502);

@@ -1,5 +1,20 @@
 # 可选免费 AI 网关
 
+## 当前选用百炼千问（待账户设置）
+
+提供商已设为 `dashscope`，固定调用北京地域 `qwen3.7-flash`，非思考模式。没有密钥或未确认免费保护时不发送请求，不会自动换付费模型。
+
+1. 在百炼北京地域确认 `qwen3.7-flash` 的剩余免费额度及有效期。新人额度是限时赠送，通常100万Token、90天，不是每天刷新。
+2. 对这个精确模型开启“免费额度用完即停”，等待配置生效。已实名账户默认可能按量收费，必须先确认此项；未实名账户由平台强制免费用完即停。
+3. 创建北京地域 API Key，在 Cloudflare Worker 的服务端 Secrets 保存为 `DASHSCOPE_API_KEY`。不要放在 Vite 变量或浏览器。
+4. 实际确认百炼免费保护生效后，在 Worker Secrets 保存 `DASHSCOPE_FREE_ONLY_CONFIRMED=true`。这个标记只是操作者确认，不能代替百炼后台开关，也不会自动配置百炼账单。
+5. 部署代码后实测一条陌生输入。返回 `AllocationQuota.FreeTierOnly` 时停止调用并回到本地，不自动重试或切换模型。
+
+免费额度规则：https://help.aliyun.com/zh/model-studio/new-free-quota
+API Key：https://help.aliyun.com/zh/model-studio/get-api-key
+
+下方 Cloudflare AI 绑定方式保留作旧方案参考；仅当 `AI_PROVIDER` 不为 `dashscope` 时使用。
+
 游戏前端始终能离线运行。没有配置网关时，明确显示“本地模式 · AI 未配置”，不会伪称已连接 AI。
 
 原仓库的 Pages 工作流已配置公开网关 `https://lone-army-1937-ai.xuzihao976.workers.dev`。其他仓库必须自行配置；`VITE_AI_GATEWAY_URL` 仓库变量可覆盖该地址。开启按钮仅表示允许调用，收到真实模型回复后才显示“AI 已连接”。

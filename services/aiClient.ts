@@ -1,8 +1,17 @@
 import type { GameStats } from '../types';
 import { validateAiOrder } from './aiOrders';
 export interface AiFailure { code: 'unconfigured' | 'timeout' | 'network' | 'http' | 'invalid_response' | 'invalid_order' | 'input_rejected' | 'cancelled'; status?: number; upstreamCode?: number; gatewayCode?: string; }
+const DASHSCOPE_ERRORS: Record<string, string> = {
+  dashscope_key_missing: '百炼千问尚未配置服务端 API Key，暂未连接。',
+  dashscope_free_only_unconfirmed: '尚未确认百炼“免费额度用完即停”已开启，已暂停模型调用。',
+  dashscope_free_quota_exhausted: '百炼免费额度已耗尽或失效，免费额度保护已停止调用。',
+  dashscope_access_denied: '百炼拒绝调用，请检查北京地域 API Key 和模型权限。',
+  dashscope_unavailable: '百炼服务暂时不可用或请求受限，已回退本地。',
+  dashscope_timeout: '百炼请求等待超过 7 秒，已停止等待。',
+};
 export const describeAiFailure = (failure: AiFailure): string => {
   if (failure.code === 'http') {
+    if (failure.gatewayCode && Object.hasOwn(DASHSCOPE_ERRORS, failure.gatewayCode)) return DASHSCOPE_ERRORS[failure.gatewayCode];
     const providerMessages: Record<number, string> = {
       10000: 'Cloudflare 模型调用鉴权失败',
       3023: 'Cloudflare 未允许此账户使用 AI 服务',
@@ -131,7 +140,7 @@ const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<{ te
       }
       const failure: AiFailure = { code: 'http', status: response.status };
       if (details && typeof details.upstreamCode === 'number' && Number.isInteger(details.upstreamCode)) failure.upstreamCode = details.upstreamCode;
-      if (details && typeof details.error === 'string' && ['ai_binding_missing', 'ai_inference_failed', 'invalid_model_reply', 'empty_model_reply'].includes(details.error)) failure.gatewayCode = details.error;
+      if (details && typeof details.error === 'string' && (Object.hasOwn(DASHSCOPE_ERRORS, details.error) || ['ai_binding_missing', 'ai_inference_failed', 'invalid_model_reply', 'empty_model_reply'].includes(details.error))) failure.gatewayCode = details.error;
       return fail(failure, 60_000);
     }
 

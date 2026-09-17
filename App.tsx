@@ -802,7 +802,7 @@ const App: React.FC = () => {
                                     ? 'text-amber-500/90 bg-neutral-900 border-amber-900/50 hover:border-amber-700'
                                     : 'text-neutral-600 bg-black border-neutral-800 hover:text-neutral-400'
                                 }`}
-                                title={IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况发送至 Cloudflare AI；AI 军令经确认才执行，失败回退本地。不发送存档或身份信息。'}
+                                title={IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况经 Cloudflare 网关发送至千问服务；AI 军令经确认才执行，失败回退本地。不发送完整存档或身份资料。'}
                             >
                                 <span className={`w-1.5 h-1.5 rounded-full ${aiSource === 'cloudflare' && aiEnabled ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
                                 <span className="hidden sm:inline">{aiStatusLabel}</span>
