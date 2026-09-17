@@ -12,7 +12,7 @@ export function validateAiOrder(value: unknown, stats: GameStats): AiOrder | nul
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const x = value as Record<string, unknown>;
   if (x.type === 'chat' || x.type === 'clarify') {
-    return typeof x.reply === 'string' && x.reply.length <= 400 ? { reply: x.reply } : null;
+    return typeof x.reply === 'string' && x.reply.trim() && x.reply.length <= 400 ? { reply: x.reply.trim() } : null;
   }
   if (x.type !== 'order' || typeof x.action !== 'string' || !Object.hasOwn(AI_ACTIONS, x.action)) return null;
   if (typeof x.confidence !== 'number' || !Number.isFinite(x.confidence) || x.confidence < 0.85 || x.confidence > 1) return null;

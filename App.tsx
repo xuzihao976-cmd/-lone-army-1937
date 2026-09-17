@@ -16,7 +16,7 @@ import TutorialGuide from './components/TutorialGuide';
 import { GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType } from './types';
 import { runGameTurn } from './engine/gameEngine';
 import { getActionPreview } from './engine/actionPreview';
-import { enhanceBattleNarrative, resetAiGatewayProbe, interpretUnknownCommand, isAiConfigured, type AiSource } from './services/aiClient';
+import { enhanceBattleNarrative, resetAiGatewayProbe, interpretUnknownCommand, isAiConfigured, describeAiFailure, type AiFailure, type AiSource } from './services/aiClient';
 import { resolveNaturalCommand } from './engine/naturalCommands';
 import { createInitialStats, getAutoSaveMeta, listSaveSlots, readAutoSave, readSaveSlot, writeAutoSave, writeSaveSlot } from './storage/saveStore';
 import { getSoundEnabled, playSound, setSoundEnabled as persistSoundEnabled } from './utils/sound';
@@ -76,6 +76,8 @@ const App: React.FC = () => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [aiSource, setAiSource] = useState<AiSource | 'auto'>('auto');
   const [aiEnabled, setAiEnabled] = useState(readAiPreference);
+  const [aiFailure, setAiFailure] = useState<AiFailure>();
+  const [isInterpreting, setIsInterpreting] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -287,6 +289,7 @@ const App: React.FC = () => {
 
     if (!controller.signal.aborted && gameSessionRef.current === sessionId) {
       setAiSource(reply.source);
+      setAiFailure(reply.failure);
       if (reply.source === 'cloudflare') {
         setLogs((prev) => prev.map((log) => log.id === logId ? { ...log, text: reply.text, isTyping: false } : log));
       }
@@ -477,12 +480,15 @@ const App: React.FC = () => {
           const controller = new AbortController();
           aiAbortRef.current?.abort();
           aiAbortRef.current = controller;
-          const interpreted = await interpretUnknownCommand(userCmd, currentStats, controller.signal);
+          setIsInterpreting(true);
+          const interpretation = await interpretUnknownCommand(userCmd, currentStats, controller.signal);
           if (controller.signal.aborted || gameSessionRef.current !== sessionId || statsRef.current !== currentStats) return;
+          setAiFailure(interpretation.failure);
+          const interpreted = interpretation.order;
           if (interpreted) {
             setAiSource('cloudflare');
             const preview = interpreted.command ? getActionPreview(currentStats, interpreted.command) : null;
-            handleGameResponse({ narrative: `【AI 副官 · 尚未执行军令】\n${interpreted.reply}`, updatedStats: {}, eventTriggered: 'none',
+            handleGameResponse({ narrative: `【AI 副官${interpreted.command ? ' · 尚未执行军令' : ''}】\n${interpreted.reply}`, updatedStats: {}, eventTriggered: 'none',
               dilemma: interpreted.command ? { id: 'ai_order_confirmation', title: '确认副官理解的军令', description: `${interpreted.reply}\n${preview?.short || ''}\n${preview?.reason || ''}`, options: [{ label: '确认执行', actionCmd: interpreted.command }, { label: '取消', actionCmd: 'cancel_retreat' }] } : undefined,
             }, createLogId());
             return;
@@ -505,6 +511,7 @@ const App: React.FC = () => {
         console.error("Game Error:", error);
         setLogs(prev => [...prev, { id: Date.now().toString(), sender: 'system', text: "系统错误，请重试。", isTyping: false }]);
     } finally {
+        setIsInterpreting(false);
         setIsLoading(false);
         const hasPrecisePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
         if (!directCommand && hasPrecisePointer) setTimeout(() => inputRef.current?.focus(), 100);
@@ -524,6 +531,7 @@ const App: React.FC = () => {
   const toggleAiEnhancement = () => {
     if (IS_STATIC_HOSTING) return;
     const next = !aiEnabled;
+    setAiFailure(undefined);
     setAiEnabled(next);
     try {
       localStorage.setItem(AI_PREFERENCE_KEY, next ? 'on' : 'off');
@@ -552,12 +560,14 @@ const App: React.FC = () => {
     ? '本地模式 · AI 未配置'
     : !aiEnabled
     ? 'AI 已关闭'
+    : isInterpreting
+      ? 'AI 正在理解'
     : isEnhancing
       ? 'AI 润色中'
       : aiSource === 'cloudflare'
         ? 'AI 已连接'
         : aiSource === 'local'
-          ? '本地叙事兜底'
+          ? 'AI 暂不可用 · 本地回复'
           : 'AI 副官已开启';
 
   const actionPreview = stats.isGameOver || currentDilemma ? null : getActionPreview(stats, input);
@@ -796,7 +806,7 @@ const App: React.FC = () => {
                             >
                                 <span className={`w-1.5 h-1.5 rounded-full ${aiSource === 'cloudflare' && aiEnabled ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
                                 <span className="hidden sm:inline">{aiStatusLabel}</span>
-                                <span className="sm:hidden">{IS_STATIC_HOSTING ? '本地' : aiEnabled ? 'AI 开' : 'AI 关'}</span>
+                                <span className="sm:hidden">{IS_STATIC_HOSTING ? '本地' : !aiEnabled ? 'AI 关' : isInterpreting ? 'AI 等待中' : aiSource === 'local' ? 'AI 未连接' : 'AI 开'}</span>
                             </button>
                         </div>
                         <button 
@@ -812,6 +822,11 @@ const App: React.FC = () => {
                     </div>
                 )}
 
+                {aiEnabled && aiFailure && !isInterpreting && (
+                  <div role="status" className="max-h-24 overflow-y-auto rounded border border-amber-900/50 bg-amber-950/20 px-2 py-1.5 text-xs text-amber-200">
+                    {describeAiFailure(aiFailure)} 当前使用本地回复，游戏仍可继续。
+                  </div>
+                )}
                 {/* Quick Actions Row */}
                 {!stats.isGameOver && (
                     <>

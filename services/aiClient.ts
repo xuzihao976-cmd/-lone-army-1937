@@ -1,11 +1,30 @@
 import type { GameStats } from '../types';
 import { validateAiOrder } from './aiOrders';
+export interface AiFailure { code: 'unconfigured' | 'timeout' | 'network' | 'http' | 'invalid_response' | 'invalid_order' | 'input_rejected' | 'cancelled'; status?: number; }
+export const describeAiFailure = (failure: AiFailure): string => {
+  if (failure.code === 'http') {
+    if (failure.status === 429) return 'AI 请求受到限流（HTTP 429），请稍后再试。';
+    if (failure.status === 401 || failure.status === 403) return `AI 网关拒绝访问（HTTP ${failure.status}），需要检查服务权限或访问规则。`;
+    if (failure.status === 503) return 'AI 网关暂时无法调用模型（HTTP 503），需要检查服务端权限、额度或模型状态。';
+    return `AI 网关返回错误（HTTP ${failure.status}）。`;
+  }
+  return {
+    unconfigured: '此版本没有配置 AI 网关。',
+    timeout: 'AI 请求超过 8 秒仍未完成，已停止等待；暂不能区分网络慢还是模型慢。',
+    network: '浏览器无法完成 AI 请求，可能是网络、域名连接或跨域访问失败。',
+    invalid_response: 'AI 网关返回了无法读取的内容。',
+    invalid_order: '模型回复不符合军令格式或安全校验，未执行。',
+    input_rejected: '这条输入超出 AI 支持范围，未发送。',
+    cancelled: 'AI 请求已取消。',
+  }[failure.code];
+};
 export type AiMode = 'narrate' | 'freeform' | 'advisor' | 'intent';
 export type AiSource = 'cloudflare' | 'local';
 
 export interface AiReply {
   text: string;
   source: AiSource;
+  failure?: AiFailure;
 }
 
 interface AiRequest {
@@ -17,6 +36,7 @@ interface AiRequest {
 
 const REQUEST_TIMEOUT_MS = 8_000;
 let gatewayUnavailableUntil = 0;
+let previousFailure: AiFailure | undefined;
 const configuredGateway = String(import.meta.env.VITE_AI_GATEWAY_URL || '').replace(/\/$/, '');
 export const isAiConfigured = () => /^https:\/\/[^/]+(?:\/[^?#]*)?$/.test(configuredGateway);
 
@@ -55,15 +75,23 @@ const localAdvisorReply = (message: string): string => {
   return '建议先确认当前工事、士气、弹药、敌军压力和接敌时间，再决定加固、休息、治疗、侦察或转移。AI 通讯不可用时，本地顾问仍会回答核心规则。';
 };
 
-const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<string | null> => {
+const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<{ text: string; failure?: never } | { text: null; failure: AiFailure }> => {
   // Pages hosts the game; an explicitly configured external Worker hosts AI.
   // Builds without a gateway stay entirely local.
-  if (!isAiConfigured()) return null;
-  if (Date.now() < gatewayUnavailableUntil) return null;
+  if (signal?.aborted) return { text: null, failure: { code: 'cancelled' } };
+  if (!isAiConfigured()) return { text: null, failure: { code: 'unconfigured' } };
+  if (Date.now() < gatewayUnavailableUntil && previousFailure) return { text: null, failure: previousFailure };
+
+  const fail = (failure: AiFailure, cooldown = 15_000) => {
+    previousFailure = failure;
+    gatewayUnavailableUntil = Date.now() + cooldown;
+    return { text: null, failure } as const;
+  };
 
   const timeoutController = new AbortController();
-  const timeoutId = window.setTimeout(() => {
-    gatewayUnavailableUntil = Date.now() + 30_000;
+  let timedOut = false;
+  const timeoutId = globalThis.setTimeout(() => {
+    timedOut = true;
     timeoutController.abort();
   }, REQUEST_TIMEOUT_MS);
   const abort = () => timeoutController.abort();
@@ -78,20 +106,22 @@ const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<stri
       signal: timeoutController.signal,
     });
 
-    if ([404, 405, 501, 503].includes(response.status)) {
-      gatewayUnavailableUntil = Date.now() + 60_000;
-    } else if (!response.ok) {
-      gatewayUnavailableUntil = Date.now() + 60_000;
-    }
-    if (!response.ok) return null;
+    if (!response.ok) return fail({ code: 'http', status: response.status }, 60_000);
 
-    const data = (await response.json()) as { text?: unknown };
-    return typeof data.text === 'string' && data.text.length <= 2000 && data.text.trim() ? data.text.trim() : null;
+    let data: { text?: unknown } | null;
+    try { data = await response.json(); } catch {
+      if (timeoutController.signal.aborted) throw new Error('aborted');
+      return fail({ code: 'invalid_response' });
+    }
+    if (!data || typeof data.text !== 'string' || data.text.length > 2000 || !data.text.trim()) return fail({ code: 'invalid_response' });
+    previousFailure = undefined;
+    gatewayUnavailableUntil = 0;
+    return { text: data.text.trim() };
   } catch {
-    if (!timeoutController.signal.aborted) gatewayUnavailableUntil = Date.now() + 15_000;
-    return null;
+    if (signal?.aborted) return { text: null, failure: { code: 'cancelled' } };
+    return fail({ code: timedOut ? 'timeout' : 'network' }, timedOut ? 30_000 : 15_000);
   } finally {
-    window.clearTimeout(timeoutId);
+    globalThis.clearTimeout(timeoutId);
     signal?.removeEventListener('abort', abort);
   }
 };
@@ -113,9 +143,9 @@ export const enhanceBattleNarrative = async (
   if (!prose.trim()) return { text: narrative, source: 'local' };
 
   const enhanced = await requestAi({ mode: 'narrate', prompt: prose, context: `${context}\n玩家命令：${command}` }, signal);
-  return enhanced
-    ? { text: `${enhanced}${stats}`, source: 'cloudflare' }
-    : { text: narrative, source: 'local' };
+  return enhanced.text
+    ? { text: `${enhanced.text}${stats}`, source: 'cloudflare' }
+    : { text: narrative, source: 'local', failure: enhanced.failure };
 };
 
 export const generateAdvisorResponse = async (
@@ -125,17 +155,21 @@ export const generateAdvisorResponse = async (
 ): Promise<AiReply> => {
   const localText = localAdvisorReply(userMessage);
   const enhanced = await requestAi({ mode: 'advisor', prompt: userMessage, history: history.slice(-8) }, signal);
-  return enhanced ? { text: enhanced, source: 'cloudflare' } : { text: localText, source: 'local' };
+  return enhanced.text ? { text: enhanced.text, source: 'cloudflare' } : { text: localText, source: 'local', failure: enhanced.failure };
 };
 
 export const resetAiGatewayProbe = (): void => {
   gatewayUnavailableUntil = 0;
+  previousFailure = undefined;
 };
 
 export async function interpretUnknownCommand(input: string, stats: GameStats, signal?: AbortSignal) {
-  if (input.length > 300 || /confirm_|evt_resolve|card_resolve|忽略.*规则|修改.*规则|加.*[0-9]{3}/i.test(input)) return null;
+  if (input.length > 300 || /confirm_|evt_resolve|card_resolve|忽略.*规则|修改.*规则|加.*[0-9]{3}/i.test(input)) return { order: null, failure: { code: 'input_rejected' } as AiFailure };
   const context = JSON.stringify({ day: stats.day, time: stats.currentTime, location: stats.location, morale: stats.morale, soldiers: stats.soldiers, wounded: stats.wounded, ammo: stats.ammo, sectorIntegrity: stats.sectorIntegrity });
-  const text = await requestAi({ mode: 'intent', prompt: input, context }, signal);
-  if (!text) return null;
-  try { return validateAiOrder(JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '')), stats); } catch { return null; }
+  const result = await requestAi({ mode: 'intent', prompt: input, context }, signal);
+  if (!result.text) return { order: null, failure: result.failure };
+  try {
+    const order = validateAiOrder(JSON.parse(result.text.replace(/^```(?:json)?\s*|\s*```$/g, '')), stats);
+    return order ? { order, failure: undefined } : { order: null, failure: { code: 'invalid_order' } as AiFailure };
+  } catch { return { order: null, failure: { code: 'invalid_order' } as AiFailure }; }
 }
