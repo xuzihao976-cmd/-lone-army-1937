@@ -1,7 +1,7 @@
 import type { GameStats } from '../types';
 import { validateAiOrder } from './aiOrders';
 export type AiMode = 'narrate' | 'freeform' | 'advisor' | 'intent';
-export type AiSource = 'siliconflow' | 'local';
+export type AiSource = 'cloudflare' | 'local';
 
 export interface AiReply {
   text: string;
@@ -56,8 +56,8 @@ const localAdvisorReply = (message: string): string => {
 };
 
 const requestAi = async (request: AiRequest, signal?: AbortSignal): Promise<string | null> => {
-  // GitHub Pages cannot host a protected server-side API. Skip the request
-  // entirely there so the UI never waits for an endpoint that cannot exist.
+  // Pages hosts the game; an explicitly configured external Worker hosts AI.
+  // Builds without a gateway stay entirely local.
   if (!isAiConfigured()) return null;
   if (Date.now() < gatewayUnavailableUntil) return null;
 
@@ -114,7 +114,7 @@ export const enhanceBattleNarrative = async (
 
   const enhanced = await requestAi({ mode: 'narrate', prompt: prose, context: `${context}\n玩家命令：${command}` }, signal);
   return enhanced
-    ? { text: `${enhanced}${stats}`, source: 'siliconflow' }
+    ? { text: `${enhanced}${stats}`, source: 'cloudflare' }
     : { text: narrative, source: 'local' };
 };
 
@@ -125,7 +125,7 @@ export const generateAdvisorResponse = async (
 ): Promise<AiReply> => {
   const localText = localAdvisorReply(userMessage);
   const enhanced = await requestAi({ mode: 'advisor', prompt: userMessage, history: history.slice(-8) }, signal);
-  return enhanced ? { text: enhanced, source: 'siliconflow' } : { text: localText, source: 'local' };
+  return enhanced ? { text: enhanced, source: 'cloudflare' } : { text: localText, source: 'local' };
 };
 
 export const resetAiGatewayProbe = (): void => {

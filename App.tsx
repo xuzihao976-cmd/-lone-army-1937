@@ -287,7 +287,7 @@ const App: React.FC = () => {
 
     if (!controller.signal.aborted && gameSessionRef.current === sessionId) {
       setAiSource(reply.source);
-      if (reply.source === 'siliconflow') {
+      if (reply.source === 'cloudflare') {
         setLogs((prev) => prev.map((log) => log.id === logId ? { ...log, text: reply.text, isTyping: false } : log));
       }
     }
@@ -480,7 +480,7 @@ const App: React.FC = () => {
           const interpreted = await interpretUnknownCommand(userCmd, currentStats, controller.signal);
           if (controller.signal.aborted || gameSessionRef.current !== sessionId || statsRef.current !== currentStats) return;
           if (interpreted) {
-            setAiSource('siliconflow');
+            setAiSource('cloudflare');
             const preview = interpreted.command ? getActionPreview(currentStats, interpreted.command) : null;
             handleGameResponse({ narrative: `【AI 副官 · 尚未执行军令】\n${interpreted.reply}`, updatedStats: {}, eventTriggered: 'none',
               dilemma: interpreted.command ? { id: 'ai_order_confirmation', title: '确认副官理解的军令', description: `${interpreted.reply}\n${preview?.short || ''}\n${preview?.reason || ''}`, options: [{ label: '确认执行', actionCmd: interpreted.command }, { label: '取消', actionCmd: 'cancel_retreat' }] } : undefined,
@@ -554,11 +554,11 @@ const App: React.FC = () => {
     ? 'AI 已关闭'
     : isEnhancing
       ? 'AI 润色中'
-      : aiSource === 'siliconflow'
-        ? '免费 AI 已连接'
+      : aiSource === 'cloudflare'
+        ? 'AI 已连接'
         : aiSource === 'local'
           ? '本地叙事兜底'
-          : 'AI 自动增强';
+          : 'AI 副官已开启';
 
   const actionPreview = stats.isGameOver || currentDilemma ? null : getActionPreview(stats, input);
 
@@ -794,9 +794,9 @@ const App: React.FC = () => {
                                 }`}
                                 title={IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况发送至 Cloudflare AI；AI 军令经确认才执行，失败回退本地。不发送存档或身份信息。'}
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full ${IS_STATIC_HOSTING || (aiSource === 'siliconflow' && aiEnabled) ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${aiSource === 'cloudflare' && aiEnabled ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
                                 <span className="hidden sm:inline">{aiStatusLabel}</span>
-                                <span className="sm:hidden">{IS_STATIC_HOSTING ? '本地' : 'AI'}</span>
+                                <span className="sm:hidden">{IS_STATIC_HOSTING ? '本地' : aiEnabled ? 'AI 开' : 'AI 关'}</span>
                             </button>
                         </div>
                         <button 

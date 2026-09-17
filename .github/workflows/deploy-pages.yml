@@ -33,7 +33,8 @@ jobs:
 
       - name: Test and build
         env:
-          VITE_AI_GATEWAY_URL: ${{ vars.VITE_AI_GATEWAY_URL }}
+          # Public endpoint only. Forks must configure their own gateway.
+          VITE_AI_GATEWAY_URL: ${{ vars.VITE_AI_GATEWAY_URL || (github.repository == 'xuzihao976-cmd/-lone-army-1937' && 'https://lone-army-1937-ai.xuzihao976.workers.dev' || '') }}
         run: npm run check
 
       - name: Configure Pages
