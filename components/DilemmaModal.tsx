@@ -16,7 +16,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
         <div className="flex items-start gap-3 border-b border-amber-900/30 bg-amber-900/20 p-4">
             <span className="shrink-0 text-2xl animate-pulse">⚠️</span>
             <h3 className="min-w-0 break-words font-serif text-base font-bold tracking-wider text-amber-500 sm:text-lg sm:tracking-widest">
-                突发事态: {dilemma.title}
+                待确认： {dilemma.title}
             </h3>
         </div>
 
@@ -37,8 +37,8 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
                         {String.fromCharCode(65 + idx)}. {opt.label}
                     </div>
                     {opt.riskText && (
-                        <div className="break-words font-mono text-xs leading-4 text-neutral-500 group-hover:text-amber-500/80">
-                            后果: {opt.riskText}
+                        <div className="break-words font-mono text-xs leading-5 text-neutral-300 group-hover:text-amber-300">
+                            风险与效果： {opt.riskText}
                         </div>
                     )}
                 </button>
@@ -46,7 +46,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
         </div>
         
         <div className="bg-black py-2 text-center text-xs font-mono text-neutral-400 uppercase">
-            AWAITING ORDERS /// COMMANDER XIE
+            AWAITING ORDERS /// FIELD COMMAND
         </div>
       </div>
     </div>

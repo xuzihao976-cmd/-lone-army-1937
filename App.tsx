@@ -566,7 +566,7 @@ const App: React.FC = () => {
     : isEnhancing
       ? 'AI 润色中'
       : aiSource === 'cloudflare'
-        ? 'AI 已连接'
+        ? '本次 AI 回复成功'
         : aiSource === 'local'
           ? 'AI 暂不可用 · 本地回复'
           : 'AI 副官已开启';
@@ -658,14 +658,14 @@ const App: React.FC = () => {
                                     本地音效：{soundEnabled ? '开启' : '关闭'}
                                 </button>
                                 <button onClick={handleExitRequest} className="w-full py-3 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded border border-red-900/30 transition-colors">
-                                    撤出战场
+                                    返回主菜单
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-3 text-center">
                                 <p className="text-red-400 text-sm mb-4">确定要返回主菜单吗？<br/><span className="text-neutral-500">最近一次命令已经自动保存。</span></p>
                                 <button onClick={handleConfirmExit} className="w-full py-3 bg-red-800 hover:bg-red-700 text-white rounded font-bold">
-                                    确认撤离
+                                    确认返回
                                 </button>
                                 <button onClick={() => { playSound('click'); setConfirmExit(false); }} className="w-full py-3 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded">
                                     取消
@@ -681,8 +681,8 @@ const App: React.FC = () => {
             {showBattleMapHint && (
               <div className="flex shrink-0 items-center justify-between gap-3 border-b border-red-900/50 bg-red-950/25 px-3 py-2" role="status">
                 <div className="min-w-0">
-                  <div className="text-xs font-black text-red-300">战场提示：红点就是敌军当前目标</div>
-                  <div className="truncate text-[11px] text-neutral-400">打开地图可查看遭袭楼层，并立即调兵或加固。</div>
+                  <div className="text-xs font-black text-red-300">战场提示：红点标出已知交战位置</div>
+                  <div className="truncate text-[11px] text-neutral-400">打开地图查看遭袭楼层；调兵和加固仍会消耗行动时间。</div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   {!showMap && (
@@ -882,7 +882,7 @@ const App: React.FC = () => {
                         onChange={(e) => setInput(e.target.value)}
                         onCompositionStart={() => isComposing.current = true}
                         onCompositionEnd={() => isComposing.current = false}
-                        placeholder={stats.isGameOver ? "连接断开..." : (currentDilemma ? "等待抉择..." : "问战况、说两句，或下达一条军令")}
+                        placeholder={stats.isGameOver ? "本局已结束，可复盘战报" : (currentDilemma ? "请先完成当前选择" : "问战况、说两句，或下达一条军令")}
                         disabled={stats.isGameOver || !!currentDilemma}
                         autoComplete="off"
                         autoCorrect="off"

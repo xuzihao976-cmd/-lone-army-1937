@@ -1,7 +1,7 @@
 import { ORDER_LABELS } from '../naturalCommands';
 import type { EnemyOperation, GameStats, Location } from '../../types';
 import { playSound } from '../../utils/sound';
-import { ATTACK_TEXTS, BAYONET_FIGHT_TEXTS, FORT_DAMAGE_SCENES } from '../../data/text/combat';
+import { ATTACK_TEXTS, BAYONET_FIGHT_TEXTS, CONFIRMED_DEATH_TEXT, CONFIRMED_INJURY_TEXTS, FORT_DAMAGE_SCENES } from '../../data/text/combat';
 import { getFatigueCasualtyFactor } from '../actionDynamics';
 import { createEnemyOperation } from '../battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from '../campaignProgress';
@@ -65,6 +65,7 @@ export const resolveAttack = ({
   const currentMgAmmo = calculatedStats.machineGunAmmo ?? currentStats.machineGunAmmo;
   const currentGrenades = calculatedStats.grenades ?? currentStats.grenades;
   let currentMorale = calculatedStats.morale ?? currentStats.morale;
+  const moraleBeforeCombat = currentMorale;
 
   if (damageType === 'BOMBING') {
     narrativeParts.push('\n\n' + pick(ATTACK_TEXTS.BOMBING));
@@ -86,8 +87,8 @@ export const resolveAttack = ({
     attackLocation = groundTargets.includes(contactOperation.target)
       ? contactOperation.target
       : groundTargets[0] ?? strategicStateAfterAction.location;
-    if (attackScale === 'LARGE') narrativeParts.push('\n\n【日军总攻】鬼子发疯了！满山遍野的黄皮狗涌了上来！');
-    else if (attackScale === 'MEDIUM') narrativeParts.push(`\n\n【日军强攻】日军组织了一个中队的兵力，沿突破口向${attackLocation}强行推进。`);
+    if (attackScale === 'LARGE') narrativeParts.push('\n\n【日军总攻】密集的脚步与喊声压向防线。守军把身体缩进掩体，传令声一遍遍重复：各处都要有人看住，别全挤向最响的缺口。');
+    else if (attackScale === 'MEDIUM') narrativeParts.push(`\n\n【日军强攻】日军集中兵力向${attackLocation}推进。枪声渐密，接令的人必须凑近同伴耳边，才能把话传完。`);
     else narrativeParts.push('\n\n' + pick(ATTACK_TEXTS.INFANTRY));
   }
 
@@ -141,7 +142,7 @@ export const resolveAttack = ({
       && (activeSquadsCount > 0 || !scene.includes('机枪')));
     narrativeParts.push(currentAmmo <= 0
       ? '\n\n' + pick(eligibleBayonetScenes.length > 0 ? eligibleBayonetScenes : BAYONET_FIGHT_TEXTS)
-      : '\n\n【弹药见底】零星枪声很快沉寂，日军已经冲进掩体。守军被迫上刺刀，在楼梯和破墙间展开白刃战。');
+      : '\n\n【弹药见底】余弹维持不住步枪火力，敌军已逼近掩体。守军把枪托握紧，挨住身边的人，准备承担近战的冲击。');
     statsLog.push(currentAmmo <= 0
       ? '⚔️ 七九弹耗尽且本层无可用机枪：转入刺刀见血的白刃防守'
       : `⚔️ 七九弹仅余${currentAmmo}发，无法维持火力：转入白刃防守`);
@@ -205,7 +206,6 @@ export const resolveAttack = ({
       ammoCheckSquads[targetIdx] = { ...destroyedSquad, status: 'destroyed', count: 0 };
       statsLog.push(`🔴 ${ammoCheckSquads[targetIdx].name}被毁!`);
       currentMorale = Math.max(0, currentMorale - 15);
-      statsLog.push('💔 重火力折损: 士气 -15');
       deaths += crewDeaths;
       if (survivingCrew > 0) {
         calculatedStats.soldiers = (calculatedStats.soldiers ?? currentStats.soldiers) + survivingCrew;
@@ -304,7 +304,7 @@ export const resolveAttack = ({
     }
     if (attackLocation === '屋顶' && (calculatedStats.hasFlagRaised ?? currentStats.hasFlagRaised)) {
       calculatedStats.hasFlagRaised = false;
-      narrativeParts.push('\n屋顶被突破，旗杆在爆炸中折断，国旗由敢死队抢下带走。');
+      narrativeParts.push('\n屋顶失守，升旗状态随之结束。联络处把消息传下来，没再让旗帜替已经守不住的阵地作保证。');
       statsLog.push('⚑ 屋顶失守: 国旗撤下');
     }
     if (attackLocation === '地下室') {
@@ -321,7 +321,7 @@ export const resolveAttack = ({
     calculatedStats.health = Math.max(0, (calculatedStats.health ?? currentStats.health) - 8);
     currentMorale = Math.max(0, currentMorale - 12);
     narrativeParts.push(`\n\n【防区失守：${attackLocation}】\n敌军突破最后一道掩体。${retreatDestination ? `残余守军沿内部通道撤往${retreatDestination}。` : '所有退路均被切断，防线已经被分割。'}从现在起，敌军会沿新的突破口继续向仓库纵深推进。`);
-    statsLog.push(`▼ ${attackLocation}失守: 总结构额外-8 / 士气-12`);
+    statsLog.push(`▼ ${attackLocation}失守: 总结构追加损伤（最多8点）`);
     appendCampaignHistory(currentStats, calculatedStats, `${attackLocation}失守`, `${retreatingRiflemen}名残余守军${retreatDestination ? `撤往${retreatDestination}` : '被切断'}。`, 'bad');
   }
 
@@ -336,7 +336,7 @@ export const resolveAttack = ({
       calculatedStats.finalRank = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_commander').rank;
       eventTriggered = 'game_over';
       visualEffect = 'heavy-damage';
-      narrativeParts.push(`\n\n【将星陨落】\n一发炮弹击穿${attackLocation}的指挥掩体。副官扑过来时，你已经倒在碎砖和硝烟之中。部队尚未死光，但失去最高指挥后，各防区通信迅速中断，成建制防守无法继续。\n\n结局达成：【阵前殉职】`);
+      narrativeParts.push(`\n\n【将星陨落】\n${attackLocation}的交火中，你倒在指挥位置旁。副官扑近，伸手去托你的后颈，掌下是温热的血；他又喊了一次长官，没能等到回应。\n\n本局指挥官已确认阵亡。其他人员的存亡按战报记录，失去指挥后的这场防守到此结束。\n\n结局达成：【阵前殉职】`);
     }
   }
 
@@ -378,10 +378,14 @@ export const resolveAttack = ({
   const prevKills = calculatedStats.enemiesKilled ?? currentStats.enemiesKilled ?? 0;
   calculatedStats.enemiesKilled = prevKills + outcome.enemiesKilled + barrierKills;
   if (deaths > 0) {
+    narrativeParts.push('\n\n' + CONFIRMED_DEATH_TEXT);
     applyNamedSoldierDeaths(currentStats, calculatedStats, deaths, narrativeParts, random);
     statsLog.push(`🔴 阵亡: ${deaths}人`);
   }
-  if (injuries > 0) statsLog.push(`🩹 新增伤员: ${injuries}人`);
+  if (injuries > 0) {
+    narrativeParts.push('\n\n' + CONFIRMED_INJURY_TEXTS[damageType]);
+    statsLog.push(`🩹 新增伤员: ${injuries}人`);
+  }
   statsLog.push(`💀 击毙日军: ${outcome.enemiesKilled + barrierKills}人`);
 
   let moraleGain = Math.floor(outcome.enemiesKilled / 8);
@@ -390,8 +394,7 @@ export const resolveAttack = ({
   const moraleLoss = deaths * 2;
   currentMorale = Math.max(0, Math.min(100, currentMorale + moraleGain - moraleLoss));
   calculatedStats.morale = currentMorale;
-  if (moraleGain > 0) statsLog.push(`💪 战果振奋: 士气 +${moraleGain}`);
-  if (moraleLoss > 0) statsLog.push(`💔 伤亡惨重: 士气 -${moraleLoss}`);
+  statsLog.push(`💪 交战士气 ${moraleBeforeCombat} → ${currentMorale}`);
 
   const stateAfterContact: GameStats = {
     ...strategicStateAfterAction,

@@ -6,27 +6,28 @@ export interface CampaignScore {
 }
 
 export const calculateCampaignScore = (stats: GameStats, endingType: EndingType): CampaignScore => {
-  let rank = '尽忠职守';
-  let text = '你完成了基本的守备任务，但在惨烈的战斗中损失惨重。';
-
-  if (endingType === 'defeat_deserter') return { rank: '懦夫', text: '你在战斗初期抛弃了部队。你的名字将被钉在耻辱柱上，后世无人知晓你的下落。' };
-  if (endingType === 'defeat_assault') return { rank: '勇猛的莽夫', text: '你的勇气令人敬佩，但连续出击耗尽了全营的成建制战力。作为指挥官，你选择了最壮烈也最惨痛的道路。' };
-  if (endingType === 'defeat_martyr') return { rank: '民族英雄', text: '旗帜不倒，军魂永存！你们全员殉国，但那面旗帜在四行仓库上空飘扬的画面，将永远激励着中华民族！' };
-  if (endingType === 'defeat_commander') return { rank: '阵前殉职', text: '你把指挥部放在了最危险的火线上。部队仍有人活着，但失去指挥官的瞬间让整条防线陷入混乱。' };
-  if (endingType === 'victory_retreat') return { rank: '孤军', text: '你成功完成了掩护大部队撤退的任务，并按照命令撤入租界。虽然结局充满无奈（被英军缴械），但你保全了这支抗战的火种。' };
-
   const hmgSurvivors = stats.hmgSquads.reduce((sum, squad) => sum + (squad.status === 'active' ? squad.count : 0), 0);
   const totalSurvivors = stats.soldiers + stats.wounded + hmgSurvivors;
+  const record = `当前记录：步兵${stats.soldiers}人，现役机枪人员${hmgSurvivors}人，待治伤员${stats.wounded}人，合计${totalSurvivors}人；累计毙敌${stats.enemiesKilled}人。专业小队已包含在步兵中，失散者的后续不在这份记录内。`;
+  let rank = '尽忠职守';
+  let text = '坚守的结果已经记下。留下多少人，就还要为多少人的下一步作安排。';
+
+  if (endingType === 'defeat_deserter') return { rank: '擅离阵地', text: `你在战斗初期确认撤离，未完成守备任务。对这道命令的评价，不等于已经判定人员死亡。\n${record}` };
+  if (endingType === 'defeat_assault') return { rank: '反攻失利', text: `主动出击未能挽回本局防守，结局由实际溃败条件触发；不能用勇敢抵消指挥的代价。\n${record}` };
+  if (endingType === 'defeat_martyr') return { rank: '孤旗为证', text: `本局曾升起国旗，最后可战力量归零。伤员与失散人员分别登记，不据此宣称全员阵亡。\n${record}` };
+  if (endingType === 'defeat_commander') return { rank: '阵前殉职', text: `指挥官在所在防区遭袭阵亡，本局防守随指挥中断而结束。其余人员不随这一死讯一并记作阵亡。\n${record}` };
+  if (endingType === 'victory_retreat') return { rank: '奉命撤离', text: `守军进入撤入租界的结局。走出仓库并不是所有苦难的终点，仍活着的人也不应被要求为幸存而羞愧。\n${record}` };
+
   if (totalSurvivors > 300) {
-    rank = '在此封神';
-    text = `奇迹！绝大多数弟兄都活了下来（${totalSurvivors}人）。击毙日军${stats.enemiesKilled}人。你的指挥艺术将被写进教科书！`;
+    rank = '守住归途';
+    text = '任务到期时，现有记录仍留下较多人手。往后的路不能替他们许诺，眼下至少还可以逐个听见回答。';
   } else if (totalSurvivors > 200) {
-    rank = '民族脊梁';
-    text = `你保全了主力部队（${totalSurvivors}人），打出了国军的威风。击毙日军${stats.enemiesKilled}人。`;
+    rank = '负重坚守';
+    text = '防务撑到了期限，现有队伍仍有可以交接的人手。胜利的字写下去，清点与救护却不能跟着停。';
   } else if (totalSurvivors > 100) {
-    rank = '血战到底';
-    text = `虽然伤亡过半（剩余${totalSurvivors}人），但那面旗帜始终飘扬。击毙日军${stats.enemiesKilled}人。`;
+    rank = '血战余生';
+    text = '任务已经到期，现有人员仍按实数登记。每一个还在的人，都有资格继续想念战场以外的生活。';
   }
-  if (endingType === 'defeat_generic') text = '仓库已经失守，但你们的抵抗让日军付出了沉重代价，幸存者仍会记住这场战斗。';
-  return { rank, text };
+  if (endingType === 'defeat_generic') text = '兵力或核心阵地已无法支持继续防守。失败条件与现存人员分别记录，不能把一场失守写成所有人的死亡。';
+  return { rank, text: `${text}\n${record}` };
 };

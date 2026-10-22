@@ -12,9 +12,9 @@ export const resolveTacticalCard = (stats: GameStats, cardId: string): TacticalC
   if (!stats.activeTacticalCard || stats.activeTacticalCard.actionCmd.toLowerCase() !== `card_resolve:${cardId}`) return null;
   if (cardId === 'morale_boost') return {
     updatedStats: { activeTacticalCard: null, morale: Math.min(100, stats.morale + 15) },
-    narrative: '【家书抵万金】信纸在一双双沾满灰尘的手里传递。有人抹去眼泪，重新抓紧了步枪。\n\n💪 士气 +15',
+    narrative: `【家书抵万金】读信的人把纸举远，又拿近，最后请旁边的人念。念到“都好，勿念”，他笑了一下，嘴角却没能撑住。信很薄，被他来回折了几次，才收进贴身口袋。\n\n💪 士气 +${Math.min(15, 100 - stats.morale)}`,
     historyTitle: '家书抵万金',
-    historyDetail: '家书送达，守军士气提升15点。',
+    historyDetail: `家书送达，士气由${stats.morale}升至${Math.min(100, stats.morale + 15)}。`,
   };
   if (cardId === 'reinforce') {
     const target = isSectorHeld(stats, stats.location) ? stats.location : '二楼阵地';
@@ -27,14 +27,14 @@ export const resolveTacticalCard = (stats: GameStats, cardId: string): TacticalC
           [target]: (stats.soldierDistribution[target] || 0) + 5,
         },
       },
-      narrative: `【孤胆英雄】五名从火线撤下的老兵穿过封锁，主动加入${target}。\n\n↗ 士兵 +5`,
+      narrative: `【接纳散兵】五名散兵核过身份，编入${target}。问起还能不能走，带头的人点了点头；真正迈步时，却先扶了墙一下。\n\n↗ 士兵 +5`,
       historyTitle: '孤胆英雄',
       historyDetail: `5名散兵加入${target}守军。`,
     };
   }
   if (cardId === 'supplies') return {
     updatedStats: { activeTacticalCard: null, ammo: stats.ammo + 500 },
-    narrative: '【意外物资】清理废墟时，工兵从断梁下拖出一个完整的军火箱。\n\n📦 七九弹 +500',
+    narrative: '【废墟里的弹药】箱子撬开，七九弹一排排露出来。清点的人怕弄错，数完又验了一遍：五百发。旁边的兵一直看着，等到入库才把肩膀松下来。\n\n📦 七九弹 +500',
     historyTitle: '意外物资',
     historyDetail: '废墟军火箱中找回500发七九弹。',
   };

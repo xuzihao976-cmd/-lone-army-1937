@@ -43,9 +43,9 @@ export const applyNamedSoldierDeaths = (
       ? { ...soldier, status: 'dead', deathReason: 'combat' }
       : soldier);
     narrative.push('\n' + pickWith([
-      `【噩耗】混战中，${victim.name}被流弹击中。这个${victim.origin}汉子死前手里还紧紧攥着那封没写完的家书。`,
-      `【牺牲】一声巨响，${victim.name}所在的掩体被炸平。我们再也听不到他${victim.trait === '暴躁' ? '骂娘' : '吹牛'}的声音了。`,
-      `【悲歌】为了掩护新兵，${victim.name}冲出了掩体，瞬间被机枪扫倒。`,
+      `【阵亡确认】${victim.name}（${victim.origin}）的死讯送到指挥处。副官抬头确认名字，然后把名册翻到那一行。纸页轻轻响了一下。`,
+      `【阵亡确认】点到${victim.name}（${victim.origin}）时，传令兵停下来报了阵亡。有人让他再说一遍；不是没有听见。`,
+      `【阵亡确认】${victim.name}（${victim.origin}）已阵亡。上一回点名时还能有人回答的位置，如今只剩一行要核实的记录。`,
     ], random));
   }
 

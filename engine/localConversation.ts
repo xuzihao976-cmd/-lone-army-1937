@@ -86,7 +86,7 @@ export const getBattlefieldQuery = (s: GameStats, raw: string): string | null =>
   const t = canonicalCommand(raw);
   if (!isQuestion(t)) return null;
   const roster = s.roster.filter(q => t.includes(q.name));
-  if (roster.length) return roster.map(q => `${q.name}：${q.status === 'alive' ? '名册登记存活' : `已阵亡${q.deathReason ? `（${q.deathReason}）` : ''}`}，籍贯 ${q.origin}，特点 ${q.trait}。`).join('\n');
+  if (roster.length) return roster.map(q => `${q.name}：${q.status === 'alive' ? '名册登记存活' : `已阵亡${q.deathReason ? `（${q.deathReason === 'combat' ? '战斗阵亡' : q.deathReason}）` : ''}`}，籍贯 ${q.origin}，特点 ${q.trait}。`).join('\n');
   if (/我是谁|你是谁|你叫什么|名字|身份|真人|人工智能|机器人/.test(t)) return null;
   const lines: string[] = [];
   if (/弹药|子弹|七九弹|机枪弹|手榴弹|弹夹|弹匣/.test(t)) lines.push(`七九弹 ${s.ammo} 发，机枪弹 ${s.machineGunAmmo} 发，手榴弹 ${s.grenades} 枚。`);
@@ -94,7 +94,7 @@ export const getBattlefieldQuery = (s: GameStats, raw: string): string | null =>
   if (/伤亡|伤员|伤兵|兵力|人数|弟兄|战士|士兵|几个人|死了|阵亡/.test(t)) {
     const crew = s.hmgSquads.reduce((n,q) => n + (q.status === 'active' ? q.count : 0), 0);
     lines.push(`步兵 ${s.soldiers} 人，现役机枪人员 ${crew} 人，伤员 ${s.wounded} 人；合计可战人员 ${s.soldiers + crew} 人。专业小队包含在步兵中，不重复计算。`);
-    if (/死了|阵亡|伤亡/.test(t)) lines.push(`具名名册记录 ${s.roster.filter(q => q.status === 'dead').length} 人阵亡；名册仅覆盖部分人物，不能当作全军累计阵亡数。`);
+    if (/死了|阵亡|伤亡/.test(t)) lines.push(`具名名册记录 ${s.roster.filter(q => q.status === 'dead').length} 人阵亡；它只覆盖部分人物，不能当作全军累计阵亡数。名册命运属于本局游戏演绎，不作史实。`);
   }
   if (/士气|信心|能守住|撑得住|能赢/.test(t)) lines.push(`士气 ${s.morale}/100。${s.morale < 35 ? '士气低落，要留意逃兵风险。' : '士气不能保证下一战结果，仍需看兵力、资源和防线。'}`);
   if (/疲劳|精神|累不累|困不困|多累/.test(t)) lines.push(`疲劳 ${s.fatigue}/100。轮换休息才会实际降低疲劳。`);

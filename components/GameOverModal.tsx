@@ -27,7 +27,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-yellow-500';
           icon = '🎖️';
           mainTitle = '四行孤军';
-          subTitle = '永垂不朽 · GLORY TO HEROES';
+          subTitle = '任务到期 · DEFENSE COMPLETE';
           break;
       case 'victory_retreat':
           borderColor = 'border-blue-700';
@@ -35,7 +35,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-blue-400';
           icon = '🌉';
           mainTitle = '孤军撤退';
-          subTitle = '保存火种 · STRATEGIC WITHDRAWAL';
+          subTitle = '奉命撤离 · ORDERED WITHDRAWAL';
           break;
       case 'defeat_martyr':
           borderColor = 'border-red-600';
@@ -43,7 +43,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-red-500';
           icon = '🇹🇼';
           mainTitle = '血染孤旗';
-          subTitle = '浩气长存 · ETERNAL GLORY';
+          subTitle = '孤旗为证 · NO COMBAT FORCE';
           break;
       case 'defeat_assault':
           borderColor = 'border-orange-700';
@@ -51,15 +51,15 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-orange-500';
           icon = '⚔️';
           mainTitle = '反攻失败';
-          subTitle = '血色冲锋 · LAST STAND';
+          subTitle = '反攻的代价 · ASSAULT FAILED';
           break;
       case 'defeat_deserter':
           borderColor = 'border-neutral-500';
           bgColor = 'bg-gray-900/50';
           titleColor = 'text-gray-400';
           icon = '🏳️';
-          mainTitle = '懦夫结局';
-          subTitle = '遗臭万年 · DESERTER';
+          mainTitle = '提前撤离';
+          subTitle = '防务未竟 · EARLY WITHDRAWAL';
           break;
       case 'defeat_commander':
           borderColor = 'border-stone-500';
@@ -99,12 +99,12 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
     commander_killed: '指挥官在所在防区遭袭阵亡',
     early_retreat: '战斗初期擅自撤离',
     historical_retreat: '奉命撤入公共租界',
-    mission_complete: '完成六日坚守任务',
+    mission_complete: '坚守至第六天，任务完成',
   } as const;
   
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center p-6 animate-fade-in">
-      <div className={`w-full max-w-md border-2 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center relative overflow-hidden flex flex-col gap-4 ${borderColor} ${bgColor}`}>
+      <div className={`max-h-[92dvh] w-full max-w-md overflow-y-auto border-2 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center relative flex flex-col gap-4 ${borderColor} ${bgColor}`}>
         
         {/* Background Effect */}
         <div className={`absolute inset-0 opacity-5 pointer-events-none ${borderColor.replace('border', 'bg')}`}></div>
@@ -137,7 +137,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
         
         {/* Stats Grid */}
         <div className="bg-black/50 p-4 rounded border border-white/10 grid grid-cols-2 gap-y-3 gap-x-6 text-sm font-mono text-left mt-2">
-            <div className="text-neutral-500 text-right text-xs">最终存活</div>
+            <div className="text-neutral-500 text-right text-xs">记录存活</div>
             <div className="text-white font-bold">{totalSurvivors} 人</div>
 
             <div className="text-neutral-500 text-right text-xs">可战人员</div>
@@ -149,7 +149,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
             <div className="text-neutral-500 text-right text-xs">结束原因</div>
             <div className="text-red-400 font-bold">{stats.gameOverReason ? reasonLabels[stats.gameOverReason] : '战役结算'}</div>
 
-            <div className="text-neutral-500 text-right text-xs">历史评价</div>
+            <div className="text-neutral-500 text-right text-xs">本局评价</div>
             <div className={`font-bold ${titleColor}`}>{stats.finalRank || '无名英雄'}</div>
 
             <div className="text-neutral-500 text-right text-xs">击毙日军</div>

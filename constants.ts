@@ -125,38 +125,38 @@ export const ACHIEVEMENTS: Achievement[] = [
         id: 'victory_hold',
         title: '固若金汤',
         icon: '🏰',
-        desc: '达成条件：坚持防守直到第6天。'
+        desc: '守至第6天，并通过本局任务完成判定。'
     },
     {
         id: 'victory_retreat',
         title: '孤军撤退',
         icon: '🌉',
-        desc: '达成条件：在第4天后奉命撤入租界（历史结局）。'
+        desc: '第4天起明确下令撤退，并二次确认；进入以历史撤退为原型的结局。'
     },
     {
         id: 'defeat_assault',
         title: '反攻的号角',
         icon: '⚔️',
-        desc: '达成条件：频繁主动出击（突袭/夜袭），直到成建制战力崩溃。'
+        desc: '主动夜袭超过3次，最终触发兵力或核心阵地溃败；满足其他优先结局时除外。'
     },
     {
         id: 'defeat_martyr',
         title: '血染孤旗',
         icon: '🇹🇼',
-        desc: '达成条件：升起国旗后，力战殉国。'
+        desc: '本局曾升起国旗，可战人员最后归零；不等于所有伤员与失散者均已死亡。'
     },
     {
         id: 'defeat_commander',
         title: '将星陨落',
         icon: '✦',
-        desc: '达成条件：指挥官所在防区遭袭，并在炮火中阵亡。',
+        desc: '指挥官所在防区遭袭，并触发指挥官阵亡判定。',
         isSecret: true
     },
     {
         id: 'defeat_deserter',
-        title: '懦夫',
+        title: '提前撤离',
         icon: '🏳️',
-        desc: '达成条件：在战斗初期（第0-1天）试图逃跑。',
+        desc: '第0—1天明确下令撤离，并二次确认放弃防务；单纯谈论撤退不会触发。',
         isSecret: true
     }
 ];

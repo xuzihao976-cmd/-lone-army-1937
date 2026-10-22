@@ -105,7 +105,7 @@ export const resolvePlayerAction = (
       updatedStats.soldierDistribution = distribution;
       applyNamedSoldierDeaths(currentStats, updatedStats, actualCasualties, narrative, random);
       if (ammoUsed > 0 || grenadesUsed > 0) logs.push(`🔻 反冲锋消耗: 七九弹${ammoUsed} / 手榴弹${grenadesUsed}`);
-      if (bayonetAssault) logs.push('⚔️ 火力不足：突击队以手榴弹、刺刀和工兵铲近战夺楼');
+      if (bayonetAssault) logs.push('⚔️ 火力不足：突击队被迫近战夺楼，伤亡风险提高');
       if (assaultEffect > 0) logs.push(`🗡 敢死突击组带队：${Math.round(assaultEffect * 100)}%效能 / 成功率提高 / 伤亡降低`);
       logs.push(`🔴 反冲锋伤亡: ${actualCasualties}人`);
 
@@ -114,8 +114,8 @@ export const resolvePlayerAction = (
         updatedStats.sectorIntegrity = { ...currentStats.sectorIntegrity, [target]: 30 };
         updatedStats.sealedApproaches = currentStats.sealedApproaches.filter((location) => location !== target);
         updatedStats.morale = Math.min(100, currentStats.morale + 6);
-        narrative.push(`【反冲锋成功】${assaultForce}名弟兄从${donor.location}冲入${target}，${bayonetAssault ? '在楼梯和房间里与敌军刺刀见血，逐屋夺回阵地' : '以步枪和手榴弹压住突破口，逐屋清剿'}。防区恢复到30%完整度，必须尽快加固。`);
-        logs.push(`↗ 夺回${target}: 防区完整度30% / 士气+6`);
+        narrative.push(`【反冲锋成功】${assaultForce}名步兵从${donor.location}出发，夺回${target}。${bayonetAssault ? '火力不足，近战的人一直挤到缺口边才稳住脚。' : '投入的火力为推进争得了空隙。'}重新报数时，幸存者仍在喘气，没人把夺楼叫作轻松。防区恢复到30%完整度，仍需尽快加固。`);
+        logs.push(`↗ 夺回${target}: 防区完整度30%`);
         appendCampaignHistory(currentStats, updatedStats, `夺回${target}`, `${actualCasualties}人伤亡后重新建立30%完整度的防线。`, 'good');
       } else {
         actionType = 'recapture_failed';
@@ -189,7 +189,7 @@ export const resolvePlayerAction = (
       }
       actionType = 'raid';
     } else {
-      narrative.push('副官拦住了你：“团附！现在天还亮着，外面全是鬼子的狙击手和观察哨。请等到深夜（00:00-05:00）再行动。”');
+      narrative.push('副官核对时间：“现在不在夜袭窗口内，不能出发。”仅可在00:00—04:59发起；本次未行动，也未耗时。');
       actionType = 'raid_blocked';
       timeCost = 0;
       siegeIncrease = 0;
@@ -205,24 +205,24 @@ export const resolvePlayerAction = (
     if (roll < 0.4 * yieldFactor) {
       const gain = Math.max(20, Math.floor((Math.floor(random() * 100) + 50) * yieldFactor));
       updatedStats.ammo = currentStats.ammo + gain;
-      narrative.push('你在仓库深处的废墟里翻找，在一个被压扁的木箱里发现了一些散落的子弹。虽然不多，但聊胜于无。');
+      narrative.push('箱子已经压扁，七九弹散在裂开的木板之间。搜寻的人一发发捡起，吹掉浮灰，交回库存；没人嫌这点数量少。');
       logs.push(`📦 搜寻获得: 七九弹 +${gain}`);
     } else if (roll < 0.6 * yieldFactor) {
       if (random() > 0.5) {
         updatedStats.medkits = currentStats.medkits + 2;
-        narrative.push('在一个角落里，你找到了几卷还没受潮的绷带。');
+        narrative.push('角落里找到尚可使用的急救物资。外包的纸已经皱了，打开查看的人却很小心，像怕多扯一下就把这点收获也弄坏。');
         logs.push('📦 搜寻获得: 急救包 +2');
       } else {
         const gain = Math.max(15, Math.floor(50 * yieldFactor));
         updatedStats.sandbags = currentStats.sandbags + gain;
-        narrative.push('工兵从废墟里拆出一批还能使用的木料、铁皮和空沙袋。');
+        narrative.push('工兵从杂物间拆出还能用的木料、铁皮和空沙袋。扎手的边角先朝内收好，再一趟趟搬回；修补缺口靠的就是这些零碎。');
         logs.push(`📦 搜寻获得: 工事材料 +${gain}`);
       }
     } else if (roll < 0.9) {
-      narrative.push('你带着几个人翻遍了地下室的杂物间，除了一身灰和几只老鼠，什么也没找到。');
+      narrative.push('搜过的箱子再次翻开，底板下面仍是灰。大家在原地停了一会儿，才把散落的东西归拢；这一趟没有可入库的收获。');
     } else {
       updatedStats.morale = Math.max(0, currentStats.morale - 1);
-      narrative.push('一无所获。看着空空如也的箱子，大家的眼神里流露出一丝失望。');
+      narrative.push('没有找到能用的东西。有人又探手摸了一遍箱角，指尖刮过木刺，最后空着手站起来。没人说白跑，脸上却藏不住失望。');
       logs.push('💔 徒劳无功: 士气 -1');
     }
     if (exhaustion >= 2) logs.push(`⌛ 仓库已被反复搜索：本次收益降至${Math.round(yieldFactor * 100)}%`);
@@ -234,14 +234,14 @@ export const resolvePlayerAction = (
     updatedStats.enemyOperation = revealEnemyOperation(operation);
     updatedStats.reconBonus = Math.min(30, (currentStats.reconBonus || 0) + 20);
     const intel = pick([
-      '日军正在搬运尸体，看来刚才的战斗让他们也伤筋动骨了。',
-      '西侧的日军机枪阵地似乎在换班，这可能是个射击的好机会。',
-      '苏州河对岸有很多百姓在挂出标语支持我们。这让弟兄们很受鼓舞。',
-      '有一小队日军正在挖掘战壕，似乎企图向大门逼近。',
+      '观察员把镜头放稳，先核对报告中的方向，没有把模糊的人影算作战果。',
+      '副官按住纸角，请观察员把看见的路线再说一遍：没有确认的部分先留空。',
+      '观察员看得眼眶发酸，放下镜子眨了两次，才继续报出已经核实的情报。',
+      '传令兵把记录念回去，让观察员确认。具体目标写进下方报告，猜测没有跟着写进去。',
     ]);
     narrative.push(`你举起望远镜仔细观察敌情。\n\n“团附，看那边。”\n${intel}`);
     narrative.push(`\n\n【敌情确证】${getOperationIntel(updatedStats.enemyOperation)}`);
-    logs.push('👁 侦察标记：下一次夜袭成功率 +20%');
+    logs.push('👁 侦察标记：夜袭加成提高20个百分点，上限30个百分点');
     if (random() < 0.2) {
       if (currentStats.ammo > 0) {
         const roundsUsed = Math.min(3, currentStats.ammo);
@@ -283,7 +283,7 @@ export const resolvePlayerAction = (
         distribution[source] = Math.max(0, (distribution[source] || 0) - transfer);
         distribution[target] = (distribution[target] || 0) + transfer;
         updatedStats.soldierDistribution = distribution;
-        narrative.push(`你命令传令兵带队穿过仓库内部通道，将${transfer}名步兵从${source}调往${target}。新的交叉火力正在形成。`);
+        narrative.push(`你命令传令兵带队穿过仓库内部通道，将${transfer}名步兵从${source}调往${target}。兵力已按新分布登记。`);
         logs.push(`↔ 调兵: ${source} → ${target} (${transfer}人)`);
       }
     }
@@ -304,7 +304,7 @@ export const resolvePlayerAction = (
       const previousLocation = squad.location;
       squads[index] = { ...squad, location: target };
       updatedStats.hmgSquads = squads;
-      narrative.push(`${squad.name}拆下枪架和水冷套筒，从${previousLocation}迅速转移到${target}。这支机枪组只会支援它所在的防区。`);
+      narrative.push(`${squad.name}收拢枪架，分担枪身与弹箱，从${previousLocation}转移到${target}。搬枪的人腾不出手擦汗，只抬了一下肩。机枪组仅支援实际所在的防区。`);
       logs.push(`♜ ${squad.name}: ${previousLocation} → ${target}`);
     }
   } else if (cmd.includes('部署小队') && cmd.includes('至')) {
@@ -328,7 +328,7 @@ export const resolvePlayerAction = (
       logs.push(`◆ ${squad.name}: ${previousLocation} → ${target}`);
     }
   } else if (cmd.includes('补给') || (cmd.includes('物资') && !cmd.includes('整理'))) {
-    narrative.push('通讯兵无奈地摇摇头：“团附，租界那边被封锁了，上面也没有空投计划。只能靠自己了。”');
+    narrative.push('通讯兵核对回报：“眼下没有可直接调用的外部补给。”他没有替可能出现的支援作保证。本次请求未增加物资，也未耗时；可搜寻库存或处理实际出现的补给事件。');
     actionType = 'supply_blocked';
     timeCost = 0;
     siegeIncrease = 0;
@@ -514,5 +514,7 @@ export const resolvePlayerAction = (
     if (actionType !== 'speech') updatedStats.speechStreak = 0;
   }
 
-  return { updatedStats, logs, narrative, timeCost, actionType, siegeIncrease, visualEffect };
+  const settlementLogs = logs.filter((line) => !line.includes('士气'));
+  if (typeof updatedStats.morale === 'number') settlementLogs.push(`💪 行动士气 ${currentStats.morale} → ${updatedStats.morale}`);
+  return { updatedStats, logs: settlementLogs, narrative, timeCost, actionType, siegeIncrease, visualEffect };
 };

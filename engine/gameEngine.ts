@@ -23,6 +23,7 @@ import { isSectorHeld } from './strategicDefense';
 
 // Import Narrative Data Modules
 import { WOUNDED_DEATH_SCENES } from "../data/text/combat";
+import { ENDING_TEXTS } from '../data/text/endings';
 
 
 
@@ -80,7 +81,7 @@ const runGameTurnInternal = (
     const isRetreat = isExplicitRetreatCommand(cmd);
     if (cmd === 'cancel_retreat') {
         return {
-            narrative: '你收回了命令。副官松了一口气，阵地上的弟兄重新握紧了枪。',
+            narrative: '你取消了这项待确认命令。副官把确认单放下；没有撤离，也没有推进时间。',
             updatedStats: { pendingRetreat: null },
             eventTriggered: 'none'
         };
@@ -107,12 +108,12 @@ const runGameTurnInternal = (
         // ENDING 4: Historical Retreat (Day 4+)
         if (currentStats.day >= 4) {
             return {
-                narrative: '师部的撤退命令已经送达。跨过新垃圾桥后，孤军的命运将进入另一个篇章。',
+                narrative: '本局已开放奉命撤退。副官把确认单推到你面前：“再核一遍，确认后就离开这场防守。”当前尚未撤离。',
                 updatedStats: { pendingRetreat: 'confirm_historical_retreat' },
                 eventTriggered: 'none',
                 dilemma: {
                     id: 'confirm_historical_retreat',
-                    title: '执行历史撤退？',
+                    title: '确认奉命撤退？',
                     description: '这会立即结束当前战役并进入“孤军撤退”结局。',
                     options: [
                         { label: '奉命撤退', actionCmd: 'confirm_historical_retreat', riskText: '不可逆：结束战役' },
@@ -122,7 +123,7 @@ const runGameTurnInternal = (
             };
         }
 
-        narrativeParts.push('副官答复：当前尚未开放历史撤退，本次未撤离。');
+        narrativeParts.push('副官核对了命令：“第4天起才能奉命撤退。”当前尚未开放，本次未撤离。');
         return {
             narrative: narrativeParts.join(""),
             updatedStats: { pendingRetreat: null },
@@ -138,7 +139,7 @@ const runGameTurnInternal = (
             const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_deserter');
             calculatedStats.finalRank = report.rank;
             return {
-                narrative: "【懦夫的结局】\n你甚至没有等到日军发动总攻，就脱下了军装试图混入租界。在桥头，督战队的机枪对准了你...\n\n“只有战死的鬼，没有逃跑的人。”\n\n结局达成：【懦夫】",
+                narrative: `${ENDING_TEXTS.earlyRetreat}\n${report.text}`,
                 updatedStats: calculatedStats,
                 eventTriggered: 'game_over',
                 visualEffect: 'heavy-damage'
@@ -153,7 +154,7 @@ const runGameTurnInternal = (
             const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_retreat');
             calculatedStats.finalRank = report.rank;
             return {
-                narrative: "【孤军撤退】\n10月31日凌晨，接上级命令，谢晋元团附含泪下令撤退。你们利用夜色冲过新垃圾桥，进入公共租界。虽然被英军缴械，但四百壮士的英名已震动世界。\n\n结局达成：【孤军撤退】",
+                narrative: `${ENDING_TEXTS.orderedRetreat}\n${report.text}`,
                 updatedStats: calculatedStats,
                 eventTriggered: 'victory'
             };
@@ -186,10 +187,10 @@ const runGameTurnInternal = (
         playSound('radio'); 
         
         return {
-            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨中，你刚刚接管防务。副官指向摇摇欲坠的大门：“团附，先把一楼入口加固起来！”\n\n按照下方的新手引导完成两步操作，随后正式开战。",
+            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n雨水顺着军帽往领口里淌。你接过防务记录，纸角已经软了，里面却清清楚楚写着人和弹药的数目。\n\n副官等你看完，才指向一楼入口：“这里先补牢。人得有个能站住的地方。”\n\n完成下方两步引导后正式开战。本作含具体伤势、死亡与战地创伤；对白、可变战况及结局为游戏演绎，不作史料。",
             updatedStats: calculatedStats,
             eventTriggered: 'none',
-            enemyIntel: "侦察兵报告：日军正在集结步兵，似乎准备进行试探性进攻。"
+            enemyIntel: "具体来袭路线尚未确证，先完成布防。"
         };
     }
     
@@ -209,7 +210,7 @@ const runGameTurnInternal = (
                 narrative: "【教程已跳过】\n\n一楼工事与守军状态已按教程完成后的标准配置。10月27日，第一天，正式战斗开始。",
                 updatedStats: calculatedStats,
                 eventTriggered: 'new_day',
-                enemyIntel: "侦察兵报告：日军步兵已展开，主要威胁为冷枪和轻型迫击炮。"
+                enemyIntel: "第一天防务开始，具体攻势请通过侦察确认。"
             };
         }
 
@@ -226,7 +227,7 @@ const runGameTurnInternal = (
                  playSound('click');
                  statsLog.push("🔨 一楼入口：加固掩体完成");
                  return {
-                     narrative: "【第 1/2 步完成】\n\n沙袋和钢板封住了一楼入口，加固掩体已经成形。副官提醒：“弟兄们两天没合眼了，该轮换休息。”\n\n现在点击下方发光的【休息】。",
+                     narrative: "【第 1/2 步完成】\n\n新补的掩体压实了，出入的通道仍留着。工兵直起腰揉了揉手，副官看了一眼队列：“接下来轮休。别等站不住才让人歇。”\n\n现在点击下方发光的【休息】。",
                      updatedStats: calculatedStats,
                      eventTriggered: 'none',
                      visualEffect: 'shake'
@@ -249,10 +250,10 @@ const runGameTurnInternal = (
                  
                  playSound('click');
                  return {
-                     narrative: "【新手引导完成】\n\n守军完成轮换，士气恢复。天亮了——10月27日，第一天，日军已在废墟中展开，真正的战斗开始。\n\n💤 士气 +15",
+                     narrative: `【新手引导完成】\n\n轮休结束，接班的人揉着脸站起来，先找自己的阵位。天亮了——10月27日，第一天。仓库里那些还不熟悉的声音，从现在起要彼此认得。\n\n💤 士气 ${currentStats.morale} → ${calculatedStats.morale}`,
                      updatedStats: calculatedStats,
                      eventTriggered: 'new_day',
-                     enemyIntel: "侦察兵报告：日军步兵已展开，主要威胁为冷枪和轻型迫击炮。"
+                     enemyIntel: "第一天防务开始，具体攻势请通过侦察确认。"
                  };
              }
              return { narrative: "【新手引导 2/2】请点击下方发光的【休息】。需要直接开战，也可以选择“跳过教程”。", updatedStats: {} };
@@ -364,11 +365,12 @@ const runGameTurnInternal = (
                 calculatedStats.wounded = currentWoundedCount - actualDeaths;
                 const moraleLoss = actualDeaths;
                 const minM = calculatedStats.minMorale ?? currentStats.minMorale ?? 0;
-                calculatedStats.morale = Math.max(minM, (calculatedStats.morale ?? currentStats.morale) - moraleLoss);
+                const moraleBeforeLoss = calculatedStats.morale ?? currentStats.morale;
+                calculatedStats.morale = Math.max(minM, moraleBeforeLoss - moraleLoss);
                 narrativeParts.push("\n\n" + pick(WOUNDED_DEATH_SCENES));
                 if (!hospitalHeld) narrativeParts.push('\n地下室失守后，伤员只能分散在楼梯间，死亡速度明显加快。');
                 statsLog.push(`⚰️ 重伤员不治: ${actualDeaths}人`);
-                statsLog.push(`💔 士气 -${moraleLoss}`);
+                statsLog.push(`💔 伤员不治后的士气 ${moraleBeforeLoss} → ${calculatedStats.morale}`);
                 currentTimer = hospitalHeld ? 660 : 300;
             }
         }

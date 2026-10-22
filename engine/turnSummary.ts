@@ -2,7 +2,7 @@ import type { GameStats, GameTurnResult, Location, SummaryMetric, TurnDelta, Tur
 import { getActionPreview } from './actionPreview';
 
 const METRICS: Array<{ metric: SummaryMetric; label: string }> = [
-  { metric: 'soldiers', label: '可战兵力' },
+  { metric: 'soldiers', label: '步兵' },
   { metric: 'wounded', label: '伤员' },
   { metric: 'morale', label: '士气' },
   { metric: 'health', label: '总结构' },
@@ -40,7 +40,9 @@ export const buildTurnSummary = (
   if (!meaningful) return undefined;
 
   let kind: TurnSummary['kind'] = 'action';
-  let title = preview?.action ?? '命令执行';
+  let title = command.toLowerCase().startsWith('evt_resolve:') ? '事件后果'
+    : command.toLowerCase().startsWith('card_resolve:') ? '战机结算'
+      : preview?.action ?? '命令执行';
   const notes: string[] = [];
 
   if (result.eventTriggered === 'attack') {

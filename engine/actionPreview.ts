@@ -88,7 +88,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     action = '调派步兵';
     durationMinutes = 30;
     baseThreat = 8;
-    reason = '从兵力最充足的防区抽调，原防区至少保留20人';
+    reason = '按命令指定的来源与目标调动，来源至少保留20人；实际人数以可抽调兵力为限';
   } else if (command.includes('部署机枪') && command.includes('至')) {
     action = '转移机枪组';
     durationMinutes = 20;
@@ -121,7 +121,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     action = '侦察敌情';
     durationMinutes = 15;
     baseThreat = 5;
-    reason = '查明下一轮敌军目标、路线、规模和武器，并使下一次夜袭成功率+20%';
+    reason = '查明下一轮目标、路线、规模和武器；夜袭加成提高20个百分点，上限30个百分点';
   } else if (isMoveCommand(command)) {
     action = '转移阵位';
     const target = commandLocation(command);
@@ -147,35 +147,35 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     durationMinutes = available ? 120 : 0;
     baseThreat = available ? 15 : 0;
     costs = level >= 3 && integrity >= 100 ? [] : [`工事材料 ${materialCost}`];
-    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `恢复${repair}%防区完整度；每两次施工强化一次实际减伤${engineerFactor > 0 ? `（工兵效能${Math.round(engineerFactor * 100)}%）` : ''}`;
+    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `最多恢复${repair}个百分点的防区完整度；每两次施工强化一次实际减伤${engineerFactor > 0 ? `（工兵效能${Math.round(engineerFactor * 100)}%）` : ''}`;
   } else if (includesAny(command, ['休息', '睡', '整顿'])) {
     action = '轮换休整';
     durationMinutes = 120;
     baseThreat = 35;
-    reason = `恢复士气、仓库结构与35%疲劳；耗时较长，敌军推进2格（当前疲劳${stats.fatigue}%）`;
+    reason = `士气最多+10、结构最多+5，疲劳最多降低35点；耗时较长，敌军推进2格（当前疲劳${stats.fatigue}%）`;
   } else if (includesAny(command, ['治疗', '抢救', '救', '医'])) {
     action = '救治伤员';
     available = isSectorHeld(stats, '地下室') && stats.wounded > 0 && stats.medkits > 0;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 10 : 0;
-    costs = available ? ['急救包 2–5'] : [];
+    costs = available ? [`急救包按实际救回人数扣除，最多${Math.min(stats.wounded, stats.medkits, 5 + Math.round(2 * getSpecialistEffectFactor(stats, 'medic', '地下室')))}份`] : [];
     reason = !isSectorHeld(stats, '地下室') ? '地下室医院已经失守' : stats.wounded <= 0 ? '目前没有伤员需要救治' : stats.medkits <= 0 ? '急救包已经耗尽' : '实际消耗取决于成功救回的人数';
   } else if (command.includes('升旗')) {
     action = '升起国旗';
     available = stats.location === '屋顶' && !stats.hasFlagRaised;
     durationMinutes = available && stats.flagWarned ? 30 : 0;
     baseThreat = available && stats.flagWarned ? 50 : 0;
-    reason = stats.hasFlagRaised ? '国旗已经升起' : stats.location !== '屋顶' ? '必须先移动到屋顶' : stats.flagWarned ? '士气大增，但白天会招致轰炸' : '副官会要求再次确认风险';
+    reason = stats.hasFlagRaised ? '国旗已经升起' : stats.location !== '屋顶' ? '必须先移动到屋顶' : stats.flagWarned ? '士气最多+30，敌军压力上升，屋顶将成为空袭优先目标' : '副官会要求再次确认风险';
   } else if (includesAny(command, ['演讲', '训话', '鼓舞', '动员', '坚持', '顶住', '拼了', '万岁'])) {
     action = '战前动员';
     durationMinutes = 60;
     baseThreat = 10;
     const moraleGain = getSpeechMoraleGain(stats);
-    reason = `本次预计士气+${moraleGain}；连续演讲效果递减，休整后恢复`;
+    reason = `本次预计士气+${Math.min(moraleGain, 100 - stats.morale)}；连续演讲效果递减，休整后恢复`;
   } else if (includesAny(command, ['补给', '物资']) && !command.includes('整理')) {
     action = '请求补给';
     available = false;
-    reason = '封锁期间没有外部补给线路';
+    reason = '当前没有可直接调用的补给；实际出现的支援事件另行选择';
   }
 
   const multiplier = getDayProfile(stats.day).threatMultiplier;

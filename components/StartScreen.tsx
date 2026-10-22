@@ -16,7 +16,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
   const [showAchievements, setShowAchievements] = useState(false);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full bg-[#050505] text-[#e5e5e5] p-6 relative overflow-hidden">
+    <div className="flex flex-col items-center justify-start h-full w-full sm:justify-center bg-[#050505] text-[#e5e5e5] px-6 py-10 relative overflow-y-auto">
       {/* Atmospheric Background Elements */}
       <div className="linen-texture absolute inset-0 opacity-30 pointer-events-none"></div>
       <div className="absolute top-10 left-0 w-full h-32 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none"></div>
@@ -24,23 +24,23 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
       {!showAchievements ? (
       <>
         {/* Title Section */}
-        <div className="z-10 text-center mb-10 sm:mb-16 animate-fade-in">
+        <div className="z-10 text-center mb-6 sm:mb-12 animate-fade-in">
             <div className="text-red-700 text-xs tracking-[0.5em] mb-2 font-bold uppercase">
                 一九三七 · 上海
             </div>
-            <h1 className="text-5xl sm:text-7xl font-bold font-serif text-neutral-200 tracking-wider mb-2 drop-shadow-2xl">
+            <h1 className="text-4xl sm:text-7xl font-bold font-serif text-neutral-200 tracking-wider mb-2 drop-shadow-2xl">
             孤军
             </h1>
             <h2 className="text-2xl sm:text-3xl font-serif text-neutral-400 tracking-widest border-t border-neutral-800 pt-4 mt-2">
             四行仓库
             </h2>
             <div className="mt-6 text-sm text-neutral-600 font-mono">
-                八百壮士 · 民族之魂
+                一座仓库 · 许多个想回家的人
             </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="z-10 flex flex-col gap-4 w-full max-w-xs">
+        <div className="z-10 flex shrink-0 flex-col gap-3 sm:gap-4 w-full max-w-xs">
             
             <button
             onClick={onNewGame}
@@ -74,8 +74,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
             </button>
             
             <div className="mt-6 text-center text-xs font-mono leading-relaxed text-neutral-400">
-                建议佩戴耳机体验本地战场音效<br/>
-                v3.1.0 | 本地副官 · 战况对白 · 军令防误触
+                成人战争叙事，含具体伤势、死亡与战地创伤<br/>
+                虚构对白与可变战况，不作史料<br/>
+                v3.2.0 · 本地完整游玩 · AI 可选
             </div>
         </div>
       </>
@@ -118,7 +119,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave
       )}
       
       {/* Footer */}
-      <div className="pointer-events-none absolute bottom-4 text-[11px] font-mono text-neutral-600">
+      <div className="pointer-events-none shrink-0 mt-8 text-[11px] font-mono text-neutral-600">
         大嘴鸭游戏出品
       </div>
     </div>

@@ -41,7 +41,7 @@ const TacticalCardDisplay: React.FC<TacticalCardDisplayProps> = ({ card, onExecu
           </p>
           
           <div className={`border-t border-white/10 pt-2 text-xs font-bold uppercase tracking-wider ${textColor}`}>
-              效果: {card.effectText}
+              点击后生效： {card.effectText}
           </div>
           
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>

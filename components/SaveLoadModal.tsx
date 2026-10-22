@@ -44,7 +44,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                         </div>
                         <div className="mt-2 flex justify-between text-xs text-neutral-400">
                             <span>第 {autoSave.day} 天 · {autoSave.location}</span>
-                            <span>可战兵力 {autoSave.soldiers}</span>
+                            <span>步兵 {autoSave.soldiers}</span>
                         </div>
                     </button>
                 ) : (
@@ -82,7 +82,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                                     第 {slot.day} 天 <span className="text-neutral-500 text-xs font-normal">| {slot.location}</span>
                                 </div>
                                 <div className="flex justify-between items-end w-full">
-                                    <span className="text-xs text-neutral-400">幸存: {slot.soldiers}人</span>
+                                    <span className="text-xs text-neutral-400">步兵：{slot.soldiers}人</span>
                                     {mode === 'save' && (
                                         <span className="text-[11px] text-amber-500 uppercase opacity-0 transition-opacity group-hover:opacity-100">
                                             覆盖存档
