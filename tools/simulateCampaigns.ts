@@ -1,3 +1,5 @@
+import { PASSIVE_INPUTS } from '../tests/fixtures/playerLanguage';
+import { isDeepStrictEqual } from 'node:util';
 import { runGameTurn } from '../engine/gameEngine';
 import { createInitialStats } from '../storage/saveStore';
 import type { Dilemma, GameStats, GameTurnResult, Location } from '../types';
@@ -146,6 +148,13 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
     } else if (stats.activeTacticalCard) {
       command = stats.activeTacticalCard.actionCmd;
     } else {
+      if (process.argv.includes('--chatter')) {
+        const input=PASSIVE_INPUTS[(decisions+seed)%PASSIVE_INPUTS.length];
+        const r=runGameTurn(stats,input), after=applyResult(stats,r);
+        const world=({localDialogue:_memory,pendingRetreat:_pending,...state}:GameStats)=>state;
+        if(r.turnAdvanced || !isDeepStrictEqual(world(stats),world(after))) throw new Error(`${policy}/${seed}: chat changed campaign: ${input}`);
+        stats=after;
+      }
       if (process.argv.includes('--orders') && stats.enemyOperation && decisions % 4 === 0) {
         const orders = ['猛烈射击', '节约弹药', '近距开火', '刺刀准备', '死守阵位'];
         const prepared = runGameTurn(stats, `${stats.enemyOperation.target}${orders[decisions % orders.length]}`);

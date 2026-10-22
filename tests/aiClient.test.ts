@@ -13,6 +13,14 @@ beforeEach(async () => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 const interpret = () => client.interpretUnknownCommand('副官，家乡的桂花开了吗', createInitialStats());
 describe('AI failure diagnostics and safe fallback', () => {
+  it('never requests a model from advisor while AI is off', async () => {
+    await client.generateAdvisorResponse([], '陌生的题外话', undefined, {stats:createInitialStats(),enabled:false});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('uses known local rules even with AI enabled', async () => {
+    const r=await client.generateAdvisorResponse([], '怎么治疗伤员', undefined, {stats:createInitialStats(),enabled:true});
+    expect(r.source).toBe('local');expect(r.text).toContain('60分钟');expect(fetchMock).not.toHaveBeenCalled();
+  });
   it('shows the provider cause instead of a generic 503', async () => {
     fetchMock.mockResolvedValue(Response.json({error:'ai_inference_failed',upstreamCode:3036,detail:'private'}, {status:503}));
     const result=await interpret();

@@ -73,7 +73,7 @@ export const detectDialogueTopic = (raw: string): DialogueTopic | null => {
   if (/还好吗|还好吧|受得了吗|保重|照顾好|注意安全|别受伤|别硬撑|辛苦吗|身体|爱你们|真不容易/.test(t)) return 'concern';
   if (/快点|快啊|来不及|没时间|抓紧|磨蹭/.test(t)) return 'urgency';
   if (/^(?:副官|参谋|长官|弟兄们|兄弟们|兄弟|各位|全体|有人在吗|在不在|有人吗|喂|喂喂)[!！。?？,，\s]*$/.test(t)) return 'attention';
-  if (/你好|大家好|你们好|早上好|早安|晚上好|晚安|嗨|哈喽|hello|hi\b|在吗|早啊/.test(t)) return 'greeting';
+  if (/你好|您好|大家好|你们好|早上好|早安|晚上好|晚安|嗨|哈喽|hello|hi\b|在吗|早啊/.test(t)) return 'greeting';
   if (/^(?:收到|明白|知道了|好|好的|嗯|嗯嗯|行|可以|没问题|ok|了解|再见|拜拜|拜)[!！。,，\s]*$/.test(t)) return 'acknowledgment';
   if (/手机|电脑|互联网|微信|抖音|steam|gpt|api|充值|奶茶|游戏设计|写代码|作业|论文|天气|星座|彩票|篮球|足球|外卖/.test(t)) return 'off_topic';
   return null;

@@ -135,17 +135,13 @@ npm run preview
 
 游戏使用相对资源路径，可在 `https://<用户名>.github.io/<仓库名>/` 这样的项目子路径中运行。GitHub Pages 不保存服务端密钥，因此该部署默认使用完整的本地游戏引擎与本地战地顾问。
 
-## 免费 AI 增强（可选）
+## AI 增强（可选）
 
-可选增强默认接入硅基流动的 OpenAI 兼容接口，模型为 `Qwen/Qwen2.5-7B-Instruct`。游戏内 AI 开关默认关闭；没有配置密钥时，即使打开也会自动回退到本地叙事和本地顾问，不会卡住游戏。
+AI默认关闭，本地规则、对白与顾问可完整使用。开启后，已识别的常见指令与规则问题仍优先在本地处理；失败会回退并显示原因。关闭AI后，顾问也不会请求模型。
 
-1. 复制 `.env.example` 为 `.env.local`。
-2. 只填写服务端变量 `SILICONFLOW_API_KEY`，不要使用 `VITE_` 前缀。
-3. 重启开发服务器。
+GitHub Pages通过`VITE_AI_GATEWAY_URL`连接服务端Worker；密钥不得使用`VITE_`前缀或写入前端。当前Worker的百炼接口要求服务端密钥与明确的免费额度保护设置，缺少时停止调用。参阅[worker/README.md](worker/README.md)。玩家自选API和充值入口尚未实现。
 
-密钥只由 Vite 本地服务或 Netlify Function 读取，不会打包到浏览器 JavaScript。生产部署时，请在托管平台的环境变量设置中填写密钥，切勿把真实密钥写进源码。
-
-Netlify 已包含 `netlify.toml` 与 `netlify/functions/narrate.mjs`。其他静态托管平台即使没有部署 `/api/narrate`，本地游戏仍可完整运行，只是没有 AI 润色。
+本次验证范围见[RELEASE-v3.1.0.md](RELEASE-v3.1.0.md)。
 
 ## 代码结构
 

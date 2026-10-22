@@ -1,3 +1,4 @@
+import { TACTICAL_CARDS } from '../data/text/events';
 import { describe, expect, it } from 'vitest';
 import { runGameTurn } from '../engine/gameEngine';
 import { createInitialStats } from '../storage/saveStore';
@@ -56,6 +57,7 @@ describe('local game engine endings', () => {
   it('resolves tactical cards with the exact advertised effects', () => {
     const moraleStats = createInitialStats(80);
     moraleStats.tutorialStep = 3;
+    moraleStats.activeTacticalCard = TACTICAL_CARDS.find(card => card.id === 'morale_boost')!;
     moraleStats.morale = 50;
     const morale = runGameTurn(moraleStats, 'CARD_RESOLVE:morale_boost');
     expect(morale.updatedStats.morale).toBe(65);
@@ -64,6 +66,7 @@ describe('local game engine endings', () => {
 
     const reinforceStats = createInitialStats(81);
     reinforceStats.tutorialStep = 3;
+    reinforceStats.activeTacticalCard = TACTICAL_CARDS.find(card => card.id === 'reinforce')!;
     reinforceStats.location = '二楼阵地';
     const reinforce = runGameTurn(reinforceStats, 'CARD_RESOLVE:reinforce');
     expect(reinforce.updatedStats.soldiers).toBe(reinforceStats.soldiers + 5);
@@ -71,6 +74,7 @@ describe('local game engine endings', () => {
 
     const supplyStats = createInitialStats(82);
     supplyStats.tutorialStep = 3;
+    supplyStats.activeTacticalCard = TACTICAL_CARDS.find(card => card.id === 'supplies')!;
     const supply = runGameTurn(supplyStats, 'CARD_RESOLVE:supplies');
     expect(supply.updatedStats.ammo).toBe(supplyStats.ammo + 500);
   });
@@ -78,6 +82,7 @@ describe('local game engine endings', () => {
   it('turns event choices into persistent, mechanical consequences', () => {
     const students = createInitialStats(83);
     students.tutorialStep = 3;
+    students.pendingDilemmaId = 'student_run';
     const rescue = runGameTurn(students, 'EVT_RESOLVE:student_run:0');
     expect(rescue.updatedStats.consequenceFlags).toContain('students_rescued');
     expect(rescue.updatedStats.ammo).toBe(students.ammo - 600);
@@ -87,6 +92,7 @@ describe('local game engine endings', () => {
 
     const british = createInitialStats(84);
     british.tutorialStep = 3;
+    british.pendingDilemmaId = 'brit_ceasefire';
     const defiance = runGameTurn(british, 'EVT_RESOLVE:brit_ceasefire:1');
     expect(defiance.updatedStats.consequenceFlags).toContain('british_defied');
     expect(defiance.updatedStats.enemyOperation?.target).toBe('地下室');
@@ -328,7 +334,8 @@ describe('local game engine endings', () => {
     stats.siegeMeter = 0;
     stats.hmgSquads = stats.hmgSquads.map((squad) => ({ ...squad, status: 'destroyed', count: 0 }));
 
-    const warning = runGameTurn(stats, '询问当前情况');
+    expect(runGameTurn(stats, '询问当前情况').updatedStats.lastStandUsed).not.toBe(true);
+    const warning = runGameTurn(stats, '侦察敌情');
     expect(warning.updatedStats.isGameOver).not.toBe(true);
     expect(warning.updatedStats.lastStandUsed).toBe(true);
     expect(warning.narrative).toContain('最后防线');
