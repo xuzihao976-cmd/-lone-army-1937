@@ -1,7 +1,7 @@
 {
   "name": "lone-army-1937-webgame",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "simulate": "vite-node tools/simulateCampaigns.ts -- --runs=1000",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run audit:language && npm run build",
+    "audit:language": "vite-node tools/auditLocalLanguage.ts"
   },
   "dependencies": {
     "react": "^19.2.3",

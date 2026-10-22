@@ -1,7 +1,8 @@
+import { sanitizeDialogueMemory } from '../engine/localConversation';
 import { INITIAL_STATS } from '../constants';
 import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 9;
+export const SAVE_SCHEMA_VERSION = 10;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -69,6 +70,8 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
   const stats: GameStats = {
     ...base,
     ...incoming,
+    localDialogue: sanitizeDialogueMemory(incoming.localDialogue),
+    pendingDilemmaId: null,
     preparedOrders: Object.fromEntries(Object.entries(incoming.preparedOrders || {}).filter(([location, order]) => ['屋顶', '二楼阵地', '一楼入口', '地下室'].includes(location) && ['rapid', 'conserve', 'close', 'bayonet', 'hold'].includes(String(order)))),
     lastEncourageTurn: typeof incoming.lastEncourageTurn === 'number' && Number.isFinite(incoming.lastEncourageTurn) ? incoming.lastEncourageTurn : -999,
     pendingRetreat: null,

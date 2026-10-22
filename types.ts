@@ -76,6 +76,9 @@ export interface CampaignHistoryEntry {
   tone: 'good' | 'bad' | 'neutral';
 }
 
+/** Presentation memory is independent of combat RNG and campaign time. */
+export interface LocalDialogueMemory { sequence: number; topic: string; variant: number; inputHash: number; repeats: number; }
+
 // NEW: Define Ending Types
 export type EndingType = 
   | 'victory_hold'      // 1. 正常坚守胜利
@@ -140,6 +143,8 @@ export interface GameStats {
   // State
   preparedOrders?: Partial<Record<Location, 'rapid' | 'conserve' | 'close' | 'bayonet' | 'hold'>>;
   lastEncourageTurn?: number;
+  localDialogue?: LocalDialogueMemory;
+  pendingDilemmaId?: string | null;
   pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 

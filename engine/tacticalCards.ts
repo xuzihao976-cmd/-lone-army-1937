@@ -9,6 +9,7 @@ export interface TacticalCardResolution {
 }
 
 export const resolveTacticalCard = (stats: GameStats, cardId: string): TacticalCardResolution | null => {
+  if (!stats.activeTacticalCard || stats.activeTacticalCard.actionCmd.toLowerCase() !== `card_resolve:${cardId}`) return null;
   if (cardId === 'morale_boost') return {
     updatedStats: { activeTacticalCard: null, morale: Math.min(100, stats.morale + 15) },
     narrative: '【家书抵万金】信纸在一双双沾满灰尘的手里传递。有人抹去眼泪，重新抓紧了步枪。\n\n💪 士气 +15',

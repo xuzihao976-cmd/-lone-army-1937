@@ -6,6 +6,7 @@ import Typewriter from './components/Typewriter';
 import StartScreen from './components/StartScreen';
 import SaveLoadModal from './components/SaveLoadModal';
 import AdvisorChat from './components/AdvisorChat';
+import LocalCommandGuide from './components/LocalCommandGuide';
 import QuickActions from './components/QuickActions'; 
 import DilemmaModal from './components/DilemmaModal';
 import TacticalCardDisplay from './components/TacticalCardDisplay'; 
@@ -448,7 +449,7 @@ const App: React.FC = () => {
     if (e) e.preventDefault();
     
     const userCmd = directCommand || input.trim();
-    const logText = displayLabel || userCmd;
+    const logText = displayLabel || (userCmd.length>500 ? '[超长输入：'+userCmd.length+'字，本次未执行]' : userCmd);
 
     if (isComposing.current || !userCmd || isLoading || stats.isGameOver) return;
 
@@ -620,7 +621,7 @@ const App: React.FC = () => {
           />
       )}
       
-      <AdvisorChat isOpen={showAdvisor} onClose={() => setShowAdvisor(false)} />
+      <AdvisorChat isOpen={showAdvisor} onClose={() => setShowAdvisor(false)} stats={stats} aiEnabled={aiEnabled} />
 
       {view === 'MENU' ? (
           <StartScreen 
@@ -881,7 +882,7 @@ const App: React.FC = () => {
                         onChange={(e) => setInput(e.target.value)}
                         onCompositionStart={() => isComposing.current = true}
                         onCompositionEnd={() => isComposing.current = false}
-                        placeholder={stats.isGameOver ? "连接断开..." : (currentDilemma ? "等待抉择..." : "下达命令...")}
+                        placeholder={stats.isGameOver ? "连接断开..." : (currentDilemma ? "等待抉择..." : "问战况、说两句，或下达一条军令")}
                         disabled={stats.isGameOver || !!currentDilemma}
                         autoComplete="off"
                         autoCorrect="off"
@@ -895,6 +896,7 @@ const App: React.FC = () => {
                         {isLoading ? '...' : '发送'}
                     </button>
                     </form>
+                    <LocalCommandGuide onFill={command => {setInput(command); inputRef.current?.focus();}} />
                   </>
                 )}
             </div>

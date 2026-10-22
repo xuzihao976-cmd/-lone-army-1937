@@ -1,4 +1,6 @@
-import { canonicalCommand, resolveNaturalCommand } from './naturalCommands';
+import { resolveNaturalCommand } from './naturalCommands';
+import { isExecutableLocalAction, normalizeExecutableAction } from './commandLanguage';
+import { getLocalDialogue } from './localConversation';
 import type { ActionPreview, GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { isMoveCommand } from './intents';
@@ -36,7 +38,7 @@ const riskFor = (turnsAfterAction: number | null, pressureCompressed = false): P
 };
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
-  const command = canonicalCommand(rawCommand);
+  const command = normalizeExecutableAction(rawCommand);
   if (!command) return null;
 
   let action = '交谈 / 询问';
@@ -46,10 +48,12 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let available = true;
   let reason: string | undefined;
 
-  const natural = resolveNaturalCommand(stats, command);
+  const natural = resolveNaturalCommand(stats, rawCommand);
   if (natural) {
     action = natural.actionType === 'encourage' ? '简短鼓励' : '交流 / 预备军令';
     durationMinutes = natural.timeCost; baseThreat = natural.siegeIncrease; costs = natural.logs; reason = natural.narrative.join('');
+  } else if (!isExecutableLocalAction(command)) {
+    reason = getLocalDialogue(stats,rawCommand,true)!.text;
   } else if ((command.includes('夺回') || command.includes('反冲锋')) && commandLocation(command)) {
     const target = commandLocation(command)!;
     const maxMovableForce = Math.max(0, ...getRecaptureStagingSectors(stats, target)

@@ -14,7 +14,7 @@ export const resolveDilemma = (
   random: RandomSource,
   recordDeaths: DeathRecorder,
 ): GameTurnResult => {
-  const updates: Partial<GameStats> = {};
+  const updates: Partial<GameStats> = { pendingDilemmaId: null };
   const logs: string[] = [];
   const narrative: string[] = [];
   let text = '';

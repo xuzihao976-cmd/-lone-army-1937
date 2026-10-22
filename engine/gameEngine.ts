@@ -1,5 +1,7 @@
 
-import { canonicalCommand } from './naturalCommands';
+import { canonicalCommand, resolveNaturalCommand } from './naturalCommands';
+import { compactCommand, isExecutableLocalAction } from './commandLanguage';
+import { ALL_DILEMMAS } from '../data/text/events';
 import { GameStats, GameTurnResult, Location } from "../types";
 import { playSound } from "../utils/sound";
 import { isExplicitRetreatCommand } from './intents';
@@ -22,9 +24,7 @@ import { isSectorHeld } from './strategicDefense';
 // Import Narrative Data Modules
 import { WOUNDED_DEATH_SCENES } from "../data/text/combat";
 
-import { 
-    GENERAL_CHATTER 
-} from "../data/text/chatter";
+
 
 // --- Helper Functions ---
 
@@ -69,6 +69,11 @@ const runGameTurnInternal = (
     if (currentStats.day >= 6) {
       const final = finalizeTurn({currentStats, calculatedStats, actionType:'idle', attackLocation:null, eventTriggered:'none', visualEffect:'none', narrativeParts, statsLog, random, allowRandomEvents:false});
       return {narrative:final.narrative, updatedStats:calculatedStats,eventTriggered:final.eventTriggered};
+    }
+
+    if (userCommand.length>500) {
+      const r=resolveNaturalCommand(currentStats,userCommand)!;
+      return {narrative:r.narrative.join(''),updatedStats:r.updatedStats,eventTriggered:'none'};
     }
 
     // --- ENDING CHECK: RETREAT COMMANDS ---
@@ -117,7 +122,7 @@ const runGameTurnInternal = (
             };
         }
 
-        narrativeParts.push(pick(GENERAL_CHATTER.DESERTION));
+        narrativeParts.push('副官答复：当前尚未开放历史撤退，本次未撤离。');
         return {
             narrative: narrativeParts.join(""),
             updatedStats: { pendingRetreat: null },
@@ -154,18 +159,9 @@ const runGameTurnInternal = (
             };
     }
 
-    // --- EASTER EGGS ---
-    if (cmd.includes("谢晋元")) {
-        playSound('type');
-        return {
-            narrative: "【指挥官】谢晋元，字中民，广东梅县人。黄埔四期。他看着镜子里的自己，整理了一下军容。这场仗，是他人生的高光，也是他的绝唱。",
-            updatedStats: { pendingRetreat: null },
-            eventTriggered: 'none'
-        };
-    }
-    
     // --- Start Game ---
     if (cmd === "start_game") {
+        if (currentStats.tutorialStep!==0 || currentStats.turnCount!==0 || currentStats.day!==0) return {narrative:'本局已经开始，不能用内部文字重置防线。',updatedStats:{},eventTriggered:'none'};
          calculatedStats.tutorialStep = 1; 
         calculatedStats.day = 0;
         calculatedStats.location = '一楼入口';
@@ -199,7 +195,7 @@ const runGameTurnInternal = (
     
     // --- Contextual two-step tutorial ---
     if (currentStats.tutorialStep > 0 && currentStats.tutorialStep < 3) {
-        if (cmd === 'skip_tutorial' || cmd.includes('跳过教程')) {
+        if (cmd === 'skip_tutorial' || compactCommand(cmd) === '跳过教程') {
             calculatedStats.tutorialStep = 3;
             calculatedStats.day = 1;
             calculatedStats.currentTime = "08:00";
@@ -217,6 +213,10 @@ const runGameTurnInternal = (
             };
         }
 
+        if (!isExecutableLocalAction(cmd)) {
+          const r=resolveNaturalCommand(currentStats,userCommand);
+          return {narrative:(r?.narrative.join('') || '军令不明确，本次未执行。')+'\n【教程提示】'+(currentStats.tutorialStep===1?'下一步加固一楼。':'下一步休息整顿。'),updatedStats:r?.timeCost===0?r.updatedStats:{},eventTriggered:'none'};
+        }
         if (currentStats.tutorialStep === 1) {
             if ((cmd.includes('加固') || cmd.includes('修')) && cmd.includes('一楼')) {
                  calculatedStats.tutorialStep = 2;
@@ -270,12 +270,21 @@ const runGameTurnInternal = (
             appendCampaignHistory(currentStats, calculatedStats, resolution.historyTitle, resolution.historyDetail, 'good');
             return { narrative: resolution.narrative, updatedStats: calculatedStats, eventTriggered: 'none' };
         }
-        return { narrative: '这张战术卡已经失效。', updatedStats: { activeTacticalCard: null }, eventTriggered: 'none' };
+        return { narrative: '这张战术卡已经失效。', updatedStats: {}, eventTriggered: 'none' };
     }
 
     // --- DILEMMA RESOLUTION ---
     if (cmd.startsWith('evt_resolve:')) {
         const [, eventId, rawOption] = cmd.split(':');
+        const event=ALL_DILEMMAS.find(e=>e.id===eventId);
+        const flags=currentStats.consequenceFlags || [];
+        if (!event || currentStats.pendingDilemmaId!==eventId || currentStats.triggeredEvents.includes(eventId)
+          || !/^\d+$/.test(rawOption || '') || !event.options[Number(rawOption)]
+          || event.options[Number(rawOption)].actionCmd.toLowerCase()!==cmd
+          || (event.minDay!==undefined && currentStats.day<event.minDay)
+          || (event.requiresFlag && !flags.includes(event.requiresFlag)) || (event.excludesFlag && flags.includes(event.excludesFlag))) {
+          return {narrative:'该事件当前未等待这项选择，或已结算；本次未执行。',updatedStats:{},eventTriggered:'none'};
+        }
         playSound('click');
         return resolveDilemma(
             currentStats,
@@ -363,7 +372,7 @@ const runGameTurnInternal = (
                 currentTimer = hospitalHeld ? 660 : 300;
             }
         }
-    } else if (currentWoundedCount <= 0) {
+    } else if (turnAdvanced && currentWoundedCount <= 0) {
         currentTimer = 0;
     }
     calculatedStats.woundedTimer = currentTimer;
@@ -431,7 +440,7 @@ export const runGameTurn = (currentStats: GameStats, userCommand: string): GameT
         const updatedStats = {
             ...result.updatedStats,
             pendingRetreat: result.updatedStats.pendingRetreat ?? null,
-            rngState: result.turnAdvanced || result.eventTriggered === 'attack' || userCommand.startsWith('evt_resolve:') ? seededRandom.getState() : currentStats.rngState,
+            rngState: result.turnAdvanced || result.eventTriggered === 'attack' || Object.hasOwn(result.updatedStats, 'triggeredEvents') ? seededRandom.getState() : currentStats.rngState,
         };
         const afterStats: GameStats = { ...currentStats, ...updatedStats };
         return {

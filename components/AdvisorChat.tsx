@@ -1,3 +1,4 @@
+import type { GameStats } from '../types';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { generateAdvisorResponse, type AiSource } from '../services/aiClient';
@@ -11,11 +12,13 @@ interface Message {
 interface AdvisorChatProps {
   isOpen: boolean;
   onClose: () => void;
+  stats: GameStats;
+  aiEnabled: boolean;
 }
 
-const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
+const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEnabled }) => {
   const [messages, setMessages] = useState<Message[]>([
-    { id: 'init', role: 'advisor', text: '指挥官，我是您的战地顾问。关于【胜利条件】、【数值作用】或【新手教程】，请随时询问我。' }
+    { id: 'init', role: 'advisor', text: '指挥官，可以问战况、规则或聊两句。这里只回答和预览，不执行军令；要行动，请回主界面下令。常见问题由本地回答，无需 AI。' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +33,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
   }, [messages, isOpen]);
 
   useEffect(() => () => requestRef.current?.abort(), []);
+  useEffect(() => { if (!aiEnabled) { requestRef.current?.abort(); setSource('local'); } }, [aiEnabled]);
 
   const closeAdvisor = () => {
     requestRef.current?.abort();
@@ -47,7 +51,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     // Add User Message
-    const newMsg: Message = { id: Date.now().toString(), role: 'user', text: userText };
+    const newMsg: Message = { id: Date.now().toString(), role: 'user', text: userText.length > 500 ? '[超长输入：'+userText.length+'字，未执行]' : userText };
     const updatedMessages = [...messages, newMsg];
     setMessages(updatedMessages);
 
@@ -59,7 +63,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose }) => {
     try {
         const controller = new AbortController();
         requestRef.current = controller;
-        const reply = await generateAdvisorResponse(apiHistory, userText, controller.signal);
+        const reply = await generateAdvisorResponse(apiHistory, userText, controller.signal, {stats, enabled: aiEnabled});
         if (!controller.signal.aborted) {
           setSource(reply.source);
           setMessages(prev => [...prev, { id: Date.now().toString() + '_adv', role: 'advisor', text: reply.text }]);

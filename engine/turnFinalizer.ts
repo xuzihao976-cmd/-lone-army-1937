@@ -106,7 +106,7 @@ export const finalizeTurn = ({
     const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_hold');
     calculatedStats.finalRank = report.rank;
     narrativeParts.push(`\n\n【战役胜利】坚守至第六天，孤军完成了任务。\n结局达成：【固若金汤】\n${report.text}`);
-  } else if (collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
+  } else if (allowRandomEvents && collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
     calculatedStats.lastStandUsed = true;
     calculatedStats.siegeMeter = Math.min(35, calculatedStats.siegeMeter ?? currentStats.siegeMeter);
     visualEffect = 'heavy-damage';
@@ -177,7 +177,7 @@ export const finalizeTurn = ({
       && (!candidate.requiresFlag || flags.includes(candidate.requiresFlag))
       && (!candidate.excludesFlag || !flags.includes(candidate.excludesFlag))
       && (candidate.minDay === undefined || finalDay >= candidate.minDay));
-    if (potentialDilemmas.length > 0) dilemma = pick(potentialDilemmas);
+    if (potentialDilemmas.length > 0) { dilemma = pick(potentialDilemmas); calculatedStats.pendingDilemmaId = dilemma.id; }
   }
 
   let narrative = narrativeParts.join('');

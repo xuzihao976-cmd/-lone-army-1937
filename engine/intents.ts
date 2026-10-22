@@ -1,3 +1,4 @@
+import { compactCommand, isExecutableLocalAction } from './commandLanguage';
 const RETREAT_PHRASES = new Set([
   '撤退',
   '立即撤退',
@@ -13,11 +14,7 @@ const RETREAT_PHRASES = new Set([
   '撤往租界',
 ]);
 
-export const normalizeCommand = (input: string): string =>
-  input
-    .trim()
-    .toLowerCase()
-    .replace(/[，。！？、,.!?；;：:\s]/g, '');
+export const normalizeCommand = compactCommand;
 
 /**
  * Only matches an explicit order to abandon the battlefield.
@@ -33,5 +30,5 @@ export const isExplicitRetreatCommand = (input: string): boolean => {
 export const isMoveCommand = (input: string): boolean => {
   const command = normalizeCommand(input);
   const hasDestination = /(?:屋顶|楼顶|二楼|一楼|地下室)/.test(command);
-  return hasDestination && /(?:去|前往|走到|移动到|转移到|撤到)/.test(command);
+  return isExecutableLocalAction(input) && hasDestination && /(?:去|前往|走到|移动到|转移到|撤到)/.test(command);
 };

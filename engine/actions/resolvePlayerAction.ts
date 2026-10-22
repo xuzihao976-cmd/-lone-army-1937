@@ -1,3 +1,5 @@
+import { isExecutableLocalAction, normalizeExecutableAction } from '../commandLanguage';
+import { getLocalDialogue } from '../localConversation';
 import { resolveNaturalCommand } from '../naturalCommands';
 import type { GameStats } from '../../types';
 import { playSound } from '../../utils/sound';
@@ -8,7 +10,6 @@ import { addConsequenceFlag, appendCampaignHistory } from '../campaignProgress';
 import {
   FORTIFICATION_NAMES,
   findLocations,
-  getConversationalResponse,
   pickWith,
   type RandomSource,
 } from '../commandUtils';
@@ -40,6 +41,11 @@ export const resolvePlayerAction = (
 ): PlayerActionResolution => {
   const natural = resolveNaturalCommand(currentStats, cmd);
   if (natural) return natural;
+  if (!isExecutableLocalAction(cmd)) {
+    const reply=getLocalDialogue(currentStats,cmd,true)!;
+    return { updatedStats:{localDialogue:reply.memory}, logs:[], narrative:[reply.text], timeCost:0, actionType:'idle', siegeIncrease:0 };
+  }
+  cmd=normalizeExecutableAction(cmd);
   const updatedStats: Partial<GameStats> = {};
   const logs: string[] = [];
   const narrative: string[] = [];
@@ -496,7 +502,8 @@ export const resolvePlayerAction = (
   }
 
   if (actionType === 'idle') {
-    narrative.push(getConversationalResponse(cmd, random));
+    const reply=getLocalDialogue(currentStats,cmd,true)!;
+    narrative.push(reply.text); updatedStats.localDialogue=reply.memory;
     timeCost = 0;
     siegeIncrease = 0;
   }
