@@ -168,12 +168,12 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
   } else if (plan.key === 'search') {
     const found = Math.min(CIVILIAN_COUNT - mission.found, 2 + Math.floor(random() * 3));
     mission.found += found;
-    narrative.push(`在破损的门后找到${found}名民众。有人一直扶着身边人的胳膊，听到招呼才敢松一点。人已经找到，仍在等护送，不能写成全部脱险。`);
+    narrative.push(`在破损的门后找到${found}名民众。有人一直扶着身边人的胳膊，听到招呼才敢松一点。班长点过名字：“跟住我们，还没到能坐下的地方。”`);
     logs.push(`找到民众 +${found}，仍待护送${mission.found - mission.evacuated}人`);
   } else if (plan.key === 'escort') {
     const count = Math.min(6, mission.found - mission.evacuated);
     mission.evacuated += count;
-    narrative.push(`${count}名民众抵达接应区。接应者伸手点到最后一个人，才向你示意。这些人确实到了安全区，街巷里尚未接出的名字仍留在登记上。`);
+    narrative.push(`${count}名民众抵达安全接应区。接应者点到最后一个人，才向你示意。有人松开一路攥着的袖口，过了好一会儿才想起道谢；登记纸上，尚未接出的名字还没有勾去。`);
     logs.push(`安全撤收 ${mission.evacuated}/${CIVILIAN_COUNT}人`);
   } else if (plan.key === 'fire') {
     next.ammo -= 30;
@@ -254,7 +254,7 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
     `已用${mission.elapsedMinutes}/${CHAPTER_TIME_LIMIT}分钟`);
   // Return only changed chapter-owned fields; no warehouse event or card settlement.
   const updatedStats: Partial<GameStats> = { mission, soldiers: next.soldiers, wounded: next.wounded,
-    ammo: next.ammo, medkits: next.medkits, sandbags: next.sandbags, morale: next.morale,
+    ammo: next.ammo, enemiesKilled: next.enemiesKilled, medkits: next.medkits, sandbags: next.sandbags, morale: next.morale,
     fatigue: next.fatigue, siegeMeter: next.siegeMeter, day: next.day, currentTime: next.currentTime,
     soldierDistribution: next.soldierDistribution, roster: next.roster, lastAttackTurn: next.lastAttackTurn,
     isGameOver: next.isGameOver, gameResult: next.gameResult, gameOverReason: next.gameOverReason, finalRank: next.finalRank };

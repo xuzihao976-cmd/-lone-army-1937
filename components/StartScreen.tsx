@@ -59,7 +59,7 @@ const StartScreen: React.FC<StartScreenProps> = (props) => {
           <p className="mt-2 text-xs leading-5 text-amber-200">任务：{chapter.objective}</p>
           <p className="mt-2 text-xs leading-5 text-neutral-400">{chapterTransition(chapter.id, props.archive)}</p>
         </section>
-        <div className="sticky bottom-0 z-10 mt-4 space-y-2 border-t border-neutral-800 bg-[#080808]/95 py-3">
+        <div className="mt-4 space-y-2 border-t border-neutral-800 bg-[#080808] py-3">
           {saved && <button type="button" onClick={props.onContinueChapter} className="w-full rounded border border-amber-700 bg-amber-950/30 py-3 text-sm font-bold text-amber-200">
             继续本关 · {chapter.title}
           </button>}

@@ -210,6 +210,7 @@ const App: React.FC = () => {
         gameSessionRef.current += 1;
         statsRef.current = data.stats;
         setStats(data.stats);
+        setShowGameOverModal(data.stats.isGameOver);
         setSelectedChapter(data.stats.chapterId);
         setLogs(data.logs);
         setCurrentDilemma(null);
@@ -239,6 +240,7 @@ const App: React.FC = () => {
         gameSessionRef.current += 1;
         statsRef.current = data.stats;
         setStats(data.stats);
+        setShowGameOverModal(data.stats.isGameOver);
         setSelectedChapter(data.stats.chapterId);
         setLogs(data.logs);
         setCurrentDilemma(null);

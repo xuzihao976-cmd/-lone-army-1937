@@ -56,12 +56,12 @@ export const recordChapterResult = (storage: ArchiveStorage, stats: GameStats): 
 
 export const chapterTransition = (id: ChapterId, archive: ChapterArchive): string => {
   if (id === 'bridge' && archive.street) {
-    return archive.street.cleared
+    return archive.street.ending === 'victory_evacuation'
       ? `上一份撤收记录里，有${archive.street.rescued}名民众抵达安全区。这次镜头转向另一支掩护队：要让身后的人先走，也要记得给自己留路。`
       : '上一份撤收记录没能完成任务，结局没有被改写。这次换一支小队守住桥头，把每一道撤离命令说清。';
   }
   if (id === 'sihang' && archive.bridge) {
-    return `桥头档案记下${archive.bridge.crossed}名友军过桥。镜头转入四行仓库，人员和物资按本章编制重新接防；前章的伤亡记录仍留在档案里，不会被写成复活或增援。`;
+    return `桥头档案记下${archive.bridge.crossed}名友军过桥。镜头转入四行仓库，另一支部队在这里接防。前章的小队留在自己的名册上；本章人员与物资独立计算。`;
   }
-  return '各章切换不同小队视角，分别记录结果；人员与物资不跨关赠送，旧档案不会因重开而抹去通关记录。';
+  return '各章切换不同小队视角，人员与物资独立，分别自动保存进度。重开本关会替换本关自动档，已完成的章节标记保留。';
 };

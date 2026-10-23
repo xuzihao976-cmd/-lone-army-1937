@@ -58,7 +58,13 @@ describe('distinct, local chapter objectives', () => {
 
   it('requires the bridge squad to withdraw after sixty others have crossed', () => {
     let stats = start('bridge');
-    for (let i = 0; i < 6; i++) stats = apply(stats, '压制射击').stats;
+    for (let i = 0; i < 6; i++) {
+      const next = apply(stats, '压制射击');
+      const reportedKills = [...next.result.narrative.matchAll(/确认毙敌(\d+)人/g)]
+        .reduce((sum, match) => sum + Number(match[1]), 0);
+      expect(next.stats.enemiesKilled - stats.enemiesKilled).toBe(reportedKills);
+      stats = next.stats;
+    }
     expect(stats.mission!.crossed).toBe(60);
     expect(stats.mission!.elapsedMinutes).toBe(120);
     expect(stats.isGameOver).toBe(false);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialStats, migrateSaveData, writeAutoSave, readAutoSave, readChapterAutoSave,
   writeSaveSlot, readSaveSlot, listSaveSlots, AUTO_SAVE_KEY, SAVE_SCHEMA_VERSION } from '../storage/saveStore';
 import { CHAPTERS } from '../data/chapters';
-import { recordChapterResult, readChapterArchive } from '../storage/chapterArchive';
+import { recordChapterResult, readChapterArchive, chapterTransition } from '../storage/chapterArchive';
 const storage = () => { const data = new Map<string, string>(); return {
   getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); },
 }; };
@@ -53,5 +53,10 @@ describe('chapter save and archive isolation', () => {
     recordChapterResult(s, other);
     expect(readChapterArchive(s).street?.cleared).toBe(true);
     expect(readChapterArchive(s).bridge?.cleared).toBe(false);
+    const retry = createInitialStats(3, 'street');
+    retry.isGameOver = true; retry.gameResult = 'defeat_mission';
+    const archive = recordChapterResult(s, retry);
+    expect(archive.street?.cleared).toBe(true);
+    expect(chapterTransition('bridge', archive)).toContain('没能完成任务');
   });
 });
