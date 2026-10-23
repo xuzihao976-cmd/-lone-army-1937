@@ -9,6 +9,8 @@ import { getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from 
 import { getOperationAdvanceSteps, projectEnemyOperation } from './battlefield';
 import { getSpecialistEffectFactor } from './specialists';
 import type { Location } from '../types';
+import { isShortChapter } from '../data/chapters';
+import { getMissionPreview } from './chapterEngine';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
 
@@ -38,6 +40,7 @@ const riskFor = (turnsAfterAction: number | null, pressureCompressed = false): P
 };
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
+  if (isShortChapter(stats)) return getMissionPreview(stats, rawCommand);
   const command = normalizeExecutableAction(rawCommand);
   if (!command) return null;
 

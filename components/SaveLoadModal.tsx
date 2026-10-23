@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { SaveSlotMeta } from '../types';
+import { getChapter } from '../data/chapters';
 
 interface SaveLoadModalProps {
   mode: 'save' | 'load';
@@ -43,7 +44,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                             <span className="text-xs font-mono text-neutral-400">{formatDate(autoSave.savedAt)}</span>
                         </div>
                         <div className="mt-2 flex justify-between text-xs text-neutral-400">
-                            <span>第 {autoSave.day} 天 · {autoSave.location}</span>
+                            <span>{getChapter(autoSave.chapterId).title}{(!autoSave.chapterId || autoSave.chapterId === 'sihang') ? ` · 第${autoSave.day}天` : ''}</span>
                             <span>步兵 {autoSave.soldiers}</span>
                         </div>
                     </button>
@@ -79,7 +80,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                         ) : (
                             <>
                                 <div className="text-amber-500 font-bold text-sm">
-                                    第 {slot.day} 天 <span className="text-neutral-500 text-xs font-normal">| {slot.location}</span>
+                                    {getChapter(slot.chapterId).title} <span className="text-neutral-500 text-xs font-normal">{(!slot.chapterId || slot.chapterId === 'sihang') ? `· 第${slot.day}天` : ''}</span>
                                 </div>
                                 <div className="flex justify-between items-end w-full">
                                     <span className="text-xs text-neutral-400">步兵：{slot.soldiers}人</span>

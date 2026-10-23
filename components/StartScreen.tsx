@@ -1,129 +1,86 @@
-
 import React, { useState } from 'react';
-import { EndingType } from '../types';
+import type { ChapterId, EndingType, SaveSlotMeta } from '../types';
 import { ACHIEVEMENTS } from '../constants';
+import { CHAPTERS, getChapter } from '../data/chapters';
+import { chapterTransition, type ChapterArchive } from '../storage/chapterArchive';
 
 interface StartScreenProps {
   onNewGame: () => void;
   onContinueAutoSave: () => void;
+  onContinueChapter: () => void;
   onOpenLoadMenu: () => void;
+  onSelectChapter: (id: ChapterId) => void;
+  selectedChapter: ChapterId;
+  chapterSaves: Partial<Record<ChapterId, SaveSlotMeta>>;
+  archive: ChapterArchive;
+  recentSave: SaveSlotMeta | null;
   hasSaves: boolean;
-  hasAutoSave: boolean;
   unlockedAchievements: EndingType[];
 }
 
-const StartScreen: React.FC<StartScreenProps> = ({ onNewGame, onContinueAutoSave, onOpenLoadMenu, hasSaves, hasAutoSave, unlockedAchievements }) => {
+const StartScreen: React.FC<StartScreenProps> = (props) => {
   const [showAchievements, setShowAchievements] = useState(false);
-
-  return (
-    <div className="flex flex-col items-center justify-start h-full w-full sm:justify-center bg-[#050505] text-[#e5e5e5] px-6 py-10 relative overflow-y-auto">
-      {/* Atmospheric Background Elements */}
-      <div className="linen-texture absolute inset-0 opacity-30 pointer-events-none"></div>
-      <div className="absolute top-10 left-0 w-full h-32 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none"></div>
-      
-      {!showAchievements ? (
-      <>
-        {/* Title Section */}
-        <div className="z-10 text-center mb-6 sm:mb-12 animate-fade-in">
-            <div className="text-red-700 text-xs tracking-[0.5em] mb-2 font-bold uppercase">
-                一九三七 · 上海
-            </div>
-            <h1 className="text-4xl sm:text-7xl font-bold font-serif text-neutral-200 tracking-wider mb-2 drop-shadow-2xl">
-            孤军
-            </h1>
-            <h2 className="text-2xl sm:text-3xl font-serif text-neutral-400 tracking-widest border-t border-neutral-800 pt-4 mt-2">
-            四行仓库
-            </h2>
-            <div className="mt-6 text-sm text-neutral-600 font-mono">
-                一座仓库 · 许多个想回家的人
-            </div>
+  const chapter = getChapter(props.selectedChapter);
+  const saved = props.chapterSaves[chapter.id];
+  const completed = Object.values(props.archive).filter(record => record?.cleared).length;
+  return <div className="relative h-full w-full overflow-y-auto bg-[#080808] px-4 py-7 text-neutral-200 sm:px-8">
+    <div className="linen-texture pointer-events-none absolute inset-0 opacity-20" />
+    <div className="relative mx-auto max-w-xl">
+      <header className="mb-6 text-center">
+        <p className="text-[11px] font-bold tracking-[0.35em] text-red-500">一九三七 · 战役档案</p>
+        <h1 className="mt-2 font-serif text-5xl font-bold tracking-widest sm:text-6xl">孤军</h1>
+        <p className="mt-3 text-sm text-neutral-400">不同的阵地，许多个想回家的人。</p>
+      </header>
+      {showAchievements ? <section className="rounded border border-neutral-700 bg-neutral-950 p-4">
+        <div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-xl text-amber-300">四行勋章</h2>
+          <button type="button" onClick={() => setShowAchievements(false)} className="rounded border border-neutral-700 px-3 py-2 text-xs">返回选关</button></div>
+        <div className="space-y-3">{ACHIEVEMENTS.map(achievement => {
+          const unlocked = props.unlockedAchievements.includes(achievement.id);
+          return <div key={achievement.id} className="flex gap-3 rounded border border-neutral-800 p-3">
+            <span className="text-2xl">{unlocked ? achievement.icon : '🔒'}</span>
+            <div><h3 className="font-bold">{achievement.isSecret && !unlocked ? '未揭示的结局' : achievement.title}</h3>
+              <p className="mt-1 text-xs leading-5 text-neutral-400">{achievement.isSecret && !unlocked ? '完成相应结局后查看。' : achievement.desc}</p></div>
+          </div>;
+        })}</div>
+      </section> : <>
+        <div className="mb-3 flex items-center justify-between text-xs"><h2 className="font-bold tracking-wider text-neutral-300">选择章节</h2><span className="text-amber-300">已完成 {completed}/{CHAPTERS.length}</span></div>
+        <div className="space-y-2" aria-label="战役章节">
+          {CHAPTERS.map(item => <button key={item.id} type="button" aria-pressed={item.id === chapter.id}
+            aria-label={`选择第${item.number}章 ${item.title}`} onClick={() => props.onSelectChapter(item.id)}
+            className={`w-full rounded border p-3 text-left transition-colors ${item.id === chapter.id ? 'border-amber-700 bg-amber-950/20' : 'border-neutral-800 bg-neutral-950 hover:border-neutral-600'}`}>
+            <div className="flex items-center justify-between gap-2"><span className="text-[11px] text-neutral-400">第{item.number}章 · {item.setting}</span>
+              <span className="shrink-0 text-[11px] text-amber-300">{props.archive[item.id]?.cleared ? '已完成' : props.chapterSaves[item.id] ? '已有自动档' : '可开始'}</span></div>
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-3"><h3 className="font-serif text-lg font-bold">{item.title}</h3><span className="text-xs text-neutral-400">{item.subtitle}</span></div>
+          </button>)}
         </div>
-
-        {/* Action Buttons */}
-        <div className="z-10 flex shrink-0 flex-col gap-3 sm:gap-4 w-full max-w-xs">
-            
-            <button
-            onClick={onNewGame}
-            className="w-full py-4 bg-red-900/20 border border-red-900/50 hover:bg-red-900/40 hover:border-red-600 text-neutral-200 font-bold tracking-widest transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 relative overflow-hidden"
-            >
-            <span className="relative z-10">开始新战役</span>
-            </button>
-
-            {hasAutoSave && (
-                <button
-                onClick={onContinueAutoSave}
-                className="w-full py-3 bg-amber-950/20 border border-amber-800/50 hover:bg-amber-950/40 hover:border-amber-600 text-amber-500 font-bold tracking-widest transition-all duration-300 shadow-lg active:scale-95"
-                >
-                继续最近战役
-                </button>
-            )}
-
-            <button
-            onClick={onOpenLoadMenu}
-            disabled={!hasSaves}
-            className={`w-full py-3 bg-neutral-800 border border-neutral-600 text-amber-500 font-bold tracking-widest transition-all duration-300 shadow-lg flex flex-col items-center gap-1 ${hasSaves ? 'hover:bg-neutral-700 hover:border-amber-600 transform hover:scale-[1.02] active:scale-95' : 'opacity-50 cursor-not-allowed grayscale'}`}
-            >
-                <span>读取作战记录</span>
-            </button>
-
-            <button
-                onClick={() => setShowAchievements(true)}
-                className="w-full py-2 bg-transparent border border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:border-neutral-600 transition-colors text-xs tracking-wider"
-            >
-                查看勋章墙 ({unlockedAchievements.length}/{ACHIEVEMENTS.length})
-            </button>
-            
-            <div className="mt-6 text-center text-xs font-mono leading-relaxed text-neutral-400">
-                成人战争叙事，含具体伤势、死亡与战地创伤<br/>
-                虚构对白与可变战况，不作史料<br/>
-                v3.2.0 · 本地完整游玩 · AI 可选
-            </div>
-        </div>
-      </>
-      ) : (
-          /* Achievements View */
-          <div className="z-20 w-full max-w-2xl bg-[#0a0a0a] border border-neutral-800 p-6 rounded shadow-2xl flex flex-col h-[80vh] animate-fade-in">
-              <div className="flex justify-between items-center mb-6 border-b border-neutral-800 pb-2">
-                  <h2 className="text-xl font-bold font-serif text-amber-600 tracking-widest">勋章墙</h2>
-                  <button onClick={() => setShowAchievements(false)} className="text-neutral-500 hover:text-white px-2">✕</button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4 custom-scrollbar pr-2">
-                  {ACHIEVEMENTS.map((ach) => {
-                      const isUnlocked = unlockedAchievements.includes(ach.id);
-                      return (
-                          <div 
-                            key={ach.id} 
-                            className={`p-4 border rounded flex gap-4 items-center transition-all ${
-                                isUnlocked 
-                                ? 'bg-neutral-900 border-amber-900/30' 
-                                : 'bg-black border-neutral-900 opacity-60'
-                            }`}
-                          >
-                              <div className={`text-3xl ${isUnlocked ? '' : 'grayscale opacity-20'}`}>
-                                  {isUnlocked ? ach.icon : '🔒'}
-                              </div>
-                              <div className="flex-1">
-                                  <div className={`font-bold font-serif ${isUnlocked ? 'text-neutral-200' : 'text-neutral-600'}`}>
-                                      {isUnlocked ? ach.title : (ach.isSecret ? '???' : ach.title)}
-                                  </div>
-                                  <div className="mt-1 text-xs leading-relaxed text-neutral-400">
-                                      {isUnlocked ? ach.desc : (ach.isSecret ? '该成就尚未解锁。' : ach.desc)}
-                                  </div>
-                              </div>
-                          </div>
-                      );
-                  })}
-              </div>
+        <section className="mt-4 rounded border border-neutral-800 p-3" aria-label="所选章节说明">
+          <p className="text-[11px] text-amber-400">{chapter.duration}</p>
+          <p className="mt-2 text-sm leading-6 text-neutral-300">{chapter.description}</p>
+          <p className="mt-2 text-xs leading-5 text-amber-200">任务：{chapter.objective}</p>
+          <p className="mt-2 text-xs leading-5 text-neutral-400">{chapterTransition(chapter.id, props.archive)}</p>
+        </section>
+        <div className="sticky bottom-0 z-10 mt-4 space-y-2 border-t border-neutral-800 bg-[#080808]/95 py-3">
+          {saved && <button type="button" onClick={props.onContinueChapter} className="w-full rounded border border-amber-700 bg-amber-950/30 py-3 text-sm font-bold text-amber-200">
+            继续本关 · {chapter.title}
+          </button>}
+          <button type="button" onClick={props.onNewGame} className="w-full rounded border border-red-800 bg-red-950/30 py-3 text-sm font-bold text-neutral-100">
+            {saved ? '重新开始本关' : `开始${chapter.title}`}
+          </button>
+          {props.recentSave && props.recentSave.chapterId !== chapter.id && <button type="button" onClick={props.onContinueAutoSave} className="w-full rounded border border-neutral-700 py-2.5 text-xs text-neutral-300">
+            继续最近战役 · {getChapter(props.recentSave.chapterId).title}
+          </button>}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={props.onOpenLoadMenu} disabled={!props.hasSaves} className="rounded border border-neutral-700 py-2.5 text-xs text-neutral-300 disabled:opacity-40">读取手动档案</button>
+            <button type="button" onClick={() => setShowAchievements(true)} className="rounded border border-neutral-700 py-2.5 text-xs text-neutral-300">四行勋章 {props.unlockedAchievements.length}/{ACHIEVEMENTS.length}</button>
           </div>
-      )}
-      
-      {/* Footer */}
-      <div className="pointer-events-none shrink-0 mt-8 text-[11px] font-mono text-neutral-600">
-        大嘴鸭游戏出品
-      </div>
+        </div>
+      </>}
+      <footer className="mt-5 pb-4 text-center text-[11px] leading-5 text-neutral-400">
+        <p>成人战争叙事，含具体伤势、死亡与战地创伤。</p>
+        <p>前两章为虚构支线；对白及可变战况不作史料。</p>
+        <p className="mt-1 text-neutral-500">v3.3.0 · 三章均可本地游玩 · 大嘴鸭游戏出品</p>
+      </footer>
     </div>
-  );
+  </div>;
 };
-
 export default StartScreen;

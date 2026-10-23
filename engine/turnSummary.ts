@@ -1,5 +1,6 @@
 import type { GameStats, GameTurnResult, Location, SummaryMetric, TurnDelta, TurnSummary } from '../types';
 import { getActionPreview } from './actionPreview';
+import { isShortChapter } from '../data/chapters';
 
 const METRICS: Array<{ metric: SummaryMetric; label: string }> = [
   { metric: 'soldiers', label: '步兵' },
@@ -48,8 +49,8 @@ export const buildTurnSummary = (
   if (result.eventTriggered === 'attack') {
     kind = 'battle';
     title = '敌军进攻结算';
-    notes.push(result.attackLocation ? `交火位置：${result.attackLocation}` : '敌军对仓库发动进攻');
-    notes.push('实际减伤、本层可用火力与敌军规模共同决定伤亡');
+    notes.push(isShortChapter(after) ? '小队在任务途中接敌，伤亡与弹药按实际结算' : result.attackLocation ? `交火位置：${result.attackLocation}` : '敌军对仓库发动进攻');
+    if (!isShortChapter(after)) notes.push('实际减伤、本层可用火力与敌军规模共同决定伤亡');
   } else if (result.eventTriggered === 'new_day') {
     kind = 'new_day';
     title = `进入第 ${after.day} 天`;
@@ -75,6 +76,10 @@ export const buildTurnSummary = (
   if (after.gameOverReason === 'commander_killed') {
     title = '指挥官阵亡 · 战役结束';
     notes.push(`指挥官在${result.attackLocation || after.location}遭袭阵亡`);
+  }
+  if (isShortChapter(after) && after.mission) {
+    notes.push(after.chapterId === 'street' ? `安全撤收 ${after.mission.evacuated}/12人` : `友军过桥 ${after.mission.crossed}/60人`);
+    notes.push(`本章已用${after.mission.elapsedMinutes}分钟，180分钟封锁`);
   }
 
   return {

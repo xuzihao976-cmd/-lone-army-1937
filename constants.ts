@@ -17,6 +17,8 @@ const INITIAL_ROSTER: Soldier[] = [
 ];
 
 export const INITIAL_STATS: GameStats = {
+  chapterId: 'sihang',
+  campaignId: 'sihang-19371026',
   location: '一楼入口',
   
   // 兵力重组：总数414

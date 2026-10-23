@@ -5,7 +5,10 @@ import { resolveNaturalCommand } from './naturalCommands';
 import { getActionPreview } from './actionPreview';
 import { detectDialogueTopic } from './localConversation';
 import { getLocalRuleHelp } from '../data/text/localRules';
+import { isShortChapter } from '../data/chapters';
+import { missionAdvisor } from './chapterEngine';
 export const localAdvisorResponse = (input: string, stats?: GameStats, sequence=0): {text:string; known:boolean} => {
+  if (stats && isShortChapter(stats)) return { text: missionAdvisor(stats, input), known: true };
   const cmd=canonicalCommand(input), guard=getLanguageGuard(input);
   if (guard) { const lines=LOCAL_DIALOGUE[guard]; return {text:lines[sequence%lines.length],known:true}; }
   if (stats) {

@@ -1,11 +1,13 @@
 import { sanitizeDialogueMemory } from '../engine/localConversation';
 import { INITIAL_STATS } from '../constants';
-import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
+import { applyChapterSetup, isChapterId, sanitizeMission } from '../data/chapters';
+import type { ChapterId, GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 10;
+export const SAVE_SCHEMA_VERSION = 11;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
+export const CHAPTER_SAVE_PREFIX = 'lone_army_chapter_autosave_';
 export const MAX_SAVE_SLOTS = 5;
 
 interface StorageLike {
@@ -54,22 +56,33 @@ const migrateSummary = (value: unknown): TurnSummary | undefined => {
   };
 };
 
-export const createInitialStats = (seed = createRandomSeed()): GameStats => {
+export const createInitialStats = (seed = createRandomSeed(), chapterId: ChapterId = 'sihang'): GameStats => {
+  if (!isChapterId(chapterId)) throw new Error('Unknown chapter');
   const stats = typeof structuredClone === 'function'
     ? structuredClone(INITIAL_STATS)
     : JSON.parse(JSON.stringify(INITIAL_STATS)) as GameStats;
   stats.rngState = seed >>> 0 || INITIAL_STATS.rngState;
-  return stats;
+  stats.campaignId = `${chapterId}-${stats.rngState}`;
+  return applyChapterSetup(stats, chapterId);
 };
 
 export const migrateSaveData = (value: unknown): SaveData | null => {
   if (!isRecord(value) || !isRecord(value.stats)) return null;
+  if (typeof value.schemaVersion === 'number' && value.schemaVersion > SAVE_SCHEMA_VERSION) return null;
 
-  const base = createInitialStats();
   const incoming = value.stats as Partial<GameStats>;
+  if (incoming.chapterId !== undefined && !isChapterId(incoming.chapterId)) return null;
+  const chapterId = incoming.chapterId ?? 'sihang';
+  const base = createInitialStats(incoming.rngState, chapterId);
+  const mission = chapterId === 'sihang' ? undefined : sanitizeMission(incoming.mission, chapterId);
+  if (chapterId !== 'sihang' && !mission) return null;
   const stats: GameStats = {
     ...base,
     ...incoming,
+    chapterId,
+    campaignId: typeof incoming.campaignId === 'string' && /^[a-z0-9-]{1,80}$/.test(incoming.campaignId)
+      ? incoming.campaignId : `legacy-${chapterId}-${base.rngState}`,
+    mission: mission ?? undefined,
     localDialogue: sanitizeDialogueMemory(incoming.localDialogue),
     pendingDilemmaId: null,
     preparedOrders: Object.fromEntries(Object.entries(incoming.preparedOrders || {}).filter(([location, order]) => ['屋顶', '二楼阵地', '一楼入口', '地下室'].includes(location) && ['rapid', 'conserve', 'close', 'bayonet', 'hold'].includes(String(order)))),
@@ -139,6 +152,7 @@ export const listSaveSlots = (storage: StorageLike): SaveSlotMeta[] => {
       day: typeof existing.day === 'number' ? existing.day : undefined,
       soldiers: typeof existing.soldiers === 'number' ? existing.soldiers : undefined,
       location: typeof existing.location === 'string' ? existing.location : undefined,
+      chapterId: isChapterId(existing.chapterId) ? existing.chapterId : 'sihang',
     };
   });
 };
@@ -169,6 +183,7 @@ export const writeSaveSlot = (
     day: stats.day,
     soldiers: stats.soldiers,
     location: stats.location,
+    chapterId: stats.chapterId,
   };
   storage.setItem(SAVE_INDEX_KEY, JSON.stringify(slots.filter((slot) => !slot.isEmpty)));
   return slots;
@@ -190,6 +205,7 @@ const metaFromSave = (save: SaveData, id = -1): SaveSlotMeta => ({
   day: save.stats.day,
   soldiers: save.stats.soldiers,
   location: save.stats.location,
+  chapterId: save.stats.chapterId,
 });
 
 export const writeAutoSave = (
@@ -203,6 +219,12 @@ export const writeAutoSave = (
     logs: logs.map((log) => ({ ...log, isTyping: false })),
     savedAt: Date.now(),
   };
+  // Preserve a pre-chapter legacy autosave before changing the most-recent slot.
+  const previous = readAutoSave(storage);
+  if (previous && previous.stats.chapterId !== stats.chapterId) {
+    storage.setItem(`${CHAPTER_SAVE_PREFIX}${previous.stats.chapterId}`, JSON.stringify(previous));
+  }
+  storage.setItem(`${CHAPTER_SAVE_PREFIX}${stats.chapterId}`, JSON.stringify(saveData));
   storage.setItem(AUTO_SAVE_KEY, JSON.stringify(saveData));
   return metaFromSave(saveData);
 };
@@ -219,4 +241,20 @@ export const readAutoSave = (storage: StorageLike): SaveData | null => {
 export const getAutoSaveMeta = (storage: StorageLike): SaveSlotMeta | null => {
   const save = readAutoSave(storage);
   return save ? metaFromSave(save) : null;
+};
+
+export const readChapterAutoSave = (storage: StorageLike, chapterId: ChapterId): SaveData | null => {
+  const own = migrateSaveData(parseJson(storage.getItem(`${CHAPTER_SAVE_PREFIX}${chapterId}`)));
+  if (own?.stats.chapterId === chapterId) return own;
+  const recent = readAutoSave(storage);
+  return recent?.stats.chapterId === chapterId ? recent : null;
+};
+
+export const getChapterSaveMetas = (storage: StorageLike): Partial<Record<ChapterId, SaveSlotMeta>> => {
+  const result: Partial<Record<ChapterId, SaveSlotMeta>> = {};
+  for (const id of ['street', 'bridge', 'sihang'] as const) {
+    const save = readChapterAutoSave(storage, id);
+    if (save) result[id] = metaFromSave(save);
+  }
+  return result;
 };

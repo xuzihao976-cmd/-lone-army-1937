@@ -20,6 +20,8 @@ import { resolvePlayerAction } from './actions/resolvePlayerAction';
 import { resolveAttack } from './combatResolution/resolveAttack';
 import { finalizeTurn } from './turnFinalizer';
 import { isSectorHeld } from './strategicDefense';
+import { isShortChapter } from '../data/chapters';
+import { resolveChapterTurn } from './chapterEngine';
 
 // Import Narrative Data Modules
 import { WOUNDED_DEATH_SCENES } from "../data/text/combat";
@@ -55,6 +57,7 @@ const runGameTurnInternal = (
   currentStats: GameStats,
   userCommand: string
 ): GameTurnResult => {
+    if (isShortChapter(currentStats)) return resolveChapterTurn(currentStats, userCommand, random);
     
     let calculatedStats: Partial<GameStats> = {};
     let statsLog: string[] = []; 

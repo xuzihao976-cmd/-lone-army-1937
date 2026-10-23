@@ -1,6 +1,20 @@
 
 export type Location = '地下室' | '一楼入口' | '二楼阵地' | '屋顶';
 
+export type ChapterId = 'street' | 'bridge' | 'sihang';
+
+/** Short chapters share resources, but keep their own objectives and battlefield. */
+export interface ChapterMission {
+  started: boolean;
+  elapsedMinutes: number;
+  recon: boolean;
+  route: 'inner' | 'river' | null;
+  found: number;
+  evacuated: number;
+  crossed: number;
+  cover: number;
+}
+
 export interface HmgSquad {
     name: string; // "机枪一连"
     location: Location | '待命'; 
@@ -88,6 +102,9 @@ export type EndingType =
   | 'defeat_martyr'     // 5. 血染孤旗 (升旗后阵亡)
   | 'defeat_commander'  // 指挥官在交战区阵亡
   | 'defeat_generic'    // 普通战败
+  | 'victory_evacuation'
+  | 'victory_cover'
+  | 'defeat_mission'
   | 'ongoing';
 
 export type GameOverReason =
@@ -97,9 +114,14 @@ export type GameOverReason =
   | 'commander_killed'
   | 'early_retreat'
   | 'historical_retreat'
-  | 'mission_complete';
+  | 'mission_complete'
+  | 'chapter_complete'
+  | 'chapter_failed';
 
 export interface GameStats {
+  chapterId: ChapterId;
+  campaignId: string;
+  mission?: ChapterMission;
   location: Location;
   soldiers: number; // Healthy Riflemen/Infantry
   wounded: number;  
@@ -145,7 +167,7 @@ export interface GameStats {
   lastEncourageTurn?: number;
   localDialogue?: LocalDialogueMemory;
   pendingDilemmaId?: string | null;
-  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | null;
+  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | 'confirm_chapter_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 
   enemiesKilled: number; // NEW: Track total enemies killed
@@ -254,6 +276,7 @@ export interface SaveData {
 }
 
 export interface SaveSlotMeta {
+    chapterId?: ChapterId;
     id: number;
     isEmpty: boolean;
     savedAt: number;
