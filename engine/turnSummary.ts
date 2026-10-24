@@ -42,7 +42,7 @@ export const buildTurnSummary = (
 
   let kind: TurnSummary['kind'] = 'action';
   let title = command.toLowerCase().startsWith('evt_resolve:') ? '事件后果'
-    : command.toLowerCase().startsWith('card_resolve:') ? '战机结算'
+    : command.toLowerCase().startsWith('card_resolve:') ? '战地际遇'
       : preview?.action ?? '命令执行';
   const notes: string[] = [];
 

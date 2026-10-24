@@ -4,6 +4,8 @@ import { createInitialStats } from '../storage/saveStore';
 import { runGameTurn } from '../engine/gameEngine';
 import { getActionPreview } from '../engine/actionPreview';
 import type { ChapterId, GameStats } from '../types';
+import { chapterTactics, tacticCommand } from '../data/tactics';
+import { getTacticPlan } from '../engine/tacticPlans';
 
 const requested = Number(process.argv.find(arg => arg.startsWith('--runs='))?.split('=')[1] ?? 1000);
 const runs = Number.isSafeInteger(requested) ? Math.max(1, requested) : 1000;
@@ -21,7 +23,7 @@ const apply = (stats: GameStats, command: string) => {
   const reportedKills = [...result.narrative.matchAll(/确认毙敌(\d+)人/g)]
     .reduce((sum, match) => sum + Number(match[1]), 0);
   assert.equal(after.enemiesKilled - stats.enemiesKilled, reportedKills, 'Battle report and cumulative kills differ');
-  if (result.turnAdvanced && command !== 'confirm_chapter_retreat') {
+  if (result.turnAdvanced) {
     assert.equal(after.mission!.elapsedMinutes - stats.mission!.elapsedMinutes, getActionPreview(stats, command)?.durationMinutes);
   }
   checkedCommands++;
@@ -29,9 +31,11 @@ const apply = (stats: GameStats, command: string) => {
 };
 
 for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
+ for (const loadout of [null, ...chapterTactics(id).map(card => card.id)]) {
   let wins = 0, survivors = 0, escorted = 0, crossed = 0;
+  let minutes = 0, used = 0, ammo = 0;
   for (let seed = 1; seed <= runs; seed++) {
-    let stats = apply(createInitialStats(19370000 + seed * 7919, id), 'start_game');
+    let stats = apply(createInitialStats(19370000 + seed * 7919, id, loadout), 'start_game');
     let decisions = 0;
     while (!stats.isGameOver && decisions++ < 30) {
       const before = stats;
@@ -44,12 +48,15 @@ for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
       }
       assert.equal(stats.rngState, before.rngState);
       let command: string;
-      if (stats.pendingRetreat) command = 'confirm_chapter_retreat';
+      if (stats.pendingRetreat) command = stats.pendingRetreat;
       else if (id === 'street') command = !stats.mission!.recon ? '侦察路线'
         : !stats.mission!.route ? seed % 2 ? '选择内巷' : '选择沿河'
           : stats.mission!.evacuated >= 8 ? '组织撤离'
-            : stats.mission!.found < 8 ? '搜救街巷' : '护送民众';
-      else command = stats.mission!.crossed >= 60 ? '组织撤离'
+            : stats.mission!.found < 8 ? '搜救街巷'
+              : loadout && getTacticPlan(stats, tacticCommand(loadout))?.available ? tacticCommand(loadout) : '护送民众';
+      else command = stats.mission!.crossed >= 60
+        ? loadout === 'covered_withdrawal' && !stats.equippedTactic?.spent ? tacticCommand(loadout) : '组织撤离'
+        : loadout === 'rapid_crossing' && getTacticPlan(stats, tacticCommand(loadout))?.available ? tacticCommand(loadout)
         : seed % 3 === 0 && stats.mission!.cover < 1 ? '加固桥头'
           : stats.fatigue > 40 ? '轮换掩护' : '压制射击';
       stats = apply(stats, command);
@@ -61,8 +68,14 @@ for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
     survivors += stats.soldiers + stats.wounded;
     escorted += stats.mission!.evacuated;
     crossed += stats.mission!.crossed;
+    minutes += stats.mission!.elapsedMinutes;
+    used += stats.equippedTactic?.spent ? 1 : 0;
+    ammo += stats.ammo;
   }
-  report[id] = { campaigns: runs, completed: wins, averageSquadSurvivors: Math.round(survivors / runs * 10) / 10,
+  report[`${id}/${loadout ?? 'none'}`] = { campaigns: runs, completed: wins, tacticUsed: used,
+    averageMinutes: minutes / runs, averageFinalAmmo: Math.round(ammo / runs * 10) / 10,
+    averageSquadSurvivors: Math.round(survivors / runs * 10) / 10,
     averageSafelyEscorted: Math.round(escorted / runs * 10) / 10, averageCrossed: crossed / runs };
+ }
 }
-console.log(JSON.stringify({ runsPerChapter: runs, totalRuns: runs * 2, checkedCommands, generatedAt: new Date().toISOString(), report }, null, 2));
+console.log(JSON.stringify({ runsPerLoadout: runs, totalRuns: runs * 6, checkedCommands, generatedAt: new Date().toISOString(), report }, null, 2));

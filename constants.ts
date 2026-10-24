@@ -60,6 +60,7 @@ export const INITIAL_STATS: GameStats = {
   tutorialStep: 0,
   siegeMeter: 10, // Starts low
   activeTacticalCard: null,
+  equippedTactic: null,
   
   // 资源修正
   ammo: 20000,

@@ -10,10 +10,18 @@ import {
   isSectorHeld,
 } from '../engine/strategicDefense';
 import { getSpecialistEffectFactor, getSpecialistReadiness } from '../engine/specialists';
+import { getTactic, tacticCommand } from '../data/tactics';
+import { getTacticPlan } from '../engine/tacticPlans';
+import type { TacticId } from '../types';
+
+const requestedTactic = process.argv.find(arg => arg.startsWith('--tactic='))?.split('=')[1];
+if (requestedTactic && getTactic(requestedTactic)?.chapterId !== 'sihang') throw new Error('Unknown warehouse tactic');
+const selectedTactic = (requestedTactic ?? null) as TacticId | null;
 
 type Policy = 'defensive' | 'balanced' | 'aggressive' | 'novice';
 
 interface CampaignResult {
+  tacticUsed: boolean;
   policy: Policy;
   ending: GameStats['gameResult'];
   reason: GameStats['gameOverReason'];
@@ -127,7 +135,7 @@ const chooseAction = (stats: GameStats, policy: Policy): string => {
 };
 
 const playCampaign = (seed: number, policy: Policy): CampaignResult => {
-  let stats = createInitialStats(seed);
+  let stats = createInitialStats(seed, 'sihang', selectedTactic);
   let pendingDilemma: Dilemma | null = null;
   let attacks = 0;
   let firstSectorLossDay: number | null = null;
@@ -161,7 +169,17 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
         stats = applyResult(stats, prepared);
         assertValidState(stats, `${policy}/${seed}/prepared-order`);
       }
-      command = chooseAction(stats, policy);
+      let tactical: string | null = null;
+      if (stats.equippedTactic && !stats.equippedTactic.spent) {
+        const id = stats.equippedTactic.id;
+        if (id === 'emergency_shoring') {
+          const target = LOCATIONS.filter(location => isSectorHeld(stats, location) && stats.sectorIntegrity[location] <= 90)
+            .sort((a, b) => stats.sectorIntegrity[a] - stats.sectorIntegrity[b])[0];
+          if (target) tactical = tacticCommand(id, target);
+        } else if (id === 'urgent_aid' && stats.wounded >= 2) tactical = tacticCommand(id);
+        if (tactical && !getTacticPlan(stats, tactical)?.available) tactical = null;
+      }
+      command = tactical ?? chooseAction(stats, policy);
     }
 
     const beforeLost = LOCATIONS.filter((location) => !isSectorHeld(stats, location)).length;
@@ -180,6 +198,7 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
 
   const hmgSurvivors = stats.hmgSquads.reduce((sum, squad) => sum + (squad.status === 'active' ? squad.count : 0), 0);
   return {
+    tacticUsed: !!stats.equippedTactic?.spent,
     policy,
     ending: stats.gameResult,
     reason: stats.gameOverReason,
@@ -209,6 +228,7 @@ const report = Object.fromEntries(policies.map((policy) => {
   const commanderDeaths = group.filter((result) => result.reason === 'commander_killed').length;
   const sectorLosses = group.filter((result) => result.firstSectorLossDay !== null);
   return [policy, {
+    tacticUsed: group.filter(result => result.tacticUsed).length,
     campaigns: group.length,
     winRate: `${Math.round(wins / group.length * 1000) / 10}%`,
     commanderDeathRate: `${Math.round(commanderDeaths / group.length * 1000) / 10}%`,
@@ -224,4 +244,4 @@ const report = Object.fromEntries(policies.map((policy) => {
   }];
 }));
 
-console.log(JSON.stringify({ runs, generatedAt: new Date().toISOString(), report }, null, 2));
+console.log(JSON.stringify({ runs, selectedTactic, generatedAt: new Date().toISOString(), report }, null, 2));

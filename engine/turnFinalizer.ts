@@ -1,11 +1,12 @@
 import type { Dilemma, GameStats, Location } from '../types';
 import { playSound } from '../utils/sound';
 import { BUILD_SCENES, COMMAND_RESPONSES, HEAL_SUCCESS_SCENES, SPEECH_SCENES } from '../data/text/commands';
-import { ALL_DILEMMAS, MUTINY_SCENES, TACTICAL_CARDS } from '../data/text/events';
+import { ALL_DILEMMAS, MUTINY_SCENES } from '../data/text/events';
 import { ENDING_TEXTS } from '../data/text/endings';
 import { pickWith, type RandomSource } from './commandUtils';
 import { calculateCampaignScore } from './endings/campaignScore';
 import { reconcileSoldierDistribution } from './roster';
+import { eligibleBattlefieldEncounters } from './tacticalCards';
 
 type TurnEvent = 'attack' | 'new_day' | 'none' | 'game_over' | 'victory';
 type VisualEffect = 'shake' | 'heavy-damage' | 'none';
@@ -62,12 +63,12 @@ export const finalizeTurn = ({
 
   if (allowRandomEvents && !currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
     const used = calculatedStats.usedTacticalCards || currentStats.usedTacticalCards || [];
-    const availableCards = TACTICAL_CARDS.filter((card) => !used.includes(card.id));
+    const availableCards = eligibleBattlefieldEncounters({ ...currentStats, ...calculatedStats, usedTacticalCards: used }, actionType);
     if (availableCards.length > 0) {
       const newCard = pick(availableCards);
       calculatedStats.activeTacticalCard = newCard;
       calculatedStats.usedTacticalCards = [...used, newCard.id];
-      statsLog.push(`🃏 触发战机: ${newCard.title}`);
+      statsLog.push(`战地际遇：${newCard.title}`);
       playSound('alert');
     }
   }

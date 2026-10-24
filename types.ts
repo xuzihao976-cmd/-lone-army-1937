@@ -56,6 +56,9 @@ export interface TacticalCard {
     color: string; // 'gold' | 'red' | 'blue'
 }
 
+export type TacticId = 'group_escort' | 'wall_hug' | 'rapid_crossing' | 'covered_withdrawal' | 'emergency_shoring' | 'urgent_aid';
+export interface EquippedTactic { id: TacticId; spent: boolean; }
+
 export type SpecialistRole = 'veteran' | 'engineer' | 'medic' | 'assault';
 
 export interface SpecialistSquad {
@@ -154,6 +157,9 @@ export interface GameStats {
   tutorialStep: number; // 0: Not started, 1: Fortify entrance, 2: Rest troops, 3: Done/skipped
   siegeMeter: number; // 0-100, triggers attack when full
   activeTacticalCard?: TacticalCard | null;
+  // Legacy activeTacticalCard fields store battlefield encounters, separately
+  // from the single chapter tactic selected before a new campaign.
+  equippedTactic: EquippedTactic | null;
 
   // Resources
   ammo: number; 
@@ -167,7 +173,7 @@ export interface GameStats {
   lastEncourageTurn?: number;
   localDialogue?: LocalDialogueMemory;
   pendingDilemmaId?: string | null;
-  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | 'confirm_chapter_retreat' | null;
+  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | 'confirm_chapter_retreat' | 'confirm_tactic_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 
   enemiesKilled: number; // NEW: Track total enemies killed

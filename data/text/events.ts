@@ -1,5 +1,5 @@
 
-// 事件、卡牌、情报文本库
+// 事件、战地际遇、情报文本库。旧导出名保留以读取已有存档。
 import { Dilemma, TacticalCard } from "../../types";
 
 export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
@@ -107,15 +107,15 @@ export const TACTICAL_CARDS: TacticalCard[] = [
     {
         id: 'morale_boost',
         title: '家书抵万金',
-        description: '送信的人到了接应处，几封信还裹在油纸里。先别催着报军情，是否安排把信送到士兵手里？使用后才结算效果。',
+        description: '送信的人到了接应处，几封信还裹在油纸里。先别催着报军情，是否安排把信送到士兵手里？收下后才结算效果。',
         effectText: '士气最多+15',
         actionCmd: 'CARD_RESOLVE:morale_boost',
         color: 'gold'
     },
     {
         id: 'reinforce',
-        title: '孤胆英雄',
-        description: '五名散兵在接应处等待编入守军。口音各不相同，身上都带着走过火线的灰；使用后才正式补入队伍。',
+        title: '散兵接应',
+        description: '早期侦察核实了仍由守军控制的入口接应点，五名散兵等着核验身份。口音各不相同，身上都带着走过火线的灰；接受后才正式编入。（虚构补员情境。）',
         effectText: '士兵+5',
         actionCmd: 'CARD_RESOLVE:reinforce',
         color: 'blue'
@@ -123,8 +123,8 @@ export const TACTICAL_CARDS: TacticalCard[] = [
     {
         id: 'supplies',
         title: '意外物资',
-        description: '清理废墟的人报来一个尚可开启的弹药箱。需要核验并接收入库；使用后才增加弹药。',
-        effectText: '弹药+500',
+        description: '这次搜寻中，清理废墟的人报来一个尚可开启的弹药箱。需要核验并接收入库；接受后才增加弹药。',
+        effectText: '七九弹+500',
         actionCmd: 'CARD_RESOLVE:supplies',
         color: 'gold'
     }

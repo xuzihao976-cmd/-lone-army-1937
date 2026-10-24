@@ -11,6 +11,7 @@ import { getSpecialistEffectFactor } from './specialists';
 import type { Location } from '../types';
 import { isShortChapter } from '../data/chapters';
 import { getMissionPreview } from './chapterEngine';
+import { getTacticPlan } from './tacticPlans';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
 
@@ -51,8 +52,16 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let available = true;
   let reason: string | undefined;
 
-  const natural = resolveNaturalCommand(stats, rawCommand);
-  if (natural) {
+  const tactic = getTacticPlan(stats, rawCommand);
+  const natural = tactic ? null : resolveNaturalCommand(stats, rawCommand);
+  if (tactic) {
+    action = tactic.tactic.title + (tactic.target ? ` · ${tactic.target}` : '');
+    available = tactic.available;
+    durationMinutes = available ? tactic.minutes : 0;
+    baseThreat = available ? tactic.pressure : 0;
+    costs = available ? tactic.costs : [];
+    reason = tactic.reason;
+  } else if (natural) {
     action = natural.actionType === 'encourage' ? '简短鼓励' : '交流 / 预备军令';
     durationMinutes = natural.timeCost; baseThreat = natural.siegeIncrease; costs = natural.logs; reason = natural.narrative.join('');
   } else if (!isExecutableLocalAction(command)) {

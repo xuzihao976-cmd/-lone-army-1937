@@ -16,6 +16,7 @@ import {
 import { isMoveCommand } from '../intents';
 import { applyNamedSoldierDeaths } from '../roster';
 import { getSpecialistEffectFactor } from '../specialists';
+import { resolveWarehouseTactic } from '../tacticActions';
 import {
   canRecaptureSector,
   getRecaptureStagingSectors,
@@ -39,6 +40,11 @@ export const resolvePlayerAction = (
   cmd: string,
   random: RandomSource,
 ): PlayerActionResolution => {
+  const tactic = resolveWarehouseTactic(currentStats, cmd);
+  if (tactic) {
+    if (tactic.timeCost > 0) tactic.updatedStats.fatigue = Math.min(100, currentStats.fatigue + Math.max(1, Math.ceil(tactic.timeCost / 45)));
+    return tactic;
+  }
   const natural = resolveNaturalCommand(currentStats, cmd);
   if (natural) return natural;
   if (!isExecutableLocalAction(cmd)) {

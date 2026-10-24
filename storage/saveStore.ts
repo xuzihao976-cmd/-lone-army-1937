@@ -1,9 +1,10 @@
 import { sanitizeDialogueMemory } from '../engine/localConversation';
 import { INITIAL_STATS } from '../constants';
 import { applyChapterSetup, isChapterId, sanitizeMission } from '../data/chapters';
-import type { ChapterId, GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
+import { makeTactic, migrateTactic } from '../data/tactics';
+import type { ChapterId, GameLog, GameStats, SaveData, SaveSlotMeta, TacticId, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 11;
+export const SAVE_SCHEMA_VERSION = 12;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -56,13 +57,14 @@ const migrateSummary = (value: unknown): TurnSummary | undefined => {
   };
 };
 
-export const createInitialStats = (seed = createRandomSeed(), chapterId: ChapterId = 'sihang'): GameStats => {
+export const createInitialStats = (seed = createRandomSeed(), chapterId: ChapterId = 'sihang', tacticId: TacticId | null = null): GameStats => {
   if (!isChapterId(chapterId)) throw new Error('Unknown chapter');
   const stats = typeof structuredClone === 'function'
     ? structuredClone(INITIAL_STATS)
     : JSON.parse(JSON.stringify(INITIAL_STATS)) as GameStats;
   stats.rngState = seed >>> 0 || INITIAL_STATS.rngState;
   stats.campaignId = `${chapterId}-${stats.rngState}`;
+  stats.equippedTactic = makeTactic(tacticId, chapterId);
   return applyChapterSetup(stats, chapterId);
 };
 
@@ -73,6 +75,8 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
   const incoming = value.stats as Partial<GameStats>;
   if (incoming.chapterId !== undefined && !isChapterId(incoming.chapterId)) return null;
   const chapterId = incoming.chapterId ?? 'sihang';
+  const equippedTactic = migrateTactic(incoming.equippedTactic, chapterId);
+  if (equippedTactic === false) return null;
   const base = createInitialStats(incoming.rngState, chapterId);
   const mission = chapterId === 'sihang' ? undefined : sanitizeMission(incoming.mission, chapterId);
   if (chapterId !== 'sihang' && !mission) return null;
@@ -80,6 +84,7 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     ...base,
     ...incoming,
     chapterId,
+    equippedTactic,
     campaignId: typeof incoming.campaignId === 'string' && /^[a-z0-9-]{1,80}$/.test(incoming.campaignId)
       ? incoming.campaignId : `legacy-${chapterId}-${base.rngState}`,
     mission: mission ?? undefined,

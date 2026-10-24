@@ -266,7 +266,11 @@ const runGameTurnInternal = (
     // --- TACTICAL CARD RESOLUTION ---
     // Cards resolve their advertised effects directly. They no longer borrow a
     // normal command whose balance, time cost or effect can silently differ.
-    if (cmd.startsWith('card_resolve:')) {
+    if (cmd === 'encounter_skip') {
+        if (!currentStats.activeTacticalCard) return { narrative: '当前没有待处理的战地际遇，未执行。', updatedStats: {}, eventTriggered: 'none' };
+        return { narrative: '你没有接受这次机会。没有领取物资或补员，也没有消耗行动时间。', updatedStats: { activeTacticalCard: null }, eventTriggered: 'none' };
+    }
+    if (/^card_resolve:[a-z_]+$/.test(cmd)) {
         const cardId = cmd.split(':')[1];
         const resolution = resolveTacticalCard(currentStats, cardId);
         if (resolution) {

@@ -7,8 +7,13 @@ import { detectDialogueTopic } from './localConversation';
 import { getLocalRuleHelp } from '../data/text/localRules';
 import { isShortChapter } from '../data/chapters';
 import { missionAdvisor } from './chapterEngine';
+import { getTacticPlan } from './tacticPlans';
 export const localAdvisorResponse = (input: string, stats?: GameStats, sequence=0): {text:string; known:boolean} => {
   if (stats && isShortChapter(stats)) return { text: missionAdvisor(stats, input), known: true };
+  if (stats && getTacticPlan(stats, input)) {
+    const preview = getActionPreview(stats, input)!;
+    return { text: `【顾问窗口 · 尚未执行】\n${preview.action}：${preview.durationLabel}\n${preview.reason}\n${preview.costs.join('；')}\n这里只回答与预览，不消耗战术牌。`, known: true };
+  }
   const cmd=canonicalCommand(input), guard=getLanguageGuard(input);
   if (guard) { const lines=LOCAL_DIALOGUE[guard]; return {text:lines[sequence%lines.length],known:true}; }
   if (stats) {
