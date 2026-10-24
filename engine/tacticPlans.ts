@@ -1,4 +1,4 @@
-import { getTactic, tacticCommand, type TacticDefinition } from '../data/tactics';
+import { getTactic, tacticCommand, chapterTactics, TACTICS, TACTIC_RULES as R, type TacticDefinition } from '../data/tactics';
 import type { GameStats, Location, TacticId } from '../types';
 import { canonicalCommand, getLanguageGuard, isQuestion } from './commandLanguage';
 import { isSectorHeld, SECTOR_LOCATIONS } from './strategicDefense';
@@ -15,14 +15,16 @@ export interface TacticPlan {
   materials: number;
   medkits: number;
   count: number;
+  extraFatigue: number;
+  casualtyReduction: number;
   costs: string[];
   baseCommand: string;
 }
 
 /** Parse the whole input. Discussion, negation and quoted codes never arm a card. */
 export function getTacticPlan(stats: GameStats, raw: string): TacticPlan | null {
-  const input = canonicalCommand(raw);
   if (raw.length > 500) return null;
+  const input = canonicalCommand(raw);
   const match = /^tactic_use:([a-z_]+)(?::(屋顶|二楼阵地|一楼入口|地下室))?$/.exec(input);
   let definition: TacticDefinition | undefined;
   let target: Location | undefined;
@@ -36,45 +38,45 @@ export function getTacticPlan(stats: GameStats, raw: string): TacticPlan | null 
   else if (target) return null;
   const plan: TacticPlan = { tactic: definition, command: tacticCommand(definition.id, target), target,
     available: true, reason: definition.effect + definition.tradeoff, minutes: 0, pressure: 0,
-    ammo: 0, materials: 0, medkits: 0, count: 0, costs: [], baseCommand: '' };
+    ammo: 0, materials: 0, medkits: 0, count: 0, extraFatigue: 0, casualtyReduction: 0, costs: [], baseCommand: '' };
   const m = stats.mission;
   switch (definition.id) {
     case 'group_escort': case 'wall_hug': {
       const grouped = definition.id === 'group_escort';
       plan.baseCommand = '护送民众';
-      plan.minutes = (m?.route === 'river' ? 15 : 25) + (grouped ? 0 : 10);
-      plan.pressure = (m?.route === 'river' ? 28 : 18) + (grouped ? 8 : -10);
-      plan.ammo = grouped ? 20 : 0;
-      plan.count = Math.min(grouped ? 8 : 6, (m?.found ?? 0) - (m?.evacuated ?? 0));
+      plan.minutes = (m?.route === 'river' ? 15 : 25) + (grouped ? 0 : R.wallHug.minutesExtra);
+      plan.pressure = (m?.route === 'river' ? 28 : 18) + (grouped ? R.groupEscort.pressureExtra : -R.wallHug.pressureReduction);
+      plan.ammo = grouped ? R.groupEscort.ammo : 0;
+      plan.count = Math.min(grouped ? R.groupEscort.capacity : 6, (m?.found ?? 0) - (m?.evacuated ?? 0));
       if (!m?.recon || !m.route) plan.reason = '先侦察并选择撤收线。';
       else if (plan.count <= 0) plan.reason = '没有已找到、仍待护送的民众。';
       else if (grouped && m.found - m.evacuated <= 6) plan.reason = '至少7人待护送时，分组接应才有额外收益。';
-      else if (stats.ammo < plan.ammo) plan.reason = '分组接应需要额外20发七九弹。';
+      else if (stats.ammo < plan.ammo) plan.reason = `分组接应需要额外${plan.ammo}发七九弹。`;
       else break;
       plan.available = false; break;
     }
     case 'rapid_crossing':
-      Object.assign(plan, { baseCommand: '压制射击', minutes: 20, pressure: 16, ammo: 60,
-        count: Math.min(20, 60 - (m?.crossed ?? 60)) });
+      Object.assign(plan, { baseCommand: '压制射击', ...R.rapidCrossing,
+        count: Math.min(R.rapidCrossing.capacity, 60 - (m?.crossed ?? 60)) });
       if (!m || 60 - m.crossed <= 10) { plan.available = false; plan.reason = '至少11名友军尚未过桥时，加速渡桥才有额外收益。'; }
-      else if (stats.ammo < 60) { plan.available = false; plan.reason = '本次掩护共需60发七九弹。'; }
+      else if (stats.ammo < plan.ammo) { plan.available = false; plan.reason = `本次掩护共需${plan.ammo}发七九弹。`; }
       break;
     case 'covered_withdrawal':
-      Object.assign(plan, { baseCommand: '组织撤离', minutes: 30, pressure: 18 }); break;
+      Object.assign(plan, { baseCommand: '组织撤离', ...R.coveredWithdrawal }); break;
     case 'emergency_shoring':
-      Object.assign(plan, { baseCommand: '应急支撑', minutes: 30, pressure: 10, materials: 100,
-        count: Math.min(10, 100 - (stats.sectorIntegrity[target!] ?? 100)) });
+      Object.assign(plan, { baseCommand: '应急支撑', ...R.emergencyShoring,
+        count: Math.min(R.emergencyShoring.integrity, 100 - (stats.sectorIntegrity[target!] ?? 100)) });
       if (!SECTOR_LOCATIONS.includes(target!) || !isSectorHeld(stats, target!)) { plan.available = false; plan.reason = '目标楼层已失守，必须先夺回。'; }
       else if (plan.count <= 0) { plan.available = false; plan.reason = '目标楼层完整度已满。'; }
-      else if (stats.sandbags < 100) { plan.available = false; plan.reason = '应急支撑需要100份工事材料。'; }
+      else if (stats.sandbags < plan.materials) { plan.available = false; plan.reason = `应急支撑需要${plan.materials}份工事材料。`; }
       break;
     case 'urgent_aid':
-      Object.assign(plan, { baseCommand: '紧急救治', minutes: 30, pressure: 10,
-        count: Math.min(2, stats.wounded, Math.floor(stats.medkits / 2)) });
-      plan.medkits = plan.count * 2;
+      Object.assign(plan, { baseCommand: '紧急救治', ...R.urgentAid,
+        count: Math.min(R.urgentAid.capacity, stats.wounded, Math.floor(stats.medkits / R.urgentAid.medkitsPerPerson)) });
+      plan.medkits = plan.count * R.urgentAid.medkitsPerPerson;
       if (!isSectorHeld(stats, '地下室')) { plan.available = false; plan.reason = '地下室医院已失守。'; }
       else if (stats.wounded <= 0) { plan.available = false; plan.reason = '目前没有待治伤员。'; }
-      else if (plan.count <= 0) { plan.available = false; plan.reason = '每人需要2份急救包，库存不足。'; }
+      else if (plan.count <= 0) { plan.available = false; plan.reason = `每人需要${R.urgentAid.medkitsPerPerson}份急救包，库存不足。`; }
       break;
   }
   if (stats.equippedTactic?.id !== definition.id || stats.equippedTactic.spent) {
@@ -85,8 +87,21 @@ export function getTacticPlan(stats: GameStats, raw: string): TacticPlan | null 
     plan.available = false; plan.reason = stats.isGameOver ? '本章已结束。' : '接防完成后才能使用战术牌。';
   }
   plan.costs = [plan.ammo ? `七九弹${plan.ammo}发` : '', plan.materials ? `工事材料${plan.materials}份` : '',
-    plan.medkits ? `急救包${plan.medkits}份` : '', definition.id === 'rapid_crossing' ? '额外疲劳最多+8' : '', '消耗本章唯一战术牌'].filter(Boolean);
+    plan.medkits ? `急救包${plan.medkits}份` : '', plan.extraFatigue ? `额外疲劳最多+${plan.extraFatigue}` : '', '消耗本章唯一战术牌'].filter(Boolean);
   return plan;
 }
 
 export const spendTactic = (id: TacticId) => ({ id, spent: true } as const);
+
+/** Card-specific rules take precedence over ordinary treatment/building help. */
+export function getTacticRuleHelp(stats: GameStats, input: string): string | null {
+  if (getLanguageGuard(input) || (!isQuestion(input) && !/规则|教程|作用|消耗|耗时/.test(input))) return null;
+  if (/战地际遇|家书|散兵接应|意外物资/.test(input)) return '家书、散兵接应、意外物资属于四行章的战地际遇，与携带的战术牌分别记录。新物资际遇来自搜寻；新散兵际遇限首日侦察且入口受控，并非必然出现。可以接受、放弃或稍后查看；未接受不领取效果，不耗行动时间，也不消耗战术牌。家书即使士气已满也可收下，不能突破100。';
+  const named = TACTICS.filter(card => input.includes(card.title));
+  if (!named.length && !/战术|携带|用牌/.test(input)) return null;
+  const cards = named.length ? named : chapterTactics(stats.chapterId);
+  const selected = getTactic(stats.equippedTactic?.id);
+  return `新开本章可从两张战术牌中选一张，也可不携带；每章最多使用一次，不跨关。普通军令始终可用。\n当前${selected ? `携带${selected.title}，${stats.equippedTactic?.spent ? '已经使用' : '尚未使用'}` : '未携带战术牌'}。\n\n`
+    + cards.map(card => `${card.title}${card.chapterId !== stats.chapterId ? '（属于其他章节，本章不可用）' : ''}：${card.effect}\n代价与条件：${card.tradeoff}`).join('\n\n')
+    + '\n\n在主界面点“查看战术”预览；只有实际执行才耗牌。交替撤离还需二次确认。这里仅说明规则，没有执行。';
+}

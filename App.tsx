@@ -15,9 +15,11 @@ import BattleResultCard from './components/BattleResultCard';
 import ActionPreviewBar from './components/ActionPreviewBar';
 import TutorialGuide from './components/TutorialGuide';
 import { ChapterMissionPanel, ChapterMissionActions } from './components/ChapterMissionPanel';
+import { TacticStatus, TacticUseModal } from './components/TacticControls';
+import { TACTICAL_CARDS } from './data/text/events';
 import { getChapter, isShortChapter } from './data/chapters';
 import { readChapterArchive, recordChapterResult, type ChapterArchive } from './storage/chapterArchive';
-import { ChapterId, GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType } from './types';
+import { ChapterId, GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType, TacticId } from './types';
 import { runGameTurn } from './engine/gameEngine';
 import { getActionPreview } from './engine/actionPreview';
 import { enhanceBattleNarrative, resetAiGatewayProbe, interpretUnknownCommand, isAiConfigured, describeAiFailure, type AiFailure, type AiSource } from './services/aiClient';
@@ -55,6 +57,9 @@ const App: React.FC = () => {
   const [saveSlots, setSaveSlots] = useState<SaveSlotMeta[]>([]);
   const [autoSaveMeta, setAutoSaveMeta] = useState<SaveSlotMeta | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<ChapterId>('street');
+  const [selectedTactics, setSelectedTactics] = useState<Record<ChapterId, TacticId | null>>({ street: null, bridge: null, sihang: null });
+  const [showTacticPreview, setShowTacticPreview] = useState(false);
+  const [showEncounterDetails, setShowEncounterDetails] = useState(false);
   const [chapterSaves, setChapterSaves] = useState<Partial<Record<ChapterId, SaveSlotMeta>>>({});
   const [chapterArchive, setChapterArchive] = useState<ChapterArchive>({});
   const [unlockedAchievements, setUnlockedAchievements] = useState<EndingType[]>([]);
@@ -93,6 +98,8 @@ const App: React.FC = () => {
   const aiAbortRef = useRef<AbortController | null>(null);
   const gameSessionRef = useRef(0);
   const statsRef = useRef(stats);
+
+  useEffect(() => { setShowEncounterDetails(false); setShowTacticPreview(false); }, [stats.campaignId]);
 
   useEffect(() => {
     statsRef.current = stats;
@@ -212,6 +219,8 @@ const App: React.FC = () => {
         setStats(data.stats);
         setShowGameOverModal(data.stats.isGameOver);
         setSelectedChapter(data.stats.chapterId);
+        setShowTacticPreview(false);
+        setSelectedTactics(previous => ({ ...previous, [data.stats.chapterId]: data.stats.equippedTactic?.id ?? null }));
         setLogs(data.logs);
         setCurrentDilemma(null);
         setAttackLocation(null);
@@ -242,6 +251,8 @@ const App: React.FC = () => {
         setStats(data.stats);
         setShowGameOverModal(data.stats.isGameOver);
         setSelectedChapter(data.stats.chapterId);
+        setShowTacticPreview(false);
+        setSelectedTactics(previous => ({ ...previous, [data.stats.chapterId]: data.stats.equippedTactic?.id ?? null }));
         setLogs(data.logs);
         setCurrentDilemma(null);
         setAttackLocation(null);
@@ -435,7 +446,7 @@ const App: React.FC = () => {
     playSound('click');
     cancelNarrativeEnhancement();
     gameSessionRef.current += 1;
-    const initialStats = createInitialStats(undefined, chapterId);
+    const initialStats = createInitialStats(undefined, chapterId, selectedTactics[chapterId]);
     setSelectedChapter(chapterId);
     statsRef.current = initialStats;
     setStats(initialStats);
@@ -448,6 +459,7 @@ const App: React.FC = () => {
     setShowBattleMapHint(false);
     setShowMap(false);
     setShowAdvisor(false);
+    setShowTacticPreview(false);
     setAiSource('auto');
 
     try {
@@ -474,6 +486,7 @@ const App: React.FC = () => {
     setShowGameMenu(false);
     setConfirmExit(false);
     setShowGameOverModal(false); 
+    setShowTacticPreview(false);
     refreshSaveSlots();
     loadAchievements();
     return true;
@@ -640,12 +653,18 @@ const App: React.FC = () => {
           }} />
       )}
       
-      {stats.activeTacticalCard && (
+      {view === 'GAME' && showEncounterDetails && !stats.isGameOver && !currentDilemma && !showTacticPreview && !showGameMenu && !showAdvisor && !showSaveLoadModal && stats.activeTacticalCard && (
           <TacticalCardDisplay 
-              card={stats.activeTacticalCard} 
-              onExecute={(cmd) => handleTacticalCardExecute(cmd, stats.activeTacticalCard?.title || "")} 
+              card={TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id) ?? stats.activeTacticalCard}
+              onExecute={(cmd) => { setShowEncounterDetails(false); handleTacticalCardExecute(cmd, '接受战地际遇'); }}
+              onDecline={() => { setShowEncounterDetails(false); handleCommand(undefined, 'encounter_skip', '放弃本次际遇'); }}
+              onClose={() => setShowEncounterDetails(false)}
           />
       )}
+      {view === 'GAME' && showTacticPreview && !stats.isGameOver && <TacticUseModal key={stats.campaignId} stats={stats}
+        onClose={() => setShowTacticPreview(false)} onExecute={(command, label) => {
+          setShowTacticPreview(false); handleCommand(undefined, command, label);
+        }} />}
 
       {/* NEW: Game Over Modal - Triggered by Delayed State */}
       {showGameOverModal && (
@@ -667,6 +686,8 @@ const App: React.FC = () => {
             onContinueChapter={() => handleLoadAutoSave(selectedChapter)}
             onSelectChapter={setSelectedChapter}
             selectedChapter={selectedChapter}
+            selectedTactic={selectedTactics[selectedChapter]}
+            onSelectTactic={id => setSelectedTactics(previous => ({ ...previous, [selectedChapter]: id }))}
             chapterSaves={chapterSaves}
             archive={chapterArchive}
             recentSave={autoSaveMeta}
@@ -871,6 +892,11 @@ const App: React.FC = () => {
                   </div>
                 )}
                 {/* Quick Actions Row */}
+                {!stats.isGameOver && stats.activeTacticalCard && <button type="button" disabled={isLoading || !!currentDilemma}
+                  onClick={() => setShowEncounterDetails(true)} className="flex min-h-10 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40">
+                  <span>战地际遇 · {TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id)?.title ?? stats.activeTacticalCard.title}</span><span>查看</span>
+                </button>}
+                {!stats.isGameOver && <TacticStatus stats={stats} disabled={isLoading || !!currentDilemma} onPreview={() => setShowTacticPreview(true)} />}
                 {!stats.isGameOver && (
                     shortChapter ? <ChapterMissionActions stats={stats} disabled={isLoading || !!currentDilemma} onAction={cmd => handleCommand(undefined, cmd)} /> : <>
                       <TutorialGuide

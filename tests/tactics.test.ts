@@ -27,6 +27,20 @@ const ready = (id: TacticId): GameStats => {
 const world = ({ localDialogue, pendingRetreat, ...stats }: GameStats) => stats;
 
 describe('chapter tactics', () => {
+  it('explains each card locally before generic action rules and does not execute it', () => {
+    for (const card of TACTICS) {
+      const stats = ready(card.id), before = structuredClone(stats);
+      const input = `${card.title}怎么用？`;
+      const advisor = localAdvisorResponse(input, stats);
+      expect(advisor.known).toBe(true);
+      expect(advisor.text).toContain(card.effect);
+      expect(advisor.text).toContain(card.tradeoff);
+      const reply = apply(stats, input);
+      expect(reply.result.narrative).toContain(card.effect);
+      expect(world(reply.stats)).toEqual(world(stats));
+      expect(stats).toEqual(before);
+    }
+  });
   it('keeps chapter loadouts independent and migrates old saves without a free card', () => {
     expect(() => makeTactic('urgent_aid', 'street')).toThrow();
     const old = ready('group_escort');
@@ -88,7 +102,7 @@ describe('chapter tactics', () => {
     const stats = ready('wall_hug');
     const next = apply(stats, tacticCommand('wall_hug')).stats;
     expect(next.mission!.elapsedMinutes).toBe(35);
-    expect(next.siegeMeter - stats.siegeMeter).toBe(8);
+    expect(next.siegeMeter - stats.siegeMeter).toBe(3);
     const late = { ...stats, mission: { ...stats.mission!, elapsedMinutes: 150 } };
     expect(getActionPreview(late, tacticCommand('wall_hug'))?.risk).toBe('critical');
     expect(apply(late, tacticCommand('wall_hug')).stats.gameResult).toBe('defeat_mission');
@@ -115,6 +129,7 @@ describe('chapter tactics', () => {
     expect(pending.equippedTactic?.spent).toBe(false);
     expect(pending.mission!.elapsedMinutes).toBe(0);
     expect(pending.pendingRetreat).toBe('confirm_tactic_retreat');
+    expect(getActionPreview(pending, '确认交替撤离')?.durationMinutes).toBe(30);
     expect(world(apply(pending, 'cancel_retreat').stats)).toEqual(world(stats));
     expect(world(apply(stats, 'confirm_tactic_retreat').stats)).toEqual(world(stats));
     const late = { ...stats, mission: { ...stats.mission!, elapsedMinutes: 150 } };

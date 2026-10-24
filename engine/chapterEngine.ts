@@ -6,7 +6,7 @@ import { canonicalCommand, getLanguageGuard, isQuestion } from './commandLanguag
 import { detectDialogueTopic, replyOnTopic } from './localConversation';
 import { advanceCampaignClock } from './time';
 import { applyNamedSoldierDeaths } from './roster';
-import { getTacticPlan, spendTactic, type TacticPlan } from './tacticPlans';
+import { getTacticPlan, getTacticRuleHelp, spendTactic, type TacticPlan } from './tacticPlans';
 import { tacticCommand } from '../data/tactics';
 
 type Action = 'recon' | 'search' | 'escort' | 'inner' | 'river' | 'fire' | 'build' | 'rest' | 'heal' | 'extract';
@@ -32,6 +32,11 @@ const aliases: Record<string, Action> = {
 const normalize = (input: string) => canonicalCommand(input)
   .replace(/^(?:(?:副官|弟兄们|兄弟们|大家)[,，:：\s]*)/, '')
   .replace(/^(?:(?:请|立即|立刻|现在|下令|命令)\s*)+/, '').replace(/[!！。]+$/, '').trim();
+const chapterCommand = (stats: GameStats, raw: string): string => {
+  const command = canonicalCommand(raw);
+  return command === '确认交替撤离' ? 'confirm_tactic_retreat'
+    : command === '确认撤出小队' ? (stats.pendingRetreat ?? 'confirm_chapter_retreat') : command;
+};
 
 export const getMissionPlan = (stats: GameStats, input: string): MissionPlan | null => {
   const tactic = getTacticPlan(stats, input);
@@ -101,6 +106,8 @@ export const missionReport = (stats: GameStats): string => {
 export const missionReadOnly = (stats: GameStats, input: string): string => {
   const guard = getLanguageGuard(input);
   if (guard) return LOCAL_DIALOGUE[guard][0];
+  const tacticHelp = getTacticRuleHelp(stats, input);
+  if (tacticHelp) return tacticHelp;
   if (isQuestion(input)) {
     const named = stats.roster.filter(person => input.includes(person.name));
     if (named.length) return named.map(person => `${person.name}：${person.status === 'alive' ? '名册登记存活' : '本局已阵亡'}，${person.trait}。本章为虚构人物。`).join('\n');
@@ -113,7 +120,7 @@ export const missionReadOnly = (stats: GameStats, input: string): string => {
 
 export const getMissionPreview = (stats: GameStats, input: string): ActionPreview | null => {
   if (!input.trim()) return null;
-  const cmd = canonicalCommand(input);
+  const cmd = chapterCommand(stats, input);
   const confirming = (cmd === 'confirm_chapter_retreat' || cmd === 'confirm_tactic_retreat') && stats.pendingRetreat === cmd;
   const plan = getMissionPlan(stats, confirming ? cmd === 'confirm_tactic_retreat' ? tacticCommand('covered_withdrawal') : '组织撤离' : input);
   const minutes = plan?.available && (plan.key !== 'extract' || confirming) ? plan.minutes : 0;
@@ -139,9 +146,7 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
   if (!m) return say('关卡记录不完整，未执行。请从已有档案恢复本关。');
   if (stats.isGameOver) return say('本关已经结束，可复盘或选择另一章。');
   if (raw.length > 500) return say(LOCAL_DIALOGUE.too_long[0]);
-  const canonical = canonicalCommand(raw);
-  const cmd = canonical === '确认交替撤离' ? 'confirm_tactic_retreat'
-    : canonical === '确认撤出小队' ? (stats.pendingRetreat ?? 'confirm_chapter_retreat') : canonical;
+  const cmd = chapterCommand(stats, raw);
   if (cmd === 'start_game') {
     if (m.started || stats.turnCount > 0) return say('本关已经开始，不能用内部文字重置进度。');
     return { narrative: getChapter(stats.chapterId).opening, updatedStats: { mission: { ...m, started: true } }, eventTriggered: 'none' };
@@ -227,7 +232,7 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
   const clock = advanceCampaignClock(stats.day, stats.currentTime, plan.minutes);
   next.day = clock.day; next.currentTime = clock.time;
   next.fatigue = Math.min(100, next.fatigue + (plan.key === 'rest' ? 0 : Math.ceil(plan.minutes / 10)));
-  if (plan.tactic?.tactic.id === 'rapid_crossing') next.fatigue = Math.min(100, next.fatigue + 8);
+  next.fatigue = Math.min(100, next.fatigue + (plan.tactic?.extraFatigue ?? 0));
   next.siegeMeter = Math.min(100, next.siegeMeter + plan.pressure);
   if (!street && plan.key !== 'extract') {
     const crossed = Math.min(CROSSING_TARGET - mission.crossed, plan.tactic?.tactic.id === 'rapid_crossing' ? plan.tactic.count : Math.floor(plan.minutes / 2));
@@ -243,7 +248,7 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
     const protection = street ? (mission.route === 'inner' ? 1 : 0) : mission.cover;
     const casualties = Math.min(next.soldiers, Math.max(0, 2 + Math.floor(random() * 4)
       + (ammunition === 0 ? 2 : 0) + (next.fatigue >= 65 ? 1 : 0) - protection
-      - (plan.tactic?.tactic.id === 'covered_withdrawal' ? 2 : 0)));
+      - (plan.tactic?.casualtyReduction ?? 0)));
     const injuries = Math.ceil(casualties * 0.6), deaths = casualties - injuries;
     next.soldiers -= casualties; next.wounded += injuries;
     const kills = Math.floor(ammunition / 8);

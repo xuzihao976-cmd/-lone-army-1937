@@ -115,7 +115,7 @@ export const TACTICAL_CARDS: TacticalCard[] = [
     {
         id: 'reinforce',
         title: '散兵接应',
-        description: '早期侦察核实了仍由守军控制的入口接应点，五名散兵等着核验身份。口音各不相同，身上都带着走过火线的灰；接受后才正式编入。（虚构补员情境。）',
+        description: '五名散兵在入口接应点等待核验身份。口音各不相同，身上都带着走过火线的灰；接受后才正式编入仍由守军控制的阵地。（虚构补员情境。）',
         effectText: '士兵+5',
         actionCmd: 'CARD_RESOLVE:reinforce',
         color: 'blue'
@@ -123,7 +123,7 @@ export const TACTICAL_CARDS: TacticalCard[] = [
     {
         id: 'supplies',
         title: '意外物资',
-        description: '这次搜寻中，清理废墟的人报来一个尚可开启的弹药箱。需要核验并接收入库；接受后才增加弹药。',
+        description: '清理废墟的人报来一个尚可开启的弹药箱。需要核验并接收入库；接受后才增加弹药。',
         effectText: '七九弹+500',
         actionCmd: 'CARD_RESOLVE:supplies',
         color: 'gold'

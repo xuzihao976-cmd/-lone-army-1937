@@ -33,7 +33,7 @@ const apply = (stats: GameStats, command: string) => {
 for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
  for (const loadout of [null, ...chapterTactics(id).map(card => card.id)]) {
   let wins = 0, survivors = 0, escorted = 0, crossed = 0;
-  let minutes = 0, used = 0, ammo = 0;
+  let minutes = 0, used = 0, ammo = 0, healthy = 0, wounded = 0;
   for (let seed = 1; seed <= runs; seed++) {
     let stats = apply(createInitialStats(19370000 + seed * 7919, id, loadout), 'start_game');
     let decisions = 0;
@@ -71,9 +71,11 @@ for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
     minutes += stats.mission!.elapsedMinutes;
     used += stats.equippedTactic?.spent ? 1 : 0;
     ammo += stats.ammo;
+    healthy += stats.soldiers; wounded += stats.wounded;
   }
   report[`${id}/${loadout ?? 'none'}`] = { campaigns: runs, completed: wins, tacticUsed: used,
     averageMinutes: minutes / runs, averageFinalAmmo: Math.round(ammo / runs * 10) / 10,
+    averageCombatReady: Math.round(healthy / runs * 10) / 10, averageWounded: Math.round(wounded / runs * 10) / 10,
     averageSquadSurvivors: Math.round(survivors / runs * 10) / 10,
     averageSafelyEscorted: Math.round(escorted / runs * 10) / 10, averageCrossed: crossed / runs };
  }

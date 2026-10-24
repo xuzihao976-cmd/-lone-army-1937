@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInitialStats } from '../storage/saveStore';
+import { TACTICS } from '../data/tactics';
 
 let client: typeof import('../services/aiClient');
 const fetchMock = vi.fn();
@@ -20,6 +21,14 @@ describe('AI failure diagnostics and safe fallback', () => {
   it('uses known local rules even with AI enabled', async () => {
     const r=await client.generateAdvisorResponse([], '怎么治疗伤员', undefined, {stats:createInitialStats(),enabled:true});
     expect(r.source).toBe('local');expect(r.text).toContain('60分钟');expect(fetchMock).not.toHaveBeenCalled();
+    for (const card of TACTICS) {
+      const answer = await client.generateAdvisorResponse([], `${card.title}怎么用？`, undefined,
+        { stats: createInitialStats(1937, card.chapterId, card.id), enabled: true });
+      expect(answer.source).toBe('local');
+      expect(answer.text).toContain(card.effect);
+      expect(answer.text).toContain(card.tradeoff);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
   });
   it('shows the provider cause instead of a generic 503', async () => {
     fetchMock.mockResolvedValue(Response.json({error:'ai_inference_failed',upstreamCode:3036,detail:'private'}, {status:503}));

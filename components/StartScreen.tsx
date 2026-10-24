@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { ChapterId, EndingType, SaveSlotMeta } from '../types';
+import type { ChapterId, EndingType, SaveSlotMeta, TacticId } from '../types';
+import { TacticPicker } from './TacticControls';
 import { ACHIEVEMENTS } from '../constants';
 import { CHAPTERS, getChapter } from '../data/chapters';
 import { chapterTransition, type ChapterArchive } from '../storage/chapterArchive';
@@ -11,6 +12,8 @@ interface StartScreenProps {
   onOpenLoadMenu: () => void;
   onSelectChapter: (id: ChapterId) => void;
   selectedChapter: ChapterId;
+  selectedTactic: TacticId | null;
+  onSelectTactic: (id: TacticId | null) => void;
   chapterSaves: Partial<Record<ChapterId, SaveSlotMeta>>;
   archive: ChapterArchive;
   recentSave: SaveSlotMeta | null;
@@ -59,6 +62,7 @@ const StartScreen: React.FC<StartScreenProps> = (props) => {
           <p className="mt-2 text-xs leading-5 text-amber-200">任务：{chapter.objective}</p>
           <p className="mt-2 text-xs leading-5 text-neutral-400">{chapterTransition(chapter.id, props.archive)}</p>
         </section>
+        <TacticPicker chapterId={chapter.id} selected={props.selectedTactic} onSelect={props.onSelectTactic} hasSave={!!saved} />
         <div className="mt-4 space-y-2 border-t border-neutral-800 bg-[#080808] py-3">
           {saved && <button type="button" onClick={props.onContinueChapter} className="w-full rounded border border-amber-700 bg-amber-950/30 py-3 text-sm font-bold text-amber-200">
             继续本关 · {chapter.title}
@@ -78,7 +82,7 @@ const StartScreen: React.FC<StartScreenProps> = (props) => {
       <footer className="mt-5 pb-4 text-center text-[11px] leading-5 text-neutral-400">
         <p>成人战争叙事，含具体伤势、死亡与战地创伤。</p>
         <p>前两章为虚构支线；对白及可变战况不作史料。</p>
-        <p className="mt-1 text-neutral-500">v3.3.0 · 三章均可本地游玩 · 大嘴鸭游戏出品</p>
+        <p className="mt-1 text-neutral-500">v3.4.0 · 三章均可本地游玩 · 大嘴鸭游戏出品</p>
       </footer>
     </div>
   </div>;
