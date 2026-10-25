@@ -4,6 +4,18 @@ import { canonicalCommand, compactCommand, isQuestion } from './commandLanguage'
 import { getOperationIntel } from './battlefield';
 import { findLocations } from './commandUtils';
 const hashText = (text: string): number => { let hash = 2166136261; for (const char of text) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return hash >>> 0; };
+/** Pure display selection for chapter-owned text. Existing warehouse dialogue
+ * keeps its own selection behavior; neither path consumes battlefield RNG. */
+export const rotateDialogueLines = <T>(s: GameStats, input: string, topic: DialogueTopic, lines: readonly T[]) => {
+  if (lines.length === 0) throw new Error('Dialogue pool must not be empty');
+  const previous = sanitizeDialogueMemory(s.localDialogue);
+  const inputHash = hashText(compactCommand(input));
+  const repeats = previous?.inputHash === inputHash ? Math.min(100, previous.repeats + 1) : 0;
+  const variant = previous?.topic === topic ? (previous.variant + 1) % lines.length
+    : (hashText(topic) + (previous?.sequence ?? 0)) % lines.length;
+  const memory: LocalDialogueMemory = { sequence: ((previous?.sequence ?? 0) + 1) % 1000001, topic, variant, inputHash, repeats };
+  return { line: lines[variant], memory };
+};
 export const sanitizeDialogueMemory = (value: unknown): LocalDialogueMemory | undefined => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const m = value as Record<string, unknown>;

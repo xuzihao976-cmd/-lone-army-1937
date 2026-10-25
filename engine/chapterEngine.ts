@@ -1,9 +1,9 @@
 import type { ActionPreview, ChapterMission, GameStats, GameTurnResult } from '../types';
 import { CHAPTER_TIME_LIMIT, CIVILIAN_COUNT, CROSSING_TARGET, EVACUATION_TARGET, getChapter } from '../data/chapters';
-import { CHAPTER_CHAT, MISSION_CONTACT, MISSION_DEATH, MISSION_INJURY } from '../data/text/chapterNarrative';
+import { missionCombatNarrative } from '../data/text/chapterNarrative';
 import { LOCAL_DIALOGUE } from '../data/text/localDialogue';
 import { canonicalCommand, getLanguageGuard, isQuestion } from './commandLanguage';
-import { detectDialogueTopic, replyOnTopic } from './localConversation';
+import { chapterConversation, isChapterInformationQuery, isChapterActionMention } from './chapterConversation';
 import { advanceCampaignClock } from './time';
 import { applyNamedSoldierDeaths } from './roster';
 import { getTacticPlan, getTacticRuleHelp, spendTactic, type TacticPlan } from './tacticPlans';
@@ -108,14 +108,14 @@ export const missionReadOnly = (stats: GameStats, input: string): string => {
   if (guard) return LOCAL_DIALOGUE[guard][0];
   const tacticHelp = getTacticRuleHelp(stats, input);
   if (tacticHelp) return tacticHelp;
-  if (isQuestion(input)) {
+  if (isQuestion(input) || /是谁|谁是|呢|在哪|怎么样|还好|活着|阵亡|死/.test(input)) {
     const named = stats.roster.filter(person => input.includes(person.name));
     if (named.length) return named.map(person => `${person.name}：${person.status === 'alive' ? '名册登记存活' : '本局已阵亡'}，${person.trait}。本章为虚构人物。`).join('\n');
   }
-  if (isQuestion(input) || /报告|查询/.test(input)) return `${missionReport(stats)}\n\n${getChapter(stats.chapterId).objective}\n普通问答不耗时。需要操作，请一次明确下达一条本关军令。`;
-  const topic = detectDialogueTopic(input);
-  const lines = topic === 'homesick' ? CHAPTER_CHAT.homesick : topic === 'fear' ? CHAPTER_CHAT.fear : CHAPTER_CHAT.other;
-  return lines[(stats.localDialogue?.sequence ?? 0) % lines.length];
+  if (/名册|都有谁|谁还活着|谁阵亡|谁死了/.test(input)) return stats.roster.map(person => `${person.name}（${person.trait}）：${person.status === 'alive' ? '名册登记存活' : '本局已阵亡'}。`).join('\n') + '\n仅为本章部分具名人物，不是全队累计伤亡；人物为虚构。';
+  const conversation = chapterConversation(stats, input);
+  if (conversation) return conversation.text;
+  return `${missionReport(stats)}\n\n${getChapter(stats.chapterId).objective}\n普通问答不耗时。需要操作，请一次明确下达一条本关军令。`;
 };
 
 export const getMissionPreview = (stats: GameStats, input: string): ActionPreview | null => {
@@ -158,10 +158,12 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
   const plan = confirming ? getMissionPlan(stats, cmd === 'confirm_tactic_retreat' ? tacticCommand('covered_withdrawal') : '组织撤离') : getMissionPlan(stats, raw);
   if (!plan) {
     const guard = getLanguageGuard(raw);
-    if (guard || isQuestion(raw) || /报告|查询/.test(raw)) return say(missionReadOnly(stats, raw));
-    if (/搜救|护送|射击|撤|轮换|加固|侦察|治疗|救治/.test(raw)) return say('军令没有完整对应本关的一项行动，本次未执行。请一次明确下达一条本关命令，也可使用下方按钮。');
-    const reply = replyOnTopic(stats, raw, detectDialogueTopic(raw) ?? 'unclear');
-    return { ...say(missionReadOnly(stats, raw)), updatedStats: { localDialogue: reply.memory } };
+    if (guard || isChapterInformationQuery(stats, raw)) return say(missionReadOnly(stats, raw));
+    const conversation = chapterConversation(stats, raw);
+    if (conversation) return { ...say(conversation.text), updatedStats: { localDialogue: conversation.memory } };
+    if (isQuestion(raw)) return say(missionReadOnly(stats, raw));
+    if (isChapterActionMention(raw)) return say('军令没有完整对应本关的一项行动，本次未执行。请一次明确下达一条本关命令，也可使用下方按钮。');
+    return say(missionReadOnly(stats, raw));
   }
   if (!plan.available) return say(`未执行：${plan.reason}`);
   if (plan.key === 'extract' && !confirming) {
@@ -256,10 +258,8 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
     next.morale = Math.max(0, next.morale - deaths * 3);
     next.siegeMeter = Math.max(15, next.siegeMeter - 45);
     next.lastAttackTurn = stats.turnCount + 1;
-    narrative.push(MISSION_CONTACT);
-    if (injuries > 0) narrative.push(MISSION_INJURY);
+    narrative.push(...missionCombatNarrative(street ? 'street' : 'bridge', stats.turnCount + 1, mission.elapsedMinutes, injuries, deaths));
     if (deaths > 0) {
-      narrative.push(MISSION_DEATH);
       const updates: Partial<GameStats> = {};
       applyNamedSoldierDeaths(next, updates, deaths, narrative, random);
       if (updates.roster) next.roster = updates.roster;
