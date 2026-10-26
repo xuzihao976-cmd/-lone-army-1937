@@ -45,7 +45,6 @@ export function TacticUseModal({ stats, onClose, onExecute }: {
   // Project the confirmed retreat, without arming or mutating the actual game.
   const preview = getActionPreview(retreat ? { ...stats, pendingRetreat: 'confirm_tactic_retreat' } : stats,
     retreat ? 'confirm_tactic_retreat' : command);
-  const after = stats.mission ? stats.mission.elapsedMinutes + plan.minutes : null;
   return <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="tactic-title">
     <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded border border-amber-800 bg-neutral-950 p-4 text-neutral-200">
       <div className="flex items-start justify-between gap-2"><h2 id="tactic-title" className="font-serif text-xl font-bold text-amber-200">{card.title} · 行动预览</h2>
@@ -56,9 +55,6 @@ export function TacticUseModal({ stats, onClose, onExecute }: {
           {SECTOR_LOCATIONS.map(location => <option key={location} value={location}>{location} · 完整度{stats.sectorIntegrity[location]}%</option>)}
         </select></label>}
       <div className="mt-3"><ActionPreviewBar preview={preview} /></div>
-      {plan.available && after !== null && <p className={`mt-3 text-sm font-bold ${after >= 180 ? 'text-red-300' : 'text-amber-200'}`}>
-        {retreat ? '确认撤离后' : '行动后'}已用{after}/180分钟，距封锁{Math.max(0, 180 - after)}分钟。{after >= 180 ? '本方案将赶上封锁，任务会失败。' : ''}
-      </p>}
       <p className="mt-3 text-xs leading-5 text-neutral-400">查看和取消都不消耗战术牌、资源或行动时间。{retreat ? '继续后还需二次确认，届时才执行撤离。' : '确认执行后按本次行动结算。'}</p>
       <div className="mt-4 grid gap-2">
         <button type="button" disabled={!plan.available} onClick={() => onExecute(command, `${card.title} · ${plan.baseCommand}`)}

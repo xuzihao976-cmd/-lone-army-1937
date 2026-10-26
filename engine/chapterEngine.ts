@@ -1,5 +1,5 @@
 import type { ActionPreview, ChapterMission, GameStats, GameTurnResult } from '../types';
-import { CHAPTER_TIME_LIMIT, CIVILIAN_COUNT, CROSSING_TARGET, EVACUATION_TARGET, getChapter } from '../data/chapters';
+import { CHAPTER_TIME_LIMIT, CIVILIAN_COUNT, CROSSING_TARGET, EVACUATION_TARGET, EXTRACTION_MINUTES, getChapter } from '../data/chapters';
 import { missionCombatNarrative } from '../data/text/chapterNarrative';
 import { LOCAL_DIALOGUE } from '../data/text/localDialogue';
 import { canonicalCommand, getLanguageGuard, isQuestion } from './commandLanguage';
@@ -8,6 +8,7 @@ import { advanceCampaignClock } from './time';
 import { applyNamedSoldierDeaths } from './roster';
 import { getTacticPlan, getTacticRuleHelp, spendTactic, type TacticPlan } from './tacticPlans';
 import { tacticCommand } from '../data/tactics';
+import { formatMissionTiming, missionGoalMet, projectMissionTiming } from './chapterGuidance';
 
 type Action = 'recon' | 'search' | 'escort' | 'inner' | 'river' | 'fire' | 'build' | 'rest' | 'heal' | 'extract';
 interface MissionPlan {
@@ -76,12 +77,12 @@ export const getMissionPlan = (stats: GameStats, input: string): MissionPlan | n
     case 'rest':
       Object.assign(plan, { label: street ? '轮换休息' : '轮换掩护', minutes: 20, pressure: 20, reason: '疲劳最多降低25点、士气最多提高4点；封锁时间仍在推进' }); break;
     case 'heal':
-      Object.assign(plan, { label: '救治伤员', minutes: 20, pressure: 12, costs: ['按实际救回人数消耗急救包，最多2份'], reason: '最多让2名现有伤员恢复战斗力，不能救回已阵亡者' });
+      Object.assign(plan, { label: '救治伤员', minutes: 20, pressure: 12, costs: [`急救包${Math.min(2, stats.wounded, stats.medkits)}份`], reason: '最多让2名现有伤员恢复战斗力，不能救回已阵亡者' });
       plan.available &&= stats.wounded > 0 && stats.medkits > 0;
       if (!plan.available) plan.reason = stats.wounded <= 0 ? '目前没有待治伤员' : '急救包已经耗尽'; break;
     case 'extract':
-      Object.assign(plan, { label: '组织撤离', minutes: 20, pressure: street ? 12 : 18,
-        reason: '先显示确认窗口，本次不撤离；确认后耗时20分钟并结束本关。任务未完成时撤离会失败' }); break;
+      Object.assign(plan, { label: '组织撤离', minutes: EXTRACTION_MINUTES, pressure: street ? 12 : 18,
+        reason: `先显示确认窗口，本次不撤离；确认后耗时${EXTRACTION_MINUTES}分钟并结束本关。任务未完成时撤离会失败` }); break;
   }
   if (tactic) {
     plan.tactic = tactic;
@@ -91,6 +92,7 @@ export const getMissionPlan = (stats: GameStats, input: string): MissionPlan | n
     plan.reason = tactic.reason;
     plan.costs = tactic.costs;
   }
+  if (!m.started || stats.isGameOver) plan.reason = stats.isGameOver ? '本关已经结束，不能继续行动。' : '本关尚未接防，请先从选关页开始。';
   return plan;
 };
 
@@ -127,17 +129,32 @@ export const getMissionPreview = (stats: GameStats, input: string): ActionPrevie
   const pressure = minutes > 0 ? Math.min(100, stats.siegeMeter + (plan?.pressure ?? 0)) : stats.siegeMeter;
   const due = minutes > 0 && pressure >= 70;
   const late = minutes > 0 && (stats.mission?.elapsedMinutes ?? 0) + minutes >= CHAPTER_TIME_LIMIT;
+  const timing = plan?.available && plan.minutes > 0 ? projectMissionTiming(stats, plan.minutes, plan.key === 'extract', plan.key === 'extract' && !confirming) : undefined;
+  const noWithdrawalTime = timing && !timing.extracting && !timing.canWithdrawAfter;
+  const earlyExtraction = plan?.available && plan.key === 'extract' && !missionGoalMet(stats);
+  const riskLabel = !plan?.available ? plan ? '不可执行' : '问答不耗时'
+    : timing?.reachesDeadline ? plan.key === 'extract' && !confirming ? '确认后将赶上封锁' : '本次行动将赶上封锁'
+      : noWithdrawalTime ? '行动后余时不足以撤离' : earlyExtraction ? '人数目标未达成，撤离会失败'
+        : due ? '本次行动将接敌' : plan.key === 'extract' && !confirming ? '等待撤离确认' : minutes > 0 ? '留意封锁剩余时间' : '本次不耗时';
+  const reason = plan ? plan.reason + (plan.key === 'extract' && plan.available
+    ? `\n${confirming ? '' : `等待二次确认；确认后${plan.minutes}分钟。`}${missionGoalMet(stats) ? '人数目标已达成。' : '人数目标尚未达成，此时撤离将判定失败。'}` : '') : missionReadOnly(stats, input);
   return { action: plan?.label ?? '交谈 / 询问', durationMinutes: minutes, durationLabel: minutes > 0 ? `${minutes}分钟` : '不耗时',
     threatIncrease: pressure - stats.siegeMeter, predictedThreat: pressure, attackChance: due ? 1 : 0,
     enemyAdvanceSteps: minutes > 0 ? 1 : 0, projectedContactTurns: null,
-    risk: late ? 'critical' : due ? 'high' : 'safe', riskLabel: late ? '本次行动将赶上封锁' : due ? '本次行动将接敌' : '留意封锁剩余时间',
+    risk: late || timing?.reachesDeadline || noWithdrawalTime || earlyExtraction ? 'critical' : due ? 'high' : 'safe', riskLabel,
     costs: plan?.available ? plan.costs : [], available: plan?.available ?? true,
-    reason: plan ? plan.reason + (plan.key === 'extract' && !confirming ? `\n等待二次确认；确认后${plan.minutes}分钟。` : '') : missionReadOnly(stats, input), short: plan ? `${minutes}分钟 · ${plan.label}` : '问答不耗时' };
+    reason, short: plan ? `${minutes}分钟 · ${plan.label}` : '问答不耗时', missionTiming: timing };
 };
 
 export const missionAdvisor = (stats: GameStats, input: string): string => {
   const plan = getMissionPlan(stats, input);
-  return plan ? `【顾问窗口 · 尚未执行】\n${plan.label}：${plan.key === 'extract' ? '确认后' : ''}${plan.minutes}分钟。\n${plan.reason}\n这里只回答与预览，实际执行请回主界面。` : missionReadOnly(stats, input);
+  if (!plan) return missionReadOnly(stats, input);
+  const preview = getMissionPreview(stats, input)!;
+  if (!preview.available) return `【顾问窗口 · 尚未执行】\n${plan.label}当前不可执行：${preview.reason}\n没有耗时、扣除资源或消耗战术牌。`;
+  return `【顾问窗口 · 尚未执行】\n${plan.label}：${plan.key === 'extract' ? '二次确认后' : ''}${plan.minutes}分钟。\n${preview.reason}`
+    + (preview.costs.length ? `\n消耗：${preview.costs.join('；')}。` : '')
+    + (preview.missionTiming ? `\n${formatMissionTiming(preview.missionTiming)}` : '')
+    + `\n${preview.riskLabel}。${preview.attackChance === 1 && !preview.riskLabel.includes('接敌') ? '本次行动将接敌。' : ''}这里只回答与预览，实际执行请回主界面。`;
 };
 
 export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => number): GameTurnResult => {

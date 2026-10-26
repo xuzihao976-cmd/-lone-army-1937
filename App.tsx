@@ -896,9 +896,13 @@ const App: React.FC = () => {
                   onClick={() => setShowEncounterDetails(true)} className="flex min-h-10 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40">
                   <span>战地际遇 · {TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id)?.title ?? stats.activeTacticalCard.title}</span><span>查看</span>
                 </button>}
-                {!stats.isGameOver && <TacticStatus stats={stats} disabled={isLoading || !!currentDilemma} onPreview={() => setShowTacticPreview(true)} />}
+                {!stats.isGameOver && stats.equippedTactic && <div className={shortChapter && input.trim() ? 'hidden sm:block' : undefined}>
+                  <TacticStatus stats={stats} disabled={isLoading || !!currentDilemma} onPreview={() => setShowTacticPreview(true)} />
+                </div>}
                 {!stats.isGameOver && (
-                    shortChapter ? <ChapterMissionActions stats={stats} disabled={isLoading || !!currentDilemma} onAction={cmd => handleCommand(undefined, cmd)} /> : <>
+                    shortChapter ? <div className={input.trim() ? 'hidden sm:block' : undefined}>
+                      <ChapterMissionActions stats={stats} disabled={isLoading || !!currentDilemma} onAction={cmd => handleCommand(undefined, cmd)} />
+                    </div> : <>
                       <TutorialGuide
                         stats={stats}
                         disabled={isLoading || !!currentDilemma}
@@ -937,7 +941,7 @@ const App: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <ActionPreviewBar preview={actionPreview} />
+                    <ActionPreviewBar preview={actionPreview} compact />
 
                     <form onSubmit={(e) => handleCommand(e)} className="relative flex gap-2">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-mono select-none">

@@ -244,6 +244,16 @@ export interface TurnSummary {
   notes: string[];
 }
 
+/** Display-only projection; never stored in GameStats or save data. */
+export interface MissionTiming {
+  elapsedAfter: number;
+  remainingAfter: number;
+  extracting: boolean;
+  confirmationRequired: boolean;
+  reachesDeadline: boolean;
+  canWithdrawAfter: boolean;
+}
+
 export interface ActionPreview {
   action: string;
   durationMinutes: number;
@@ -259,6 +269,7 @@ export interface ActionPreview {
   available: boolean;
   reason?: string;
   short: string;
+  missionTiming?: MissionTiming;
 }
 
 export interface GameTurnResult {

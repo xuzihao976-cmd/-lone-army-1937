@@ -49,6 +49,7 @@ export const CHAPTER_TIME_LIMIT = 180;
 export const EVACUATION_TARGET = 8;
 export const CIVILIAN_COUNT = 12;
 export const CROSSING_TARGET = 60;
+export const EXTRACTION_MINUTES = 20;
 
 export const initialMission = (): ChapterMission => ({
   started: false, elapsedMinutes: 0, recon: false, route: null,
