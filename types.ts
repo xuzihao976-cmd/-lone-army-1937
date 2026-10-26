@@ -35,6 +35,8 @@ export interface DilemmaOption {
     label: string;
     actionCmd: string; // The command string to send to backend
     riskText?: string;
+    available?: boolean;
+    unavailableReason?: string;
 }
 
 export interface Dilemma {
@@ -45,6 +47,16 @@ export interface Dilemma {
   requiresFlag?: string;
   excludesFlag?: string;
   minDay?: number;
+  presentation?: 'choice' | 'notice';
+}
+
+export interface PendingEventTicket {
+  version: 1;
+  eventId: string;
+  campaignId: string;
+  day: number;
+  time: string;
+  turn: number;
 }
 
 export interface TacticalCard {
@@ -173,6 +185,8 @@ export interface GameStats {
   lastEncourageTurn?: number;
   localDialogue?: LocalDialogueMemory;
   pendingDilemmaId?: string | null;
+  pendingEvent?: PendingEventTicket | null;
+  lastDilemmaTurn?: number;
   pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | 'confirm_chapter_retreat' | 'confirm_tactic_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 

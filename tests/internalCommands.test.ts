@@ -1,3 +1,4 @@
+import { issueEvent } from '../engine/eventPlans';
 import {describe,expect,it} from 'vitest';
 import {createInitialStats} from '../storage/saveStore';
 import {runGameTurn} from '../engine/gameEngine';
@@ -12,7 +13,7 @@ describe('owned event and tactical card actions',()=>{
  it.each(ALL_DILEMMAS)('requires a pending $id event, its option and its preconditions',event=>{
   const s=fresh();const command=event.options[0].actionCmd;
   expect(runGameTurn(s,command).updatedStats.triggeredEvents).toBeUndefined();
-  s.pendingDilemmaId=event.id;s.consequenceFlags=event.requiresFlag?[event.requiresFlag]:[];
+  s.consequenceFlags=event.requiresFlag?[event.requiresFlag]:[];s.enemyOperation!.revealed=true;Object.assign(s,issueEvent(s,event.id));
   const valid=runGameTurn(s,command);expect(valid.updatedStats.triggeredEvents).toContain(event.id);expect(valid.updatedStats.pendingDilemmaId).toBeNull();
   expect(runGameTurn({...s,...valid.updatedStats},command).updatedStats.triggeredEvents).toBeUndefined();
   expect(runGameTurn(s,`evt_resolve:${event.id}:99`).updatedStats.triggeredEvents).toBeUndefined();

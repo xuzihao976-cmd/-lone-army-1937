@@ -1,3 +1,4 @@
+import { issueEvent } from '../engine/eventPlans';
 import { describe, expect, it } from 'vitest';
 import { createInitialStats } from '../storage/saveStore';
 import { runGameTurn } from '../engine/gameEngine';
@@ -53,7 +54,7 @@ describe('narrative follows settled state', () => {
 
   it.each(['smuggler_boat', 'puppet_defector'])('refusing %s does not fire or execute people', eventId => {
     const stats = fresh();
-    stats.pendingDilemmaId = eventId;
+    Object.assign(stats, issueEvent(stats, eventId));
     const result = runGameTurn(stats, `EVT_RESOLVE:${eventId}:1`);
     expect(result.updatedStats.ammo).toBeUndefined();
     expect(result.updatedStats.soldiers).toBeUndefined();

@@ -1,7 +1,6 @@
 
 import { canonicalCommand, resolveNaturalCommand } from './naturalCommands';
 import { compactCommand, isExecutableLocalAction } from './commandLanguage';
-import { ALL_DILEMMAS } from '../data/text/events';
 import { GameStats, GameTurnResult, Location } from "../types";
 import { playSound } from "../utils/sound";
 import { isExplicitRetreatCommand } from './intents';
@@ -16,12 +15,13 @@ import { resolveDilemma } from './dilemmaResolver';
 import { pickWith, type RandomSource } from './commandUtils';
 import { applyNamedSoldierDeaths } from './roster';
 import { calculateCampaignScore } from './endings/campaignScore';
-import { resolvePlayerAction } from './actions/resolvePlayerAction';
+import { resolvePlayerAction, type PlayerActionResolution } from './actions/resolvePlayerAction';
 import { resolveAttack } from './combatResolution/resolveAttack';
 import { finalizeTurn } from './turnFinalizer';
 import { isSectorHeld } from './strategicDefense';
 import { isShortChapter } from '../data/chapters';
 import { resolveChapterTurn } from './chapterEngine';
+import { getEventPlan, getEventRuleHelp, getPendingEvent, presentEvent } from './eventPlans';
 
 // Import Narrative Data Modules
 import { WOUNDED_DEATH_SCENES } from "../data/text/combat";
@@ -70,10 +70,17 @@ const runGameTurnInternal = (
     const cmd = canonicalCommand(userCommand);
     if (cmd.startsWith('confirm_') && currentStats.pendingRetreat !== cmd) return { narrative: '未收到有效的撤退确认请求，命令未执行。', updatedStats: {}, eventTriggered: 'none' };
     if (currentStats.isGameOver) return { narrative: '本次战役已结束。', updatedStats: {}, eventTriggered: 'none' };
+    const pendingEvent = getPendingEvent(currentStats);
+    if (pendingEvent && !cmd.startsWith('evt_resolve:')) return {
+      narrative: '当前有待处理事件，尚未执行其他行动。请先选择本事件的处置。', updatedStats: {}, eventTriggered: 'none', turnAdvanced: false,
+      dilemma: presentEvent(currentStats, pendingEvent),
+    };
     if (currentStats.day >= 6) {
       const final = finalizeTurn({currentStats, calculatedStats, actionType:'idle', attackLocation:null, eventTriggered:'none', visualEffect:'none', narrativeParts, statsLog, random, allowRandomEvents:false});
       return {narrative:final.narrative, updatedStats:calculatedStats,eventTriggered:final.eventTriggered};
     }
+    const eventHelp = getEventRuleHelp(currentStats, userCommand);
+    if (eventHelp) return { narrative: eventHelp, updatedStats: {}, eventTriggered: 'none', turnAdvanced: false };
 
     if (userCommand.length>500) {
       const r=resolveNaturalCommand(currentStats,userCommand)!;
@@ -281,29 +288,39 @@ const runGameTurnInternal = (
         return { narrative: '这张战术卡已经失效。', updatedStats: {}, eventTriggered: 'none' };
     }
 
+    let eventAction: PlayerActionResolution | undefined;
+    let newEventWounded = 0;
     // --- DILEMMA RESOLUTION ---
     if (cmd.startsWith('evt_resolve:')) {
-        const [, eventId, rawOption] = cmd.split(':');
-        const event=ALL_DILEMMAS.find(e=>e.id===eventId);
-        const flags=currentStats.consequenceFlags || [];
-        if (!event || currentStats.pendingDilemmaId!==eventId || currentStats.triggeredEvents.includes(eventId)
-          || !/^\d+$/.test(rawOption || '') || !event.options[Number(rawOption)]
-          || event.options[Number(rawOption)].actionCmd.toLowerCase()!==cmd
-          || (event.minDay!==undefined && currentStats.day<event.minDay)
-          || (event.requiresFlag && !flags.includes(event.requiresFlag)) || (event.excludesFlag && flags.includes(event.excludesFlag))) {
-          return {narrative:'该事件当前未等待这项选择，或已结算；本次未执行。',updatedStats:{},eventTriggered:'none'};
+        const plan = getEventPlan(currentStats, cmd);
+        if (!plan?.available) {
+          return { narrative: `未执行：${plan?.reason ?? '该事件选项当前无效，或已结算。'}`, updatedStats: {}, eventTriggered: 'none', turnAdvanced: false,
+            dilemma: pendingEvent ? presentEvent(currentStats, pendingEvent) : undefined };
         }
         playSound('click');
-        return resolveDilemma(
+        const resolution = resolveDilemma(
             currentStats,
-            eventId,
-            Number(rawOption),
+            plan.event.id,
+            plan.option,
             random,
             (updates, deaths, eventNarrative) => applyNamedSoldierDeaths(currentStats, updates, deaths, eventNarrative, random),
         );
+        if (plan.minutes <= 0) {
+          Object.assign(calculatedStats, resolution.updatedStats);
+          const finalized = finalizeTurn({ currentStats, calculatedStats, actionType: 'event', attackLocation: null,
+            eventTriggered: 'none', visualEffect: resolution.visualEffect ?? 'none', narrativeParts: [resolution.narrative],
+            statsLog: [], random, allowRandomEvents: false, allowDilemmas: false });
+          return { narrative: finalized.narrative, updatedStats: calculatedStats, eventTriggered: finalized.eventTriggered,
+            visualEffect: finalized.visualEffect, turnAdvanced: false };
+        }
+        newEventWounded = Math.max(0, (resolution.updatedStats.wounded ?? currentStats.wounded) - currentStats.wounded);
+        eventAction = { updatedStats: { ...resolution.updatedStats,
+          fatigue: Math.min(100, currentStats.fatigue + Math.max(1, Math.ceil(plan.minutes / 45))), speechStreak: 0 },
+          logs: [`事件行动耗时${plan.minutes}分钟`], narrative: [resolution.narrative], timeCost: plan.minutes,
+          actionType: 'event', siegeIncrease: plan.pressure, visualEffect: resolution.visualEffect };
     }
 
-    const actionResolution = resolvePlayerAction(currentStats, cmd, random);
+    const actionResolution = eventAction ?? resolvePlayerAction(currentStats, cmd, random);
     Object.assign(calculatedStats, actionResolution.updatedStats);
     statsLog.push(...actionResolution.logs);
     narrativeParts.push(...actionResolution.narrative);
@@ -342,7 +359,9 @@ const runGameTurnInternal = (
         // action uses the same duration/pressure projection as the UI preview.
         contactOperation = projectEnemyOperation(contactOperation, timeCost, newSiege);
         calculatedStats.enemyOperation = contactOperation;
-        if (contactAllowed && contactOperation.turnsRemaining <= 0) {
+        const combatantsAfterAction = (calculatedStats.soldiers ?? currentStats.soldiers)
+          + (calculatedStats.hmgSquads ?? currentStats.hmgSquads).reduce((n, squad) => n + (squad.status === 'active' ? squad.count : 0), 0);
+        if (contactAllowed && contactOperation.turnsRemaining <= 0 && combatantsAfterAction > 0) {
             attackTriggered = true;
             newSiege = Math.max(10, newSiege - 65);
             calculatedStats.lastAttackTurn = currentStats.turnCount + 1;
@@ -367,7 +386,7 @@ const runGameTurnInternal = (
         currentTimer += totalMinutesPassed;
         if (currentTimer >= treatmentWindow) {
             const deathToll = hospitalHeld ? Math.floor(random() * 5) + 1 : Math.floor(random() * 7) + 3;
-            const actualDeaths = Math.min(currentWoundedCount, deathToll);
+            const actualDeaths = Math.min(Math.max(0, currentWoundedCount - newEventWounded), deathToll);
             if (actualDeaths > 0) {
                 calculatedStats.wounded = currentWoundedCount - actualDeaths;
                 const moraleLoss = actualDeaths;
@@ -425,6 +444,7 @@ const runGameTurnInternal = (
         statsLog,
         random,
         allowRandomEvents: turnAdvanced,
+        allowDilemmas: !eventAction,
     });
 
     return {

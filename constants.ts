@@ -73,6 +73,8 @@ export const INITIAL_STATS: GameStats = {
   flagWarned: false,
   enemiesKilled: 0,
   triggeredEvents: [],
+  pendingEvent: null,
+  lastDilemmaTurn: -999,
   usedTacticalCards: [],
   consequenceFlags: [],
   campaignHistory: [],

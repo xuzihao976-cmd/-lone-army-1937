@@ -3,98 +3,82 @@
 import { Dilemma, TacticalCard } from "../../types";
 
 export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
-    {
-        id: 'student_run',
-        title: '学生冲桥',
-        description: '桥头有人举着药品包，隔着枪声朝仓库喊。是来送东西的学生和童子军，跑到一半不敢再动。接应要动用守军火力，也可能付出人命；不接应，就得让他们自行寻找退路。副官没有替你说哪一种比较轻。',
-        options: [
-            { label: '火力接应', actionCmd: 'EVT_RESOLVE:student_run:0', riskText: '七九弹最多-600 | 急救包+10 | 阵亡0-15人 | 建立民间支援线' },
-            { label: '不作火力接应', actionCmd: 'EVT_RESOLVE:student_run:1', riskText: '士气 -3' }
-        ]
-    },
-    {
-        id: 'smuggler_boat',
-        title: '私枭闯关',
-        description: '【极高风险补给】河面一条小船靠近，来人压着嗓子说有七九弹，要求守军让他们靠岸卸货。帆布底下是什么，岸上看不清。对方催得急，副官却把手按在放行簿上，等你决定。',
-        options: [
-            { label: '冒险交易', actionCmd: 'EVT_RESOLVE:smuggler_boat:0', riskText: '七九弹+3000，或遭伏击阵亡10—19人' },
-            { label: '拒绝靠岸', actionCmd: 'EVT_RESOLVE:smuggler_boat:1', riskText: '放弃交易，不消耗弹药' }
-        ]
-    },
-    {
-        id: 'puppet_defector',
-        title: '门外的白旗',
-        description: '门外几名携械来人举起白布，声称愿意投诚，箱子里装着能交给守军的手榴弹。岗哨叫他们停住，对方果然不动了。人和箱子都还在掩体外，是真是假，隔着这段距离问不出来。',
-        options: [
-            { label: '放行进入', actionCmd: 'EVT_RESOLVE:puppet_defector:0', riskText: '手榴弹+50，或一楼工事降1级' },
-            { label: '拒绝入内', actionCmd: 'EVT_RESOLVE:puppet_defector:1', riskText: '士气 -2' }
-        ]
-    },
-    {
-        id: 'wrecked_truck',
-        title: '损毁卡车',
-        description: '观察哨找到一辆侧翻的运输车，车厢里还压着七九弹箱。位置在守军掩体之外，敌军火力能罩住那段路。突击组来问要不要搬，人已经站在门边，谁也没先说自己能活着回来。',
-        options: [
-            { label: '派队抢运', actionCmd: 'EVT_RESOLVE:wrecked_truck:0', riskText: '七九弹+2000 | 阵亡1—5人 | 每人阵亡士气-2' },
-            { label: '风险太大，放弃', actionCmd: 'EVT_RESOLVE:wrecked_truck:1', riskText: '士气 -2' }
-        ]
-    },
-    {
-        id: 'stray_airdrop',
-        title: '偏离的空投',
-        description: '风把一个空投包挂在仓库高处的金属支架上。包里可能有药品和材料，人却得离开遮蔽才能够到。绳子正一下下擦着断口，下面的人仰着头，没人催那个准备攀爬的兵。',
-        options: [
-            { label: '攀爬取回', actionCmd: 'EVT_RESOLVE:stray_airdrop:0', riskText: '成功：急救包+5、材料+100、士气最多+5；失败：阵亡1人、士气-5' },
-            { label: '保守回收', actionCmd: 'EVT_RESOLVE:stray_airdrop:1', riskText: '仅回收材料+50，不冒攀爬风险' }
-        ]
-    }
+  {
+    id: 'student_run', title: '学生冲桥', minDay: 1,
+    description: '桥头有人举着药品包，是来送东西的学生和童子军。他们停在守军尚能接应的位置，等一阵掩护。副官先报了用弹和派出人数：“接不接，您定。别先替外面的人说已经安全。”（虚构战场情境。）',
+    options: [
+      { label: '组织火力接应', actionCmd: 'EVT_RESOLVE:student_run:0', riskText: '需600发七九弹；急救包+10；阵亡由实际派出人数限制；建立民间支援线' },
+      { label: '不作火力接应', actionCmd: 'EVT_RESOLVE:student_run:1', riskText: '不扣资源或士气；未建立支援线，外面人员的后续未确认' },
+    ],
+  },
+  {
+    id: 'smuggler_boat', title: '私枭闯关', minDay: 1,
+    description: '水路接应点外，一条小船停住。来人说有七九弹，催着靠岸；帆布下面看不清。岗哨没有放行。核验需要时间和掩护用弹，直接接货则要承担更大的风险。（虚构战场情境。）',
+    options: [
+      { label: '冒险直接接货', actionCmd: 'EVT_RESOLVE:smuggler_boat:0', riskText: '50%取得七九弹3000发；50%遭伏击，阵亡不超过派出人数' },
+      { label: '拒绝靠岸', actionCmd: 'EVT_RESOLVE:smuggler_boat:1', riskText: '不扣资源或士气，不建立水路联系' },
+      { label: '核验后接货', actionCmd: 'EVT_RESOLVE:smuggler_boat:2', riskText: '30分钟、100发掩护用弹；80%取得2400发已核实弹药，20%遇险' },
+    ],
+  },
+  {
+    id: 'puppet_defector', title: '门外的白旗', minDay: 1,
+    description: '门外来人举着白布，声称愿意交出一箱手榴弹。岗哨叫他们停住，对方照做了。接收位置与核验办法还没有定，谁也没有替那只箱子作保。（虚构战场情境。）',
+    options: [
+      { label: '直接放行接收', actionCmd: 'EVT_RESOLVE:puppet_defector:0', riskText: '70%手榴弹+50；30%工事受损，零级工事时改为真实人员受伤' },
+      { label: '拒绝入内', actionCmd: 'EVT_RESOLVE:puppet_defector:1', riskText: '不扣资源或士气；不执行射杀' },
+      { label: '隔离核验后接收', actionCmd: 'EVT_RESOLVE:puppet_defector:2', riskText: '20分钟、30材料；70%核实30枚可用手榴弹；30%拒收，不损工事、不增伤亡' },
+    ],
+  },
+  {
+    id: 'wrecked_truck', title: '损毁卡车', minDay: 1,
+    description: '侦察后确认的外侧通路旁，一辆运输车侧翻着，车厢里压着弹药箱。抢运的人等在受控入口，问得很短：“这一趟，去不去？”风险、兵力和十五分钟都得算进去。（虚构战场情境。）',
+    options: [
+      { label: '派队抢运', actionCmd: 'EVT_RESOLVE:wrecked_truck:0', riskText: '15分钟；七九弹+2000；阵亡1—5人且不超过实际派出人数' },
+      { label: '放弃本次抢运', actionCmd: 'EVT_RESOLVE:wrecked_truck:1', riskText: '不扣资源或士气；弹药没有入库' },
+    ],
+  },
+  {
+    id: 'stray_airdrop', title: '悬着的补给包', minDay: 1,
+    description: '仓库高处的支架上挂着一个破开的补给包，下方散落了些可回收材料。包里还有什么，要取回核验才知道。准备攀爬的人试了试支撑，又停下来等你的话。（虚构战场情境，不作特定空投史实。）',
+    options: [
+      { label: '攀爬取回', actionCmd: 'EVT_RESOLVE:stray_airdrop:0', riskText: '15分钟；70%药品+5、材料+100、士气最多+5；30%阵亡1人、士气最多-5' },
+      { label: '只收地面散落材料', actionCmd: 'EVT_RESOLVE:stray_airdrop:1', riskText: '10分钟；材料+50，不承担攀爬风险；行动仍可能接敌' },
+      { label: '放弃此次回收', actionCmd: 'EVT_RESOLVE:stray_airdrop:2', riskText: '不耗时、不扣资源或士气；没有物资入库' },
+    ],
+  },
 ];
 
-export const ALL_DILEMMAS = [
-    ...NEW_SUPPLY_DILEMMAS,
-    {
-        id: 'brit_ceasefire',
-        title: '英军通牒',
-        description: '联络处送来租界方面的停火要求：限制朝苏州河方向的射击，换取少量药品。副官把译文摊开，手指停在限制火力的那一行。答应要压住守军的不满；拒绝则可能让南侧联络与防务更难维持。（本事件为游戏情境演绎。）',
-        options: [
-            { label: '答应要求', actionCmd: 'EVT_RESOLVE:brit_ceasefire:0', riskText: '士气-5 | 获得急救包x5' },
-            { label: '严词拒绝', actionCmd: 'EVT_RESOLVE:brit_ceasefire:1', riskText: '士气最多+5 | 地下室侧翼攻势提前' }
-        ]
-    },
-    {
-        id: 'student_thanks',
-        title: '河对岸的回声',
-        description: '此前接应的学生托人传来消息：药品已经筹齐，等守军接收。联络员说他们记得桥头那次掩护，连谁替他们开了路都想问清。副官把接收单递来，这回纸上终于有一项不是损失。',
-        requiresFlag: 'students_rescued',
-        excludesFlag: 'student_support_arrived',
-        minDay: 2,
-        options: [
-            { label: '接受民众支援', actionCmd: 'EVT_RESOLVE:student_thanks:0', riskText: '急救包+8 | 士气最多+8' },
-        ]
-    },
-    {
-        id: 'smuggler_return',
-        title: '私枭再度靠岸',
-        description: '做过一次交易的小船又来了。船上说有机枪弹，但卸货后需要守军掩护撤离。来人认得上次接头的地方，却没因此省掉价码：要300发七九弹作掩护，少了便不卸货。',
-        requiresFlag: 'smuggler_trusted',
-        excludesFlag: 'smuggler_network_resolved',
-        minDay: 3,
-        options: [
-            { label: '掩护运输线', actionCmd: 'EVT_RESOLVE:smuggler_return:0', riskText: '需七九弹300；换机枪弹+1800' },
-            { label: '不再冒险', actionCmd: 'EVT_RESOLVE:smuggler_return:1', riskText: '不消耗弹药，放弃后续补给' },
-        ]
-    },
-    {
-        id: 'british_pressure',
-        title: '租界侧翼压力',
-        description: '拒绝停火后，南侧联络受阻。观察哨的报告送到指挥处：地下室外墙一线有敌军接近，攻势比预料更早。工兵等着领料转移防务，作战图上那条河，此刻像直接贴到了背上。',
-        requiresFlag: 'british_defied',
-        excludesFlag: 'british_pressure_resolved',
-        minDay: 3,
-        options: [
-            { label: '立即转移防务', actionCmd: 'EVT_RESOLVE:british_pressure:0', riskText: '揭示地下室袭击 | 最多消耗材料120' },
-        ]
-    }
+export const ALL_DILEMMAS: Dilemma[] = [
+  ...NEW_SUPPLY_DILEMMAS,
+  {
+    id: 'brit_ceasefire', title: '南岸联络交涉', minDay: 2,
+    description: '南岸联络处提出补给交接条件。配合会招来守军的不满，但能取得药品；拒绝则保留强硬态度，南侧防务压力也会增加。副官把得失逐项报完，没有替你作决定。（虚构交涉；后续攻势变化为战役规则抽象，不对应真实外交因果。）',
+    options: [
+      { label: '接受交接安排', actionCmd: 'EVT_RESOLVE:brit_ceasefire:0', riskText: '急救包+5、士气最多-5；后续炮击倾向降低；不额外限制我方射击' },
+      { label: '拒绝交接条件', actionCmd: 'EVT_RESOLVE:brit_ceasefire:1', riskText: '士气最多+5；合法侧翼攻势提前1回合，南侧长期压力增加；变更后的情报需重新侦察' },
+    ],
+  },
+  {
+    id: 'student_thanks', title: '河对岸的回声', presentation: 'notice',
+    description: '此前接应的学生托人送来筹齐的药品。接收单上夹着一句谢意，这回纸上终于有一项不是损失。支援抵达后按真实库存入库。',
+    requiresFlag: 'students_rescued', excludesFlag: 'student_support_arrived', minDay: 2,
+    options: [{ label: '接收民众支援', actionCmd: 'EVT_RESOLVE:student_thanks:0', riskText: '急救包+8、士气最多+8；支援抵达通知，不额外耗时' }],
+  },
+  {
+    id: 'smuggler_return', title: '私枭再度靠岸',
+    description: '上次做成交易的小船又来了，这回带着机枪弹。来人认得接头的位置，却没有省掉条件：卸货和撤离需要三百发七九弹掩护。够不够，先看库存，再下令。（虚构战场情境。）',
+    requiresFlag: 'smuggler_trusted', excludesFlag: 'smuggler_network_resolved', minDay: 3,
+    options: [
+      { label: '掩护运输线', actionCmd: 'EVT_RESOLVE:smuggler_return:0', riskText: '15分钟、七九弹300发；机枪弹+1800；缺弹不能执行，可另选拒绝' },
+      { label: '不再接货', actionCmd: 'EVT_RESOLVE:smuggler_return:1', riskText: '不扣资源或士气；明确结束这次水路联系' },
+    ],
+  },
+  {
+    id: 'british_pressure', title: '侧翼来袭预警', presentation: 'notice',
+    description: '南岸联络受阻后，观察哨补送了当前来袭报告。指挥处先核对实际战线，再把能确认的目标、路线与接敌时间写上图。预警不等于工事已经建好，也不等于兵力已经调过去。',
+    requiresFlag: 'british_defied', excludesFlag: 'british_pressure_resolved', minDay: 3,
+    options: [{ label: '核对来袭报告', actionCmd: 'EVT_RESOLVE:british_pressure:0', riskText: '免费揭示当前合法攻势；不扣材料、不凭空调兵，不再额外提前接敌' }],
+  },
 ];
 
 export const MUTINY_SCENES = [

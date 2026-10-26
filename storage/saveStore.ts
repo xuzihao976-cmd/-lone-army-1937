@@ -2,9 +2,10 @@ import { sanitizeDialogueMemory } from '../engine/localConversation';
 import { INITIAL_STATS } from '../constants';
 import { applyChapterSetup, isChapterId, sanitizeMission } from '../data/chapters';
 import { makeTactic, migrateTactic } from '../data/tactics';
+import { getEvent, getEventPlan, validateEventTicket } from '../engine/eventPlans';
 import type { ChapterId, GameLog, GameStats, SaveData, SaveSlotMeta, TacticId, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 12;
+export const SAVE_SCHEMA_VERSION = 13;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -90,6 +91,8 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     mission: mission ?? undefined,
     localDialogue: sanitizeDialogueMemory(incoming.localDialogue),
     pendingDilemmaId: null,
+    pendingEvent: null,
+    lastDilemmaTurn: -999,
     preparedOrders: Object.fromEntries(Object.entries(incoming.preparedOrders || {}).filter(([location, order]) => ['屋顶', '二楼阵地', '一楼入口', '地下室'].includes(location) && ['rapid', 'conserve', 'close', 'bayonet', 'hold'].includes(String(order)))),
     lastEncourageTurn: typeof incoming.lastEncourageTurn === 'number' && Number.isFinite(incoming.lastEncourageTurn) ? incoming.lastEncourageTurn : -999,
     pendingRetreat: null,
@@ -111,6 +114,17 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     fortificationBuildCounts: { ...base.fortificationBuildCounts, ...(incoming.fortificationBuildCounts ?? {}) },
   };
 
+  if (value.schemaVersion === SAVE_SCHEMA_VERSION) {
+    const last = incoming.lastDilemmaTurn ?? -999;
+    if (!Number.isSafeInteger(last) || last < -999 || last > stats.turnCount) return null;
+    stats.lastDilemmaTurn = last;
+    if (incoming.pendingEvent != null || incoming.pendingDilemmaId != null) {
+      stats.pendingDilemmaId = incoming.pendingDilemmaId;
+      if (!validateEventTicket(stats, incoming.pendingEvent)) return null;
+      stats.pendingEvent = { ...incoming.pendingEvent };
+      if (!getEvent(stats.pendingDilemmaId!)!.options.some(option => getEventPlan(stats, option.actionCmd, false)?.available)) return null;
+    }
+  }
   const rawLogs = Array.isArray(value.logs) ? value.logs : [];
   const logs: GameLog[] = rawLogs
     .filter(isRecord)

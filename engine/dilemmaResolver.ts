@@ -3,184 +3,161 @@ import { createEnemyOperation, revealEnemyOperation } from './battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from './campaignProgress';
 import { reconcileSoldierDistribution } from './roster';
 import { getSectorDefenseProfile } from './strategicDefense';
+import { EVENT_RULES as R } from '../data/eventRules';
+import { getEventPlan, getPendingEvent, presentEvent, validEventOperation } from './eventPlans';
 
 type RandomSource = () => number;
 type DeathRecorder = (updates: Partial<GameStats>, deaths: number, narrative: string[]) => void;
 
-export const resolveDilemma = (
-  stats: GameStats,
-  eventId: string,
-  optionIndex: number,
-  random: RandomSource,
-  recordDeaths: DeathRecorder,
-): GameTurnResult => {
-  const updates: Partial<GameStats> = { pendingDilemmaId: null };
-  const logs: string[] = [];
-  const narrative: string[] = [];
-  let text = '';
-  let visualEffect: GameTurnResult['visualEffect'] = 'none';
-  updates.triggeredEvents = stats.triggeredEvents.includes(eventId)
-    ? stats.triggeredEvents
-    : [...stats.triggeredEvents, eventId];
+export const resolveDilemma = (stats: GameStats, eventId: string, optionIndex: number,
+  random: RandomSource, recordDeaths: DeathRecorder): GameTurnResult => {
+  const plan = getEventPlan(stats, `evt_resolve:${eventId}:${optionIndex}`);
+  if (!plan?.available) {
+    const pending = getPendingEvent(stats);
+    return { narrative: `未执行：${plan?.reason ?? '该事件选项无效。'}`, updatedStats: {}, eventTriggered: 'none',
+      dilemma: pending ? presentEvent(stats, pending) : undefined };
+  }
+  const updates: Partial<GameStats> = { pendingDilemmaId: null, pendingEvent: null,
+    triggeredEvents: [...stats.triggeredEvents, eventId] };
+  const logs: string[] = [], narrative: string[] = [];
+  let text = '', visualEffect: GameTurnResult['visualEffect'] = 'none';
+  const history = (title: string, detail: string, tone: 'good'|'bad'|'neutral' = 'neutral') => appendCampaignHistory(stats, updates, title, detail, tone);
+  const flag = (value: string) => { updates.consequenceFlags = addConsequenceFlag(updates.consequenceFlags ?? stats.consequenceFlags, value); };
+  const morale = (delta: number) => { updates.morale = Math.min(100, Math.max(0, (updates.morale ?? stats.morale) + delta)); };
+  const deaths = (rolled: number) => {
+    const count = Math.min(stats.soldiers, plan.partySize, Math.max(0, rolled));
+    updates.soldiers = stats.soldiers - count;
+    if (count > 0) { morale(-count * 2); recordDeaths(updates, count, narrative); visualEffect = 'heavy-damage'; }
+    return count;
+  };
+  if (plan.ammo) { updates.ammo = stats.ammo - plan.ammo; logs.push(`七九弹 -${plan.ammo}`); }
+  if (plan.materials) { updates.sandbags = stats.sandbags - plan.materials; logs.push(`工事材料 -${plan.materials}`); }
 
   if (eventId === 'student_run') {
     if (optionIndex === 0) {
-      const deaths = Math.floor(random() * 16);
-      const ammoUsed = Math.min(600, stats.ammo);
-      updates.medkits = stats.medkits + 10;
-      updates.ammo = stats.ammo - ammoUsed;
-      updates.soldiers = Math.max(0, stats.soldiers - deaths);
-      updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'students_rescued');
-      recordDeaths(updates, deaths, narrative);
-      text = `【火力接应】${ammoUsed > 0 ? '守军用尚能调出的七九弹压住外侧火力，接应人员趁隙把药品送进仓库。' : '七九弹已经耗尽，接应只能在缺少步枪掩护的险境里进行。药品仍被送了进来。'}${deaths > 0 ? '接收单上多了药，点名时却少了回答。那份刚送到手的救命东西，被人抱着，一时放不下来。' : '点名后没有接应阵亡报告。抱住药包的人缓了一口气，才发觉手指一直抠在结上。'}`;
-      logs.push('📦 获得急救包 +10', `🔻 火力接应消耗七九弹 ${ammoUsed}`);
-      appendCampaignHistory(stats, updates, '学生冲桥', `火力接应成功，付出${deaths}人阵亡与${ammoUsed}发弹药的代价。`, deaths > 5 ? 'bad' : 'good');
-      if (deaths > 0) {
-        logs.push(`🔴 阵亡: ${deaths}人`, `💔 士气 -${deaths * 2}`);
-        updates.morale = Math.max(0, stats.morale - deaths * 2);
+      const lost = deaths(Math.floor(random() * (R.student.maxDeaths + 1)));
+      updates.medkits = stats.medkits + R.student.medkitsReward; flag('students_rescued');
+      text = '【火力接应】掩护展开，接应人员把药包送进仓库。'
+        + (lost ? '药到了，点名却少了回答。抱着包的人没有马上松手，等副官把名字重新核实了一遍。' : '这次接应环节未报告阵亡。抱住药包的人缓了一口气，才发觉指头一直抠在结上。');
+      logs.push(`急救包 +${R.student.medkitsReward}`, `接应阵亡: ${lost}人`);
+      history('学生冲桥', `接应药品入库，实际阵亡${lost}名派出步兵，掩护用弹${plan.ammo}发。`, lost ? 'bad' : 'good');
+    } else {
+      flag('students_abandoned');
+      text = '你没有下令接应。岗哨仍看着外侧，药品没有送进来，支援线也没有建立。副官收起空着的接收单；外面的人员后来如何，没有确证。';
+      history('未作桥头接应', '守军未取得药品或建立支援线；未把外面人员的去向写成死讯。');
+    }
+  } else if (eventId === 'smuggler_boat') {
+    if (optionIndex === 1) {
+      text = '你拒绝小船靠岸。岗哨传出手势，船慢慢离开。没有开枪，也没有接收物资。';
+      history('拒绝水路接货', '未建立联系，未消耗弹药。');
+    } else {
+      const checked = optionIndex === 2;
+      const ambushed = random() < (checked ? R.checkedBoat.ambushChance : R.boat.ambushChance);
+      if (ambushed) {
+        const rolled = checked ? 1 + Math.floor(random() * R.checkedBoat.maxDeaths)
+          : R.boat.minDeaths + Math.floor(random() * (R.boat.maxDeaths - R.boat.minDeaths + 1));
+        const lost = deaths(rolled);
+        text = checked ? '【核验遇险】异常在交接时暴露，接应人员退回遮蔽。核验压低了风险，仍没能让这一趟免于损失。没有弹药入库。'
+          : '【水路伏击】帆布下面露出枪口。接货的人退回掩体，点名时才把缺额逐个核实。这次没有弹药入库。';
+        logs.push(`伏击阵亡: ${lost}人`); history('水路接货遇险', `实际阵亡${lost}名派出步兵，未取得货物。`, 'bad');
+      } else {
+        const gain = checked ? R.checkedBoat.ammoReward : R.boat.ammoReward;
+        updates.ammo = (updates.ammo ?? stats.ammo) + gain; flag('smuggler_trusted');
+        text = checked ? '【核验接货】只把核验清楚的那部分弹药接收入库。接货的人报完数，又把没验收的箱子推回去，没有因做成交易就撤掉岗哨。'
+          : '【水路接货】木箱打开，里面确实是七九弹。接货的人清点完，才示意往里搬。这次接头留下了后续联系的可能。';
+        logs.push(`七九弹入库 +${gain}`); history('水路接货成功', `取得${gain}发七九弹${checked ? `，另用了${plan.ammo}发掩护用弹` : ''}，建立不稳定的水路联系。`, 'good');
+      }
+    }
+  } else if (eventId === 'puppet_defector') {
+    if (optionIndex === 1) {
+      text = '你没有准许来人入内。岗哨传达拒绝，对方仍停在外侧。箱子未接收，没有执行射杀，后续去向未确认。';
+      history('拒绝门外来人', '未接收物资，也未凭猜测开枪。');
+    } else if (optionIndex === 2) {
+      if (random() < R.defector.sabotageChance) {
+        text = '【隔离拒收】核验中发现异常，箱子留在隔离位置。来人没有被带入守军工事，这次没有新增伤亡，也没有工事受损。';
+        history('隔离核验拒收', `消耗${plan.materials}份隔离材料，未取得手榴弹。`);
+      } else {
+        updates.grenades = stats.grenades + R.checkedDefector.grenadeReward;
+        text = '【隔离核验】只接收已经验明可用的那部分手榴弹。剩下的没有算进入库数；负责交接的人核完登记，才收回手。';
+        logs.push(`手榴弹 +${R.checkedDefector.grenadeReward}`); history('核验接收手榴弹', `实际入库${R.checkedDefector.grenadeReward}枚，消耗隔离材料${plan.materials}份。`, 'good');
+      }
+    } else if (random() < R.defector.sabotageChance) {
+      const old = stats.fortificationLevel['一楼入口'];
+      if (old > 0) {
+        const before = Math.round(getSectorDefenseProfile(stats, '一楼入口').mitigation * 100);
+        updates.fortificationLevel = { ...stats.fortificationLevel, '一楼入口': old - 1 };
+        updates.fortificationBuildCounts = { ...stats.fortificationBuildCounts,
+          '一楼入口': Math.min(stats.fortificationBuildCounts['一楼入口'] ?? old * 2, (old - 1) * 2 + 1) };
+        const after = Math.round(getSectorDefenseProfile({ ...stats, ...updates }, '一楼入口').mitigation * 100);
+        text = '【门口爆炸】箱子在入口附近炸开，现成的挡弹工事被撕松。这次事件损失落在工事上，未报告新增人员伤亡。';
+        logs.push(`一楼实际减伤 ${before}% → ${after}%`); history('接收点遭破坏', `一楼工事防护降低，实际减伤${before}%降至${after}%。`, 'bad');
+      } else {
+        const wounded = Math.min(R.defector.fallbackWounded, plan.partySize, stats.soldiers);
+        updates.soldiers = stats.soldiers - wounded; updates.wounded = stats.wounded + wounded;
+        text = '【入口爆炸】入口没有现成工事替接收人员挡住冲击。飞溅的碎屑割伤了人，同伴先接住拿不稳的东西，再扶他们退到遮蔽处。新增伤员已记入待治人数，没有报成阵亡。';
+        logs.push(`新增待治伤员 ${wounded}人`); history('接收点人员受伤', `现成工事为零，实际新增伤员${wounded}人，无本次事件阵亡。`, 'bad');
       }
       visualEffect = 'heavy-damage';
     } else {
-      updates.morale = Math.max(0, stats.morale - 3);
-      updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'students_abandoned');
-      text = '你没有下令接应。岗哨仍对着桥头，药品没有送进来，联络也没能建立。副官等了一会儿，把空着的接收单收回去；外面的学生后来如何，仓库里没有确证。';
-      logs.push('💔 士气 -3');
-      appendCampaignHistory(stats, updates, '未接应桥头学生', '守军未作火力接应，未取得药品，也未建立民间支援线；学生去向未确认。', 'bad');
-    }
-  } else if (eventId === 'smuggler_boat') {
-    if (optionIndex === 0 && random() < 0.5) {
-      const deaths = 10 + Math.floor(random() * 10);
-      updates.soldiers = Math.max(0, stats.soldiers - deaths);
-      updates.morale = Math.max(0, stats.morale - deaths * 2);
-      recordDeaths(updates, deaths, narrative);
-      text = '【水路伏击】帆布掀开，枪口朝岸上转过来。放行的人刚喊出一个字就被枪声截断。伏击造成了实际阵亡；退回掩体的人还保持着接货时伸手的姿势。';
-      logs.push(`🔴 伏击阵亡: ${deaths}人`, `💔 士气 -${deaths * 2}`);
-      visualEffect = 'heavy-damage';
-    } else if (optionIndex === 0) {
-      updates.ammo = stats.ammo + 3000;
-      updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'smuggler_trusted');
-      text = '【水路交易】木箱推上岸，箱盖撬开，里面确实是七九弹。接货的人用指腹碰过弹壳，才示意往里搬。三千发入库，这条水路也留下了下一次联络的可能。';
-      logs.push('📦 获得七九弹 +3000');
-      appendCampaignHistory(stats, updates, '私枭交易成功', '取得3000发七九弹，并建立了一条不稳定的水路联系。', 'good');
-    } else text = '你拒绝小船靠岸。岗哨用手势把来人挡在接应区外，船慢慢离开。没有开枪，也没有收下任何物资。';
-  } else if (eventId === 'puppet_defector') {
-    if (optionIndex === 0 && random() < 0.3) {
-      const oldLevel = stats.fortificationLevel['一楼入口'];
-      const newLevel = Math.max(0, oldLevel - 1);
-      const before = Math.round(getSectorDefenseProfile(stats, '一楼入口').mitigation * 100);
-      updates.fortificationLevel = { ...stats.fortificationLevel, '一楼入口': newLevel };
-      updates.fortificationBuildCounts = {
-        ...stats.fortificationBuildCounts,
-        '一楼入口': Math.min(stats.fortificationBuildCounts['一楼入口'] || oldLevel * 2, newLevel * 2 + 1),
-      };
-      const afterState = { ...stats, fortificationLevel: updates.fortificationLevel, fortificationBuildCounts: updates.fortificationBuildCounts };
-      const after = Math.round(getSectorDefenseProfile(afterState, '一楼入口').mitigation * 100);
-      text = '【门口爆炸】来人放下的箱子突然炸开，一楼掩体被冲击撕松。尘灰落下来后，工兵先摸了一遍支撑，再报防护损失。这一次损失落在掩体上，未报告新增人员伤亡。';
-      logs.push(`🏚️ 一楼掩体被炸开: 实际减伤 ${before}% → ${after}%`);
-      visualEffect = 'heavy-damage';
-    } else if (optionIndex === 0) {
-      updates.grenades = stats.grenades + 50;
-      text = '来人交出了箱子，退开让守军检查。里面的手榴弹验过后收入库存，数量五十枚。岗哨没有因为这一箱东西，就省掉对陌生人的戒备。';
-      logs.push('📦 获得手榴弹 +50');
-    } else {
-      updates.morale = Math.max(0, stats.morale - 2);
-      text = '你没有准许他们入内。岗哨传达拒绝，来人仍停留在外侧；他们的后续去向没有报告。有人觉得过于冷硬，有人仍担心箱子，争论压低了士气。没有执行射杀。';
+      updates.grenades = stats.grenades + R.defector.grenadeReward;
+      text = '来人交出箱子。验收后，五十枚手榴弹收入库存；岗哨仍盯着接应区外，没有因为接到东西就把戒备一并收走。';
+      logs.push(`手榴弹 +${R.defector.grenadeReward}`); history('接收手榴弹', '实际入库50枚手榴弹。', 'good');
     }
   } else if (eventId === 'wrecked_truck') {
     if (optionIndex === 0) {
-      const deaths = Math.floor(random() * 5) + 1;
-      updates.ammo = stats.ammo + 2000;
-      updates.soldiers = Math.max(0, stats.soldiers - deaths);
-      updates.morale = Math.max(0, stats.morale - deaths * 2);
-      recordDeaths(updates, deaths, narrative);
-      text = '【抢运归来】弹药箱拖过门槛，木边磨掉了一长条，抬箱的手却还不肯松。七九弹搬回了，出发的人没有全部回来。副官先让人把通道腾开，再逐个核对阵亡者。';
-      logs.push('📦 获得七九弹 +2000', `🔴 阵亡: ${deaths}人`, `💔 士气 -${deaths * 2}`);
-    } else {
-      updates.morale = Math.max(0, stats.morale - 2);
-      text = '你放下望远镜，决定放弃抢运。门边等着出发的人散回阵位，弹药仍留在外面。有人松了口气，又不愿让旁人看见。';
-      logs.push('💔 士气 -2');
-    }
+      const lost = deaths(1 + Math.floor(random() * R.truck.maxDeaths));
+      updates.ammo = stats.ammo + R.truck.ammoReward;
+      text = '【抢运归来】弹药箱拖过门槛，木边磨掉了一长条。搬回来的物资先放在通道旁，副官逐个核对出发和回来的人。';
+      logs.push(`七九弹 +${R.truck.ammoReward}`, `抢运阵亡: ${lost}人`);
+      history('抢运车内弹药', `实际取得2000发七九弹，派出人员阵亡${lost}人。`, 'bad');
+    } else { text = '你放下望远镜，决定放弃本次抢运。门边的人回到阵位，弹药仍在外面。有人松了口气，又把脸转开。'; history('放弃本次抢运', '未取得弹药，也未因此派人出发。'); }
   } else if (eventId === 'stray_airdrop') {
-    if (optionIndex === 0 && random() > 0.3) {
-      updates.medkits = stats.medkits + 5;
-      updates.sandbags = stats.sandbags + 100;
-      updates.morale = Math.min(100, stats.morale + 5);
-      text = '【取回空投】攀爬的兵终于回到遮蔽里，先把包推给接应的人，自己扶着墙蹲下。手指攥得僵硬，好一会儿才伸直；药品与材料核验后入库，旁边的人这才敢骂一句：“吓死老子了。”';
-      logs.push('📦 获得急救包 +5', '📦 获得工事材料 +100', '💪 士气 +5');
-    } else if (optionIndex === 0) {
-      updates.soldiers = Math.max(0, stats.soldiers - 1);
-      updates.morale = Math.max(0, stats.morale - 5);
-      recordDeaths(updates, 1, narrative);
-      text = '【坠亡】高处传来一下金属摩擦，攀爬的人失去支撑，身体撞落地面。接应者冲过去，仍没能救回那条命。旁边散着没取成的包，人们不再仰头看它。';
-      logs.push('🔴 意外坠亡: 1人', '💔 士气 -5');
+    if (optionIndex === 2) {
+      text = '你没有派人回收。高处的包和地面的散落物都没有记进入库数，守军仍按原部署留在阵位。';
+      history('放弃此次回收', '未取得物资，也未派人冒险。');
+    } else if (optionIndex === 1) {
+      updates.sandbags = stats.sandbags + R.groundRecovery.materialsReward;
+      text = '你选择只收起地面散落的材料。接应的人没有再向高处攀爬，五十份可用材料核实后入库。';
+      logs.push(`工事材料 +${R.groundRecovery.materialsReward}`); history('地面回收', '回收50份散落材料，未攀爬。', 'good');
+    } else if (random() >= 1 - R.package.successChance) {
+      updates.medkits = stats.medkits + R.package.medkitsReward; updates.sandbags = stats.sandbags + R.package.materialsReward; morale(R.package.moraleReward);
+      text = '【取回补给包】攀爬的人回到遮蔽里，先把包推给接应者，自己扶着墙蹲下。手指攥得僵硬，好一会儿才伸直；药品与材料核验后入库。';
+      logs.push('急救包 +5', '工事材料 +100'); history('取回高处补给', '实际入库5份急救包与100份材料。', 'good');
     } else {
-      updates.sandbags = stats.sandbags + 50;
-      text = '你选了保守回收。接应的人只收起落散后仍可使用的材料，没再派人攀爬。药品没能保住，五十份材料收入库存。';
-      logs.push('📦 获得工事材料 +50');
+      const lost = deaths(1); morale(-Math.max(0, 5 - lost * 2));
+      text = '【坠亡】高处传来一下金属摩擦，攀爬者失去支撑。接应的人冲过去，仍没能救回那条命。未取成的包还挂在上方，这次没有物资入库。';
+      logs.push(`意外坠亡: ${lost}人`); history('高处回收失利', `实际阵亡${lost}人，未取得包内物资。`, 'bad');
     }
   } else if (eventId === 'brit_ceasefire') {
     if (optionIndex === 0) {
-      updates.morale = Math.max(0, stats.morale - 5);
-      updates.medkits = stats.medkits + 5;
-      updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'british_ceasefire_accepted');
-      text = '【接受限制】火力限制令传下去，守军听着，没有马上答话。换来的药品送到救护处，军医逐份收好。限制与不满都已留下，五份药却也确实到了手里。';
-      logs.push('💔 士气 -5', '📦 获得急救包 +5');
-      appendCampaignHistory(stats, updates, '接受英军停火要求', '接受南侧火力限制要求，换得5份急救物资；本事件未额外扣除弹药。', 'neutral');
+      updates.medkits = stats.medkits + 5; morale(-5); flag('british_ceasefire_accepted');
+      text = '【接受交接安排】药品交到救护处，负责接收的人逐份记下。有人对条件不满，也有人只盯着那几份药。后续炮击倾向按本局的联络规则降低，没有另行限制我方射击。';
+      logs.push('急救包 +5'); history('接受南岸联络安排', '取得5份药品；后续炮击倾向降低，此为战役规则抽象，不额外限制我方射击。');
     } else {
-      const operation = stats.enemyOperation || createEnemyOperation(stats, random);
-      updates.morale = Math.min(100, stats.morale + 5);
-      updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'british_defied');
-      updates.enemyOperation = { ...operation, target: '地下室', routeName: '苏州河岸 → 地下室侧墙', turnsRemaining: Math.max(1, operation.turnsRemaining - 1) };
-      text = '【拒绝要求】你把译文推回联络员面前，拒绝接受限制。屋内有人低低应了一声，随即继续看作战图：这份强硬会有人支持，也会有人在侧翼替它承担压力。';
-      logs.push('💪 士气 +5');
-      appendCampaignHistory(stats, updates, '拒绝英军通牒', '士气提高，但南侧联络被封锁，地下室侧翼攻势提前。', 'neutral');
+      morale(5); flag('british_defied');
+      updates.enemyOperation = validEventOperation(stats, stats.enemyOperation ?? createEnemyOperation(stats, random), true);
+      text = '【拒绝交接条件】你把条件退回联络员面前。屋内有人低低应了一声，随即继续看作战图。南侧压力已经进入本局攻势计算，变更后的来袭态势需要重新侦察。';
+      history('拒绝南岸交接条件', '士气提高；合法侧翼攻势提前1回合，南侧长期压力增加，变更后的情报重新核实。');
     }
   } else if (eventId === 'student_thanks') {
-    updates.medkits = stats.medkits + 8;
-    updates.morale = Math.min(100, stats.morale + 8);
-    updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'student_support_arrived');
-    text = '【河对岸的回声】药品交到了接收的人手里，包裹外面还夹着一句谢意。学生们记着那次接应。军医摸了摸新到的药，低声说：“替我谢谢他们。这个真用得上。”';
-    logs.push('📦 急救包 +8', '💪 士气 +8');
-    appendCampaignHistory(stats, updates, '民众支援抵达', '此前救下的学生带来了药品和来自租界的声援。', 'good');
+    updates.medkits = stats.medkits + 8; morale(8); flag('student_support_arrived');
+    text = '【河对岸的回声】此前接应的学生托人送来药品，包裹外面夹着一句谢意。接收的人把纸角压平，低声说：“替我谢谢他们，这个用得上。”';
+    logs.push('急救包 +8'); history('民众支援抵达', '此前建立的支援线送来8份急救物资。', 'good');
   } else if (eventId === 'smuggler_return') {
-    updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'smuggler_network_resolved');
-    if (optionIndex === 0 && stats.ammo >= 300) {
-      updates.ammo = stats.ammo - 300;
-      updates.machineGunAmmo = stats.machineGunAmmo + 1800;
-      text = '【水路接力】三百发七九弹用在掩护上，小船趁空隙卸下机枪弹。接货的人往回搬时不敢停，到库房才逐箱清点：一千八百发。那条危险的水路，这次把约定兑成了实物。';
-      logs.push('🔻 七九弹 -300', '📦 机枪弹 +1800');
-      appendCampaignHistory(stats, updates, '水路补给线', '掩护私枭撤离，获得1800发机枪弹。', 'good');
-    } else {
-      text = optionIndex === 0
-        ? '三百发掩护用弹已经凑不齐，小船没有卸货。联络员把水路联系从可用名单里划去，手指在纸上停了一下。此后不再接货，也未消耗弹药。'
-        : '你决定不再冒险接货。联络员传出消息，小船离开，水路联系就此中止。没有卸货，也没有消耗弹药。';
-      appendCampaignHistory(stats, updates, '中止水路联系', '选择保存火力，放弃后续机枪弹补给。', 'neutral');
-    }
+    flag('smuggler_network_resolved');
+    if (optionIndex === 0) {
+      updates.machineGunAmmo = stats.machineGunAmmo + R.returnBoat.machineGunAmmoReward;
+      text = '【水路接力】三百发七九弹用在掩护上，机枪弹逐箱卸下。接货的人回到库房才敢停，按实际收进来的数量重新报数。';
+      logs.push('机枪弹 +1800'); history('水路补给抵达', '以300发七九弹掩护，实际接收1800发机枪弹。', 'good');
+    } else { text = '你明确结束这次水路接货。联络员传出消息，小船离开。没有卸货，也没有消耗弹药。'; history('主动结束水路联系', '玩家选择不再接货，保存现有弹药。'); }
   } else if (eventId === 'british_pressure') {
-    const materialUsed = Math.min(120, stats.sandbags);
-    const operation = stats.enemyOperation || createEnemyOperation(stats, random);
-    updates.sandbags = stats.sandbags - materialUsed;
-    updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'british_pressure_resolved');
-    updates.enemyOperation = revealEnemyOperation({ ...operation, target: '地下室', routeName: '苏州河岸 → 地下室侧墙', turnsRemaining: Math.min(2, operation.turnsRemaining) });
-    text = '【侧翼预警】地下室侧翼攻势已经查明。工兵领出尚能调用的材料，往需要设防的位置搬去；作战图上那条路线终于清楚，留给守军准备的时间却更短了。';
-    logs.push(`🧱 工事材料 -${materialUsed}`);
-    appendCampaignHistory(stats, updates, '南侧封锁的代价', '地下室侧翼攻势提前，但守军取得完整预警。', 'bad');
+    flag('british_pressure_resolved');
+    updates.enemyOperation = revealEnemyOperation(validEventOperation(stats, stats.enemyOperation ?? createEnemyOperation(stats, random)));
+    text = '【侧翼来袭预警】观察报告与当前受控战线核对过，能确认的来袭资料已标上图。没有再向失守区安排防务，也没有扣除材料。这份预警没有替守军完成施工或调兵。';
+    history('来袭报告补全', '免费确认当前合法攻势，不消耗材料，不再额外压缩接敌时间。');
   }
-
-  // Event casualties bypass the normal turn finalizer, so reconcile the map
-  // immediately instead of leaving total strength and floor garrisons out of
-  // sync until the player's next timed action.
-  if (typeof updates.soldiers === 'number') {
-    updates.soldierDistribution = reconcileSoldierDistribution(
-      updates.soldierDistribution || stats.soldierDistribution,
-      updates.soldiers,
-      stats.location,
-    );
-  }
-
-  // Report the settled change after caps, rather than promising the nominal gain.
-  const settlementLogs = logs.filter((line) => !line.includes('士气'));
-  if (typeof updates.morale === 'number') settlementLogs.push(`💪 士气 ${stats.morale} → ${updates.morale}`);
-  const fullNarrative = `${text}${narrative.length ? `\n${narrative.join('')}` : ''}${settlementLogs.length ? `\n\n${settlementLogs.join('\n')}` : ''}`;
-  return { narrative: fullNarrative, updatedStats: updates, eventTriggered: 'none', visualEffect };
+  if (updates.soldiers !== undefined) updates.soldierDistribution = reconcileSoldierDistribution(stats.soldierDistribution, updates.soldiers, stats.location);
+  if (updates.morale !== undefined) logs.push(`士气 ${stats.morale} → ${updates.morale}`);
+  return { narrative: text + (narrative.length ? '\n' + narrative.join('') : '') + (logs.length ? '\n\n━━━━━━━━━━━━━━\n' + logs.join('\n') : ''),
+    updatedStats: updates, eventTriggered: 'none', visualEffect };
 };

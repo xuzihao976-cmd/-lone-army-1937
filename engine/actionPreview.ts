@@ -12,6 +12,7 @@ import type { Location } from '../types';
 import { isShortChapter } from '../data/chapters';
 import { getMissionPreview } from './chapterEngine';
 import { getTacticPlan } from './tacticPlans';
+import { getEventPlan, getEventRuleHelp, getPendingEvent, validEventOperation } from './eventPlans';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
 
@@ -42,6 +43,11 @@ const riskFor = (turnsAfterAction: number | null, pressureCompressed = false): P
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
   if (isShortChapter(stats)) return getMissionPreview(stats, rawCommand);
+  const eventHelp = getEventRuleHelp(stats, rawCommand);
+  if (eventHelp) return { action: '事件规则', durationMinutes: 0, durationLabel: '不耗时', threatIncrease: 0,
+    predictedThreat: stats.siegeMeter, attackChance: 0, enemyAdvanceSteps: 0,
+    projectedContactTurns: stats.enemyOperation?.turnsRemaining ?? null, risk: 'safe', riskLabel: '查询不耗时',
+    costs: [], available: true, reason: eventHelp, short: '规则查询不耗时' };
   const command = normalizeExecutableAction(rawCommand);
   if (!command) return null;
 
@@ -53,8 +59,16 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let reason: string | undefined;
 
   const tactic = getTacticPlan(stats, rawCommand);
-  const natural = tactic ? null : resolveNaturalCommand(stats, rawCommand);
-  if (tactic) {
+  const eventPlan = getEventPlan(stats, rawCommand);
+  const natural = tactic || eventPlan ? null : resolveNaturalCommand(stats, rawCommand);
+  if (eventPlan) {
+    action = `${eventPlan.event.title} · ${eventPlan.event.options[eventPlan.option].label}`;
+    available = eventPlan.available;
+    durationMinutes = available ? eventPlan.minutes : 0;
+    baseThreat = available ? eventPlan.pressure : 0;
+    costs = available ? eventPlan.costs : [];
+    reason = available ? eventPlan.riskText : eventPlan.reason;
+  } else if (tactic) {
     action = tactic.tactic.title + (tactic.target ? ` · ${tactic.target}` : '');
     available = tactic.available;
     durationMinutes = available ? tactic.minutes : 0;
@@ -113,7 +127,8 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     reason = '小队专长只会在实际驻扎的防区生效';
   } else if (command.startsWith('evt_resolve:')) {
     action = '事件抉择';
-    reason = '抉择会立即生效，具体结果取决于事件风险';
+    available = false;
+    reason = '没有当前有效的事件选项，未执行。';
   } else if (includesAny(command, ['突袭', '夜袭', '偷袭', '反击', '进攻'])) {
     action = '夜间突袭';
     const hour = Number(stats.currentTime.split(':')[0]);
@@ -190,16 +205,23 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     reason = '当前没有可直接调用的补给；实际出现的支援事件另行选择';
   }
 
+  if (!eventPlan && getPendingEvent(stats) && (isExecutableLocalAction(command) || tactic
+    || (natural && (natural.timeCost > 0 || Object.keys(natural.updatedStats).some(key => key !== 'localDialogue'))))) {
+    available = false; durationMinutes = 0; baseThreat = 0; costs = [];
+    reason = '请先处理当前事件，再执行其他军令。';
+  }
   const multiplier = getDayProfile(stats.day).threatMultiplier;
   const threatIncrease = Math.max(0, Math.ceil(baseThreat * multiplier * 0.6));
   const predictedThreat = Math.min(100, stats.siegeMeter + threatIncrease);
   const enemyAdvanceSteps = available ? getOperationAdvanceSteps(durationMinutes) : 0;
-  const projectedOperation = stats.enemyOperation && enemyAdvanceSteps > 0
-    ? projectEnemyOperation(stats.enemyOperation, durationMinutes, predictedThreat)
-    : stats.enemyOperation;
+  const operationBefore = available && eventPlan?.event.id === 'brit_ceasefire' && eventPlan.option === 1 && stats.enemyOperation
+    ? validEventOperation(stats, stats.enemyOperation, true) : stats.enemyOperation;
+  const projectedOperation = operationBefore && enemyAdvanceSteps > 0
+    ? projectEnemyOperation(operationBefore, durationMinutes, predictedThreat)
+    : operationBefore;
   const turnsAfterAction = projectedOperation?.turnsRemaining ?? null;
-  const turnsAfterMovement = stats.enemyOperation
-    ? Math.max(0, stats.enemyOperation.turnsRemaining - enemyAdvanceSteps)
+  const turnsAfterMovement = operationBefore
+    ? Math.max(0, operationBefore.turnsRemaining - enemyAdvanceSteps)
     : null;
   const pressureCompressed = predictedThreat >= 100
     && turnsAfterMovement !== null

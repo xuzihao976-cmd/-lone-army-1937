@@ -11,6 +11,7 @@ import {
 } from '../engine/strategicDefense';
 import { getSpecialistEffectFactor, getSpecialistReadiness } from '../engine/specialists';
 import { getTactic, tacticCommand } from '../data/tactics';
+import { getEventPlan, getPendingEvent } from '../engine/eventPlans';
 import { getTacticPlan } from '../engine/tacticPlans';
 import type { TacticId } from '../types';
 
@@ -37,6 +38,7 @@ interface CampaignResult {
 const LOCATIONS: Location[] = ['一楼入口', '二楼阵地', '地下室', '屋顶'];
 
 const assertValidState = (stats: GameStats, context: string): void => {
+  if (stats.pendingDilemmaId && !getPendingEvent(stats)) throw new Error(`${context}: pending event ticket is invalid`);
   const nonNegativeKeys = ['soldiers', 'wounded', 'ammo', 'machineGunAmmo', 'grenades', 'sandbags', 'medkits', 'enemiesKilled'] as const;
   for (const key of nonNegativeKeys) {
     if (!Number.isFinite(stats[key]) || stats[key] < 0) throw new Error(`${context}: invalid ${key}=${stats[key]}`);
@@ -151,7 +153,9 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
     decisions += 1;
     let command: string;
     if (pendingDilemma) {
-      command = pendingDilemma.options[0].actionCmd;
+      const option = pendingDilemma.options.find(option => getEventPlan(stats, option.actionCmd)?.available ?? option.available !== false);
+      if (!option) throw new Error(`${policy}/${seed}: pending dilemma has no executable option`);
+      command = option.actionCmd;
       pendingDilemma = null;
     } else if (stats.activeTacticalCard) {
       command = stats.activeTacticalCard.actionCmd;

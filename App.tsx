@@ -22,6 +22,7 @@ import { readChapterArchive, recordChapterResult, type ChapterArchive } from './
 import { ChapterId, GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType, TacticId } from './types';
 import { runGameTurn } from './engine/gameEngine';
 import { getActionPreview } from './engine/actionPreview';
+import { getPendingEvent } from './engine/eventPlans';
 import { enhanceBattleNarrative, resetAiGatewayProbe, interpretUnknownCommand, isAiConfigured, describeAiFailure, type AiFailure, type AiSource } from './services/aiClient';
 import { resolveNaturalCommand } from './engine/naturalCommands';
 import { createInitialStats, getAutoSaveMeta, getChapterSaveMetas, listSaveSlots, readAutoSave, readChapterAutoSave, readSaveSlot, writeAutoSave, writeSaveSlot } from './storage/saveStore';
@@ -222,7 +223,7 @@ const App: React.FC = () => {
         setShowTacticPreview(false);
         setSelectedTactics(previous => ({ ...previous, [data.stats.chapterId]: data.stats.equippedTactic?.id ?? null }));
         setLogs(data.logs);
-        setCurrentDilemma(null);
+        setCurrentDilemma(getPendingEvent(data.stats));
         setAttackLocation(null);
         setShowBattleMapHint(false);
         setShowMap(false);
@@ -254,7 +255,7 @@ const App: React.FC = () => {
         setShowTacticPreview(false);
         setSelectedTactics(previous => ({ ...previous, [data.stats.chapterId]: data.stats.equippedTactic?.id ?? null }));
         setLogs(data.logs);
-        setCurrentDilemma(null);
+        setCurrentDilemma(getPendingEvent(data.stats));
         setAttackLocation(null);
         setShowBattleMapHint(false);
         setShowMap(false);
@@ -647,7 +648,7 @@ const App: React.FC = () => {
       )}
       
       {currentDilemma && (
-          <DilemmaModal dilemma={currentDilemma} onChoice={(cmd) => {
+          <DilemmaModal dilemma={currentDilemma} stats={stats} onChoice={(cmd) => {
               const opt = currentDilemma.options.find(o => o.actionCmd === cmd);
               handleDilemmaChoice(cmd, opt?.label || "做出选择");
           }} />

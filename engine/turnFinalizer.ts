@@ -7,6 +7,9 @@ import { pickWith, type RandomSource } from './commandUtils';
 import { calculateCampaignScore } from './endings/campaignScore';
 import { reconcileSoldierDistribution } from './roster';
 import { eligibleBattlefieldEncounters } from './tacticalCards';
+import { canOfferEvent, issueEvent, presentEvent } from './eventPlans';
+import { EVENT_RULES } from '../data/eventRules';
+import { resolveDilemma } from './dilemmaResolver';
 
 type TurnEvent = 'attack' | 'new_day' | 'none' | 'game_over' | 'victory';
 type VisualEffect = 'shake' | 'heavy-damage' | 'none';
@@ -22,6 +25,8 @@ interface FinalizeTurnInput {
   statsLog: string[];
   random: RandomSource;
   allowRandomEvents: boolean;
+  allowDilemmas?: boolean;
+  checkCollapse?: boolean;
 }
 
 interface FinalizeTurnResult {
@@ -47,13 +52,17 @@ export const finalizeTurn = ({
   statsLog,
   random,
   allowRandomEvents,
+  allowDilemmas = true,
+  checkCollapse = false,
 }: FinalizeTurnInput): FinalizeTurnResult => {
   const pick = <T>(items: T[]): T => pickWith(items, random);
   let eventTriggered = initialEvent;
   let visualEffect = initialVisualEffect;
+  const combatantsNow = () => (calculatedStats.soldiers ?? currentStats.soldiers)
+    + (calculatedStats.hmgSquads ?? currentStats.hmgSquads).reduce((n, squad) => n + (squad.status === 'active' ? squad.count : 0), 0);
 
   const finalMorale = calculatedStats.morale ?? currentStats.morale;
-  if (allowRandomEvents && !calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
+  if (allowRandomEvents && combatantsNow() > 0 && !calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
     narrativeParts.push('\n\n' + pick(MUTINY_SCENES));
     const lost = Math.floor(random() * 10) + 5;
     const soldiersBeforeLoss = calculatedStats.soldiers ?? currentStats.soldiers;
@@ -61,7 +70,7 @@ export const finalizeTurn = ({
     statsLog.push(`🏃 逃兵/失踪: ${soldiersBeforeLoss - calculatedStats.soldiers}人`);
   }
 
-  if (allowRandomEvents && !currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
+  if (allowRandomEvents && combatantsNow() > 0 && !currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
     const used = calculatedStats.usedTacticalCards || currentStats.usedTacticalCards || [];
     const availableCards = eligibleBattlefieldEncounters({ ...currentStats, ...calculatedStats, usedTacticalCards: used }, actionType);
     if (availableCards.length > 0) {
@@ -109,7 +118,7 @@ export const finalizeTurn = ({
     const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_hold');
     calculatedStats.finalRank = report.rank;
     narrativeParts.push(`\n\n${ENDING_TEXTS.hold}\n${report.text}`);
-  } else if (allowRandomEvents && collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
+  } else if ((allowRandomEvents || checkCollapse) && collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
     calculatedStats.lastStandUsed = true;
     calculatedStats.siegeMeter = Math.min(35, calculatedStats.siegeMeter ?? currentStats.siegeMeter);
     visualEffect = 'heavy-damage';
@@ -118,7 +127,7 @@ export const finalizeTurn = ({
       : '一楼、二楼与地下室已经全部失守';
     narrativeParts.push(`\n\n【最后防线】\n${collapseWarning}，但残余守军仍在抵抗。副官为你争取到一次补救机会：立即救治伤员或从仍控制的楼层发动反攻，夺回一个核心防区；若局面仍未恢复，战役才会结束。`);
     statsLog.push('⚠ 最后防线已启用：本局仅有一次补救机会');
-  } else if (collapseDetected && (allowRandomEvents || immediateCollapse)) {
+  } else if (collapseDetected && (allowRandomEvents || checkCollapse || immediateCollapse)) {
     calculatedStats.isGameOver = true;
     eventTriggered = 'game_over';
     visualEffect = 'heavy-damage';
@@ -172,15 +181,25 @@ export const finalizeTurn = ({
   if (responseText) narrativeParts.unshift(responseText);
 
   let dilemma: Dilemma | undefined;
-  if (allowRandomEvents && !calculatedStats.isGameOver && !eventTriggered.includes('attack') && random() < 0.2) {
-    const alreadyTriggered = calculatedStats.triggeredEvents || currentStats.triggeredEvents || [];
-    const flags = calculatedStats.consequenceFlags || currentStats.consequenceFlags || [];
-    const potentialDilemmas = ALL_DILEMMAS.filter((candidate) =>
-      !alreadyTriggered.includes(candidate.id)
-      && (!candidate.requiresFlag || flags.includes(candidate.requiresFlag))
-      && (!candidate.excludesFlag || !flags.includes(candidate.excludesFlag))
-      && (candidate.minDay === undefined || finalDay >= candidate.minDay));
-    if (potentialDilemmas.length > 0) { dilemma = pick(potentialDilemmas); calculatedStats.pendingDilemmaId = dilemma.id; }
+  const projectedTurn = currentStats.turnCount + 1;
+  if (allowRandomEvents && allowDilemmas && !calculatedStats.isGameOver && !eventTriggered.includes('attack')
+    && projectedTurn - (currentStats.lastDilemmaTurn ?? -999) >= EVENT_RULES.cooldownTurns) {
+    const offeredState = { ...currentStats, ...calculatedStats, day: finalDay, turnCount: projectedTurn };
+    const candidates = ALL_DILEMMAS.filter(event => canOfferEvent(offeredState, event));
+    const followUps = candidates.filter(event => event.requiresFlag);
+    const pool = followUps.length ? followUps : random() < 0.2 ? candidates : [];
+    if (pool.length) {
+      const event = pick(pool);
+      const ticket = issueEvent(offeredState, event.id);
+      if (event.presentation === 'notice') {
+        const notice = resolveDilemma({ ...offeredState, ...ticket }, event.id, 0, random, () => {});
+        Object.assign(calculatedStats, ticket, notice.updatedStats);
+        narrativeParts.push('\n\n' + notice.narrative);
+      } else {
+        Object.assign(calculatedStats, ticket);
+        dilemma = presentEvent(offeredState, event);
+      }
+    }
   }
 
   let narrative = narrativeParts.join('');

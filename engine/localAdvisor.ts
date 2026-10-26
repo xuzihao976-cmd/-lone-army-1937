@@ -8,8 +8,17 @@ import { getLocalRuleHelp } from '../data/text/localRules';
 import { isShortChapter } from '../data/chapters';
 import { missionAdvisor } from './chapterEngine';
 import { getTacticPlan, getTacticRuleHelp } from './tacticPlans';
+import { getEventPlan, getEventRuleHelp } from './eventPlans';
 export const localAdvisorResponse = (input: string, stats?: GameStats, sequence=0): {text:string; known:boolean} => {
   if (stats && isShortChapter(stats)) return { text: missionAdvisor(stats, input), known: true };
+  const eventHelp = stats ? getEventRuleHelp(stats, input) : null;
+  if (eventHelp) return { text: eventHelp, known: true };
+  if (stats && getEventPlan(stats, input)) {
+    const preview = getActionPreview(stats, input)!;
+    return { text: `【顾问窗口 · 尚未执行】\n${preview.action}：${preview.available ? preview.durationLabel : '当前不可执行'}。\n${preview.reason}\n`
+      + (preview.available && preview.costs.length ? `消耗：${preview.costs.join('；')}。\n` : '')
+      + (preview.available ? preview.riskLabel + '。\n' : '') + '这里只预览，不处理事件、不扣资源、不推进时间。', known: true };
+  }
   if (stats && getTacticPlan(stats, input)) {
     const preview = getActionPreview(stats, input)!;
     return { text: `【顾问窗口 · 尚未执行】\n${preview.action}：${preview.durationLabel}\n${preview.reason}\n${preview.costs.join('；')}\n这里只回答与预览，不消耗战术牌。`, known: true };
