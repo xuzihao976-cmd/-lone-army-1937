@@ -648,7 +648,9 @@ const App: React.FC = () => {
       )}
       
       {currentDilemma && (
-          <DilemmaModal dilemma={currentDilemma} stats={stats} onChoice={(cmd) => {
+          <DilemmaModal dilemma={currentDilemma} stats={stats} onSaveExit={() => {
+              if (handleConfirmExit()) setCurrentDilemma(null);
+          }} onChoice={(cmd) => {
               const opt = currentDilemma.options.find(o => o.actionCmd === cmd);
               handleDilemmaChoice(cmd, opt?.label || "做出选择");
           }} />

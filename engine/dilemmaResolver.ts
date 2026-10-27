@@ -1,5 +1,5 @@
 import type { GameStats, GameTurnResult } from '../types';
-import { createEnemyOperation, revealEnemyOperation } from './battlefield';
+import { revealEnemyOperation } from './battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from './campaignProgress';
 import { reconcileSoldierDistribution } from './roster';
 import { getSectorDefenseProfile } from './strategicDefense';
@@ -135,9 +135,11 @@ export const resolveDilemma = (stats: GameStats, eventId: string, optionIndex: n
       logs.push('急救包 +5'); history('接受南岸联络安排', '取得5份药品；后续炮击倾向降低，此为战役规则抽象，不额外限制我方射击。');
     } else {
       morale(5); flag('british_defied');
-      updates.enemyOperation = validEventOperation(stats, stats.enemyOperation ?? createEnemyOperation(stats, random), true);
-      text = '【拒绝交接条件】你把条件退回联络员面前。屋内有人低低应了一声，随即继续看作战图。南侧压力已经进入本局攻势计算，变更后的来袭态势需要重新侦察。';
-      history('拒绝南岸交接条件', '士气提高；合法侧翼攻势提前1回合，南侧长期压力增加，变更后的情报重新核实。');
+      if (stats.enemyOperation) updates.enemyOperation = validEventOperation(stats, stats.enemyOperation, true);
+      text = '【拒绝交接条件】你把条件退回联络员面前。屋内有人低低应了一声，随即继续看作战图。'
+        + (stats.enemyOperation ? '当前合法侧翼攻势提前1回合，变更后的来袭态势需要重新侦察。' : '眼下没有可核实的攻势，图上没有添出一个目标。')
+        + '南侧长期压力按本局规则增加。';
+      history('拒绝南岸交接条件', `士气提高；${stats.enemyOperation ? '当前合法侧翼攻势提前1回合，变更后的情报重新核实；' : '没有生成新攻势；'}南侧长期压力增加。`);
     }
   } else if (eventId === 'student_thanks') {
     updates.medkits = stats.medkits + 8; morale(8); flag('student_support_arrived');
@@ -152,9 +154,11 @@ export const resolveDilemma = (stats: GameStats, eventId: string, optionIndex: n
     } else { text = '你明确结束这次水路接货。联络员传出消息，小船离开。没有卸货，也没有消耗弹药。'; history('主动结束水路联系', '玩家选择不再接货，保存现有弹药。'); }
   } else if (eventId === 'british_pressure') {
     flag('british_pressure_resolved');
-    updates.enemyOperation = revealEnemyOperation(validEventOperation(stats, stats.enemyOperation ?? createEnemyOperation(stats, random)));
-    text = '【侧翼来袭预警】观察报告与当前受控战线核对过，能确认的来袭资料已标上图。没有再向失守区安排防务，也没有扣除材料。这份预警没有替守军完成施工或调兵。';
-    history('来袭报告补全', '免费确认当前合法攻势，不消耗材料，不再额外压缩接敌时间。');
+    if (stats.enemyOperation) updates.enemyOperation = revealEnemyOperation(validEventOperation(stats, stats.enemyOperation));
+    text = stats.enemyOperation
+      ? '【侧翼来袭预警】观察报告与当前受控战线核对过，能确认的来袭资料已标上图。没有再向失守区安排防务，也没有扣除材料。这份预警没有替守军完成施工或调兵。'
+      : '【侧翼报告核对】眼下没有可核实的攻势，观察哨没有把猜测画成来袭目标。库存、部署与接敌时间均未改变。';
+    history('来袭报告补全', stats.enemyOperation ? '免费确认当前合法攻势，不消耗材料，不再额外压缩接敌时间。' : '当前没有攻势，未生成目标或消耗材料。');
   }
   if (updates.soldiers !== undefined) updates.soldierDistribution = reconcileSoldierDistribution(stats.soldierDistribution, updates.soldiers, stats.location);
   if (updates.morale !== undefined) logs.push(`士气 ${stats.morale} → ${updates.morale}`);

@@ -112,6 +112,12 @@ describe('existing event ownership and real consequences', () => {
     expect(getActionPreview(diplomacy, 'evt_resolve:brit_ceasefire:1')?.projectedContactTurns).toBe(6);
     const refused = apply(diplomacy, 'evt_resolve:brit_ceasefire:1').stats;
     expect(refused.enemyOperation!.target).not.toBe('地下室'); expect(refused.enemyOperation!.revealed).toBe(false);
+    for (const [id, option] of [['british_pressure',0],['brit_ceasefire',1]] as const) {
+      const idle = owned(id); idle.enemyOperation = null;
+      const settled = apply(idle, `evt_resolve:${id}:${option}`);
+      expect(settled.stats.enemyOperation).toBeNull(); expect(settled.stats.rngState).toBe(idle.rngState);
+      expect(settled.result.narrative).toContain('没有可核实的攻势');
+    }
   });
 
   it('delivers qualified follow-ups as one-time notices without another lottery or forced modal', () => {

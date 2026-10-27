@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lone-army-1937-v3.4.2';
+const CACHE_NAME = 'lone-army-1937-v3.5.0';
 
 self.addEventListener('install', () => self.skipWaiting());
 

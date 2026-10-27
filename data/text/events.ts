@@ -5,7 +5,7 @@ import { Dilemma, TacticalCard } from "../../types";
 export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
   {
     id: 'student_run', title: '学生冲桥', minDay: 1,
-    description: '桥头有人举着药品包，是来送东西的学生和童子军。他们停在守军尚能接应的位置，等一阵掩护。副官先报了用弹和派出人数：“接不接，您定。别先替外面的人说已经安全。”（虚构战场情境。）',
+    description: '桥头有人举着药品包，是来送东西的学生和童子军。他们停在守军尚能接应的位置，等一阵掩护。副官先报了用弹和派出人数：“接不接，您定。他们在等；咱们出去的人，也得算进去。”（虚构战场情境。）',
     options: [
       { label: '组织火力接应', actionCmd: 'EVT_RESOLVE:student_run:0', riskText: '需600发七九弹；急救包+10；阵亡由实际派出人数限制；建立民间支援线' },
       { label: '不作火力接应', actionCmd: 'EVT_RESOLVE:student_run:1', riskText: '不扣资源或士气；未建立支援线，外面人员的后续未确认' },
@@ -41,8 +41,8 @@ export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
     id: 'stray_airdrop', title: '悬着的补给包', minDay: 1,
     description: '仓库高处的支架上挂着一个破开的补给包，下方散落了些可回收材料。包里还有什么，要取回核验才知道。准备攀爬的人试了试支撑，又停下来等你的话。（虚构战场情境，不作特定空投史实。）',
     options: [
-      { label: '攀爬取回', actionCmd: 'EVT_RESOLVE:stray_airdrop:0', riskText: '15分钟；70%药品+5、材料+100、士气最多+5；30%阵亡1人、士气最多-5' },
-      { label: '只收地面散落材料', actionCmd: 'EVT_RESOLVE:stray_airdrop:1', riskText: '10分钟；材料+50，不承担攀爬风险；行动仍可能接敌' },
+      { label: '攀爬取回', actionCmd: 'EVT_RESOLVE:stray_airdrop:0', riskText: '70%药品+5、材料+100、士气最多+5；30%阵亡1人、士气最多-5' },
+      { label: '只收地面散落材料', actionCmd: 'EVT_RESOLVE:stray_airdrop:1', riskText: '材料+50，不承担攀爬风险；行动仍可能接敌' },
       { label: '放弃此次回收', actionCmd: 'EVT_RESOLVE:stray_airdrop:2', riskText: '不耗时、不扣资源或士气；没有物资入库' },
     ],
   },
@@ -69,7 +69,7 @@ export const ALL_DILEMMAS: Dilemma[] = [
     description: '上次做成交易的小船又来了，这回带着机枪弹。来人认得接头的位置，却没有省掉条件：卸货和撤离需要三百发七九弹掩护。够不够，先看库存，再下令。（虚构战场情境。）',
     requiresFlag: 'smuggler_trusted', excludesFlag: 'smuggler_network_resolved', minDay: 3,
     options: [
-      { label: '掩护运输线', actionCmd: 'EVT_RESOLVE:smuggler_return:0', riskText: '15分钟、七九弹300发；机枪弹+1800；缺弹不能执行，可另选拒绝' },
+      { label: '掩护运输线', actionCmd: 'EVT_RESOLVE:smuggler_return:0', riskText: '机枪弹+1800；缺弹不能执行，可另选拒绝' },
       { label: '不再接货', actionCmd: 'EVT_RESOLVE:smuggler_return:1', riskText: '不扣资源或士气；明确结束这次水路联系' },
     ],
   },

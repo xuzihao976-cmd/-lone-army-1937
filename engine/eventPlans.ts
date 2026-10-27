@@ -34,7 +34,7 @@ export const canOfferEvent = (s: GameStats, e: Dilemma): boolean => {
     case 'brit_ceasefire': return river && (s.wounded > 0 || s.medkits < 10);
     case 'student_thanks': return river;
     case 'smuggler_return': return river && s.ammo >= R.returnBoat.ammo && s.soldiers > 0;
-    case 'british_pressure': return (['一楼入口', '二楼阵地', '地下室', '屋顶'] as const).some(floor => s.sectorIntegrity[floor] > 0);
+    case 'british_pressure': return !!s.enemyOperation && (['一楼入口', '二楼阵地', '地下室', '屋顶'] as const).some(floor => s.sectorIntegrity[floor] > 0);
     default: return false;
   }
 };
@@ -97,7 +97,7 @@ export const getEventPlan = (s: GameStats, raw: string, requireOwnership = true)
       if (active) { Object.assign(p, option === 2 ? R.checkedDefector : R.defector); needTroops(2); needEntry();
         p.riskText = option === 2 ? '70%验明一部分可用手榴弹，入库30枚；30%拒收，不损工事、不增伤亡。'
           : s.fortificationLevel['一楼入口'] > 0 ? '70%手榴弹+50；30%一楼实际工事防护降低一档。'
-            : `70%手榴弹+50；30%爆炸新增伤员${Math.min(2, s.soldiers)}人，不凭空扣除不存在的工事。`; }
+            : `70%手榴弹+50；30%爆炸新增伤员${Math.min(2, s.soldiers)}人；入口没有工事遮挡。`; }
       break;
     case 'wrecked_truck':
       if (active) { Object.assign(p, R.truck); needTroops(R.truck.maxDeaths); needEntry(); p.maxDeaths = p.partySize;
@@ -114,6 +114,7 @@ export const getEventPlan = (s: GameStats, raw: string, requireOwnership = true)
       break;
     case 'brit_ceasefire':
       if (option === 0) needRiver();
+      else if (!s.enemyOperation) p.riskText = '士气最多+5；南侧长期压力增加；当前没有攻势，不生成新目标。';
       break;
     case 'student_thanks': needRiver(); break;
     case 'smuggler_return':

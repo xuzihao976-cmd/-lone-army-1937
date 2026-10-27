@@ -82,7 +82,7 @@ const StartScreen: React.FC<StartScreenProps> = (props) => {
       <footer className="mt-5 pb-4 text-center text-[11px] leading-5 text-neutral-400">
         <p>成人战争叙事，含具体伤势、死亡与战地创伤。</p>
         <p>前两章为虚构支线；对白及可变战况不作史料。</p>
-        <p className="mt-1 text-neutral-500">v3.4.2 · 三章均可本地游玩 · 大嘴鸭游戏出品</p>
+        <p className="mt-1 text-neutral-500">v3.5.0 · 三章均可本地游玩 · 大嘴鸭游戏出品</p>
       </footer>
     </div>
   </div>;
