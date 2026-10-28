@@ -20,6 +20,7 @@ export interface HmgSquad {
     location: Location | '待命'; 
     count: number; // Specific number of men (starts at 30)
     status: 'active' | 'destroyed' | 'disbanded'; // Added 'disbanded' for ammo depletion
+    jammed?: boolean; // Repairable weapon fault; crew remain present.
 }
 
 export interface Soldier {
@@ -48,6 +49,7 @@ export interface Dilemma {
   excludesFlag?: string;
   minDay?: number;
   presentation?: 'choice' | 'notice';
+  chapterId?: ChapterId; // Legacy definitions belong to sihang.
 }
 
 export interface PendingEventTicket {
@@ -57,6 +59,8 @@ export interface PendingEventTicket {
   day: number;
   time: string;
   turn: number;
+  location?: Location;
+  hmgName?: string;
 }
 
 export interface TacticalCard {
@@ -187,6 +191,7 @@ export interface GameStats {
   pendingDilemmaId?: string | null;
   pendingEvent?: PendingEventTicket | null;
   lastDilemmaTurn?: number;
+  lastBattle?: { turn: number; location: Location; attackType: EnemyAttackType; hmgFired: string[] };
   pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | 'confirm_chapter_retreat' | 'confirm_tactic_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 

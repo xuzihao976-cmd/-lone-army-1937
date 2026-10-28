@@ -182,10 +182,11 @@ export const finalizeTurn = ({
 
   let dilemma: Dilemma | undefined;
   const projectedTurn = currentStats.turnCount + 1;
-  if (allowRandomEvents && allowDilemmas && !calculatedStats.isGameOver && !eventTriggered.includes('attack')
+  if (allowRandomEvents && allowDilemmas && !calculatedStats.isGameOver
     && projectedTurn - (currentStats.lastDilemmaTurn ?? -999) >= EVENT_RULES.cooldownTurns) {
     const offeredState = { ...currentStats, ...calculatedStats, day: finalDay, turnCount: projectedTurn };
-    const candidates = ALL_DILEMMAS.filter(event => canOfferEvent(offeredState, event));
+    const candidates = ALL_DILEMMAS.filter(event => canOfferEvent(offeredState, event)
+      && (eventTriggered !== 'attack' || ['beam_creak','hmg_jam'].includes(event.id)));
     const followUps = candidates.filter(event => event.requiresFlag);
     const pool = followUps.length ? followUps : random() < 0.2 ? candidates : [];
     if (pool.length) {
@@ -197,7 +198,7 @@ export const finalizeTurn = ({
         narrativeParts.push('\n\n' + notice.narrative);
       } else {
         Object.assign(calculatedStats, ticket);
-        dilemma = presentEvent(offeredState, event);
+        dilemma = presentEvent({ ...offeredState, ...ticket }, event);
       }
     }
   }

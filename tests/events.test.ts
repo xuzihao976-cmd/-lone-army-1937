@@ -33,7 +33,7 @@ const finish = (s: GameStats, random: () => number = () => 0) => {
 
 describe('existing event ownership and real consequences', () => {
   it('preserves the nine legacy IDs and bounds all event deaths by actual dispatched infantry', () => {
-    expect(ALL_DILEMMAS.map(e => e.id)).toEqual(['student_run', 'smuggler_boat', 'puppet_defector', 'wrecked_truck',
+    expect(ALL_DILEMMAS.slice(0,9).map(e => e.id)).toEqual(['student_run', 'smuggler_boat', 'puppet_defector', 'wrecked_truck',
       'stray_airdrop', 'brit_ceasefire', 'student_thanks', 'smuggler_return', 'british_pressure']);
     for (const id of ['student_run', 'smuggler_boat', 'wrecked_truck', 'stray_airdrop']) for (let seed = 1; seed <= 32; seed++) {
       const s = owned(id, seed); lowForce(s);

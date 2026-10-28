@@ -5,7 +5,7 @@ import { makeTactic, migrateTactic } from '../data/tactics';
 import { getEvent, getEventPlan, validateEventTicket } from '../engine/eventPlans';
 import type { ChapterId, GameLog, GameStats, SaveData, SaveSlotMeta, TacticId, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 13;
+export const SAVE_SCHEMA_VERSION = 14;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
@@ -114,7 +114,21 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     fortificationBuildCounts: { ...base.fortificationBuildCounts, ...(incoming.fortificationBuildCounts ?? {}) },
   };
 
-  if (value.schemaVersion === SAVE_SCHEMA_VERSION) {
+  const modern = value.schemaVersion === SAVE_SCHEMA_VERSION;
+  if (modern) {
+    if(stats.hmgSquads.some(q=>!q||typeof q!=='object'||(q.jammed!==undefined&&typeof q.jammed!=='boolean')))return null;
+    if(incoming.lastBattle!==undefined){
+      const b=incoming.lastBattle;
+      if(!isRecord(b)||!Number.isSafeInteger(b.turn)||Number(b.turn)<0||Number(b.turn)>stats.turnCount
+        ||!['一楼入口','二楼阵地','地下室','屋顶'].includes(String(b.location))
+        ||!['INFANTRY','ARTILLERY','BOMBING'].includes(String(b.attackType))||!Array.isArray(b.hmgFired)
+        ||b.hmgFired.length>stats.hmgSquads.length||b.hmgFired.some(n=>typeof n!=='string'||!stats.hmgSquads.some(q=>q.name===n)))return null;
+      stats.lastBattle={turn:Number(b.turn),location:b.location as GameStats['location'],attackType:b.attackType as NonNullable<GameStats['lastBattle']>['attackType'],hmgFired:[...b.hmgFired]};
+    }
+  } else {
+    stats.hmgSquads=stats.hmgSquads.map(({jammed,...q})=>q);delete stats.lastBattle;
+  }
+  if (modern || value.schemaVersion === 13) {
     const last = incoming.lastDilemmaTurn ?? -999;
     if (!Number.isSafeInteger(last) || last < -999 || last > stats.turnCount) return null;
     stats.lastDilemmaTurn = last;

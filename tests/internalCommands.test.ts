@@ -11,9 +11,16 @@ describe('owned event and tactical card actions',()=>{
   const replay=runGameTurn({...s,...valid.updatedStats},card.actionCmd);expect(replay.updatedStats.ammo).toBeUndefined();expect(replay.updatedStats.morale).toBeUndefined();expect(replay.updatedStats.soldiers).toBeUndefined();
  });
  it.each(ALL_DILEMMAS)('requires a pending $id event, its option and its preconditions',event=>{
-  const s=fresh();const command=event.options[0].actionCmd;
+  const s=event.chapterId==='street'?{...createInitialStats(881,'street'),tutorialStep:3}:fresh();const command=event.options[0].actionCmd;
   expect(runGameTurn(s,command).updatedStats.triggeredEvents).toBeUndefined();
-  s.consequenceFlags=event.requiresFlag?[event.requiresFlag]:[];s.enemyOperation!.revealed=true;Object.assign(s,issueEvent(s,event.id));
+  s.consequenceFlags=event.requiresFlag?[event.requiresFlag]:[];if(s.enemyOperation)s.enemyOperation.revealed=true;
+  if(s.mission)Object.assign(s.mission,{started:true,recon:true,route:'inner',found:4,elapsedMinutes:35});
+  if(event.id==='wet_medicine')s.wounded=1;
+  if(['beam_creak','hmg_jam'].includes(event.id)){
+    s.sectorIntegrity['一楼入口']=40;s.fortificationLevel['一楼入口']=1;
+    s.lastBattle={turn:s.turnCount,location:'一楼入口',attackType:'ARTILLERY',hmgFired:[s.hmgSquads[0].name]};
+  }
+  Object.assign(s,issueEvent(s,event.id));
   const valid=runGameTurn(s,command);expect(valid.updatedStats.triggeredEvents).toContain(event.id);expect(valid.updatedStats.pendingDilemmaId).toBeNull();
   expect(runGameTurn({...s,...valid.updatedStats},command).updatedStats.triggeredEvents).toBeUndefined();
   expect(runGameTurn(s,`evt_resolve:${event.id}:99`).updatedStats.triggeredEvents).toBeUndefined();

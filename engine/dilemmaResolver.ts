@@ -33,7 +33,53 @@ export const resolveDilemma = (stats: GameStats, eventId: string, optionIndex: n
   if (plan.ammo) { updates.ammo = stats.ammo - plan.ammo; logs.push(`七九弹 -${plan.ammo}`); }
   if (plan.materials) { updates.sandbags = stats.sandbags - plan.materials; logs.push(`工事材料 -${plan.materials}`); }
 
-  if (eventId === 'student_run') {
+  if (eventId === 'street_corner') {
+    if (optionIndex === 0) {
+      flag('street_corner_cleared');
+      text='砖被一块块移到墙根，内巷重新留出通行的位置。搬砖的人先试着走过一遍，才回头招呼。路清开了，等在后面的人仍要另行护送。';
+      history('内巷清障完成','花10分钟清障，保留内巷；尚未增加安全抵达人数。');
+    } else {
+      updates.mission={...stats.mission!,route:'river'};
+      text='带路的人把手往另一侧一指，改走已查明的沿河线。前面的人转了身，后面才跟着挪。选路没有替任何人走完这一程，原来转角的砖仍堆着。';
+      history('转向沿河撤收线','选择改道不耗时；后续沿河护送15分钟、压力更高，内巷障碍仍在。');
+    }
+  } else if (eventId === 'wall_knocking') {
+    if (optionIndex === 0) {
+      updates.mission={...stats.mission!,found:stats.mission!.found+1};
+      text='敲击声终于有了人的回答。搜救人员核对登记，找到其中尚未接回的一人。对方站到队伍旁，先扶住墙，没有马上问别的。找到的人仍须护送，尚未记作安全抵达。';
+      logs.push('找到登记民众 +1，安全抵达人数未变');history('隔墙搜救','核实找到原十二人登记中的1人，仍待另行护送。','good');
+    } else {
+      text='你没有让队伍停下来搜救。隔墙后的声音没有被核实，登记上仍留着未找到的名字。接下来的人把脚步放轻了一些，没有谁替那边写下死讯。';
+      history('未核实隔墙敲击','未找到新人，去向未确认；没有扣除全队士气。');
+    }
+  } else if (eventId === 'beam_creak') {
+    if (optionIndex === 0 && plan.location) {
+      const floor=plan.location,old=stats.fortificationLevel[floor];
+      updates.fortificationLevel={...stats.fortificationLevel,[floor]:old-1};
+      updates.fortificationBuildCounts={...stats.fortificationBuildCounts,[floor]:Math.min(stats.fortificationBuildCounts[floor]??old*2,(old-1)*2+1)};
+      updates.sectorIntegrity={...stats.sectorIntegrity,[floor]:Math.min(100,stats.sectorIntegrity[floor]+R.beam.integrityReward)};
+      text='抢修人员从挡弹工事上拆出木料，抵住松动处。灰仍落了几缕，支撑逐渐吃住重量；原来的射击位却露出了一截空处。人从那一截经过，都把身子压低了些。';
+      logs.push(plan.riskText);history('拆防护支撑结构',plan.riskText);
+    } else {text='你保留现成的挡弹工事。抢修人员把工具收在一旁，提醒经过的人避开松动处。本层完整度没有恢复，也没有因此直接记入人员损失。';history('保留现成防护','没有拆用工事，完整度维持现状，后续风险依实际阵地状态结算。');}
+  } else if (eventId === 'wet_medicine') {
+    if (optionIndex === 0) {
+      text='药箱搬离渗水的位置，外层湿纸被揭开，尚可用的药品重新核过数。军医把箱盖压好，手仍停在上面片刻。这只是保住库存，伤员还等着治疗。';
+      history('药箱搬移完成',`保住现有${stats.medkits}份急救包，未新增药品或完成治疗。`);
+    } else {
+      const lost=Math.min(stats.medkits,R.wetMedicine.maxLoss);updates.medkits=stats.medkits-lost;
+      text='你先把人手留在阵位。再查药箱时，受潮的部分已经不能使用。守箱的人把它们另放一边，核清报废数量；没把剩下的也一并划掉。';
+      logs.push(`急救包实际报废 ${lost}份`);history('受潮药品报废',`实际报废${lost}份急救包，没有直接新增伤亡。`,'bad');
+    }
+  } else if (eventId === 'hmg_jam') {
+    if (optionIndex === 0) {
+      updates.hmgSquads=stats.hmgSquads.map(q=>q.name===plan.hmgName?{...q,jammed:false}:q);
+      text=`${plan.hmgName}停射检查，排除了记录中的故障。枪组长把机柄复位，报了声“能用了”，才让人回到各自的位置。恢复的是这把枪，人员没有增减；真正开火还要看阵地与余弹。`;
+      history('机枪故障排除',`${plan.hmgName}检修30分钟，恢复武器；没有补发人员、弹药或零件。`,'good');
+    } else {
+      text=`${plan.hmgName}暂不检修。枪组人员仍留在编制，故障枪停止提供火力和掩护。邻近步兵按现有部署接续防务，没有凭这句话多出人或枪。稍后可明确下令“检修${plan.hmgName}”。`;
+      history('暂缓机枪检修',`${plan.hmgName}故障保留，可另行检修；没有人员阵亡或增补。`);
+    }
+  } else if (eventId === 'student_run') {
     if (optionIndex === 0) {
       const lost = deaths(Math.floor(random() * (R.student.maxDeaths + 1)));
       updates.medkits = stats.medkits + R.student.medkitsReward; flag('students_rescued');

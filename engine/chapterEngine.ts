@@ -9,10 +9,15 @@ import { applyNamedSoldierDeaths } from './roster';
 import { getTacticPlan, getTacticRuleHelp, spendTactic, type TacticPlan } from './tacticPlans';
 import { tacticCommand } from '../data/tactics';
 import { formatMissionTiming, missionGoalMet, projectMissionTiming } from './chapterGuidance';
+import { ALL_DILEMMAS } from '../data/text/events';
+import { canOfferEvent, getEventPlan, getEventRuleHelp, getPendingEvent, issueEvent, presentEvent, type EventPlan } from './eventPlans';
+import { innerRoadBlocked } from './eventContext';
+import { resolveDilemma } from './dilemmaResolver';
 
-type Action = 'recon' | 'search' | 'escort' | 'inner' | 'river' | 'fire' | 'build' | 'rest' | 'heal' | 'extract';
+type Action = 'recon' | 'search' | 'escort' | 'inner' | 'river' | 'fire' | 'build' | 'rest' | 'heal' | 'extract' | 'event' | 'clear';
 interface MissionPlan {
   tactic?: TacticPlan;
+  event?: EventPlan;
   key: Action;
   label: string;
   minutes: number;
@@ -29,6 +34,7 @@ const aliases: Record<string, Action> = {
   '轮换掩护': 'rest', '轮换休息': 'rest', '休息整顿': 'rest', '休息': 'rest',
   '救治伤员': 'heal', '治疗伤员': 'heal', '治疗': 'heal',
   '组织撤离': 'extract', '撤离': 'extract', '撤退': 'extract',
+  '清理内巷障碍': 'clear',
 };
 const normalize = (input: string) => canonicalCommand(input)
   .replace(/^(?:(?:副官|弟兄们|兄弟们|大家)[,，:：\s]*)/, '')
@@ -40,6 +46,10 @@ const chapterCommand = (stats: GameStats, raw: string): string => {
 };
 
 export const getMissionPlan = (stats: GameStats, input: string): MissionPlan | null => {
+  const event=getEventPlan(stats,input);
+  if(event) return {key:'event',event,label:`${event.event.title} · ${event.event.options[event.option].label}`,
+    minutes:event.available?event.minutes:0,pressure:event.available?event.pressure:0,available:event.available,
+    reason:event.available?event.riskText:event.reason,costs:event.available?event.costs:[]};
   const tactic = getTacticPlan(stats, input);
   if (!tactic && (getLanguageGuard(input) || isQuestion(input))) return null;
   const normalized = tactic?.baseCommand ?? normalize(input);
@@ -48,6 +58,10 @@ export const getMissionPlan = (stats: GameStats, input: string): MissionPlan | n
   const m = stats.mission, street = stats.chapterId === 'street';
   const plan: MissionPlan = { key, label: '', minutes: 0, pressure: 0, available: m.started && !stats.isGameOver, reason: '', costs: [] };
   switch (key) {
+    case 'clear':
+      Object.assign(plan,{label:'清理内巷障碍',minutes:10,pressure:8,reason:'清开已记录的内巷障碍；不护送民众，敌军照常推进。'});
+      plan.available &&= street && innerRoadBlocked(stats);
+      if(!plan.available)plan.reason='当前没有可清理的内巷障碍。';break;
     case 'recon':
       Object.assign(plan, { label: street ? '侦察路线' : '观察桥面', minutes: street ? 15 : 10, pressure: 8,
         reason: street ? '查清两条撤收线，之后才能选择路线并护送' : '核实渡桥进度；观察期间友军仍继续过桥' }); break;
@@ -92,6 +106,10 @@ export const getMissionPlan = (stats: GameStats, input: string): MissionPlan | n
     plan.reason = tactic.reason;
     plan.costs = tactic.costs;
   }
+  if (street && innerRoadBlocked(stats) && (key==='inner' || (key==='escort' && m.route==='inner'))) {
+    plan.available=false;plan.reason='内巷转角仍被堵住，先清理内巷障碍，或选择已侦明的沿河线。';
+  }
+  if (stats.pendingDilemmaId) {plan.available=false;plan.reason='先处置当前待决事件。';}
   if (!m.started || stats.isGameOver) plan.reason = stats.isGameOver ? '本关已经结束，不能继续行动。' : '本关尚未接防，请先从选关页开始。';
   return plan;
 };
@@ -106,6 +124,7 @@ export const missionReport = (stats: GameStats): string => {
 };
 
 export const missionReadOnly = (stats: GameStats, input: string): string => {
+  const eventHelp=getEventRuleHelp(stats,input);if(eventHelp)return eventHelp;
   const guard = getLanguageGuard(input);
   if (guard) return LOCAL_DIALOGUE[guard][0];
   const tacticHelp = getTacticRuleHelp(stats, input);
@@ -164,6 +183,9 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
   if (stats.isGameOver) return say('本关已经结束，可复盘或选择另一章。');
   if (raw.length > 500) return say(LOCAL_DIALOGUE.too_long[0]);
   const cmd = chapterCommand(stats, raw);
+  const pending=getPendingEvent(stats);
+  if(pending&&!cmd.startsWith('evt_resolve:'))return {...say('当前有待决事件，请先选择处置；其他行动尚未执行。'),turnAdvanced:false,dilemma:presentEvent(stats,pending)};
+  if(cmd.startsWith('evt_resolve:')&&!getEventPlan(stats,raw)?.available)return {...say(`未执行：${getEventPlan(stats,raw)?.reason??'无效事件代码。'}`),turnAdvanced:false,dilemma:pending?presentEvent(stats,pending):undefined};
   if (cmd === 'start_game') {
     if (m.started || stats.turnCount > 0) return say('本关已经开始，不能用内部文字重置进度。');
     return { narrative: getChapter(stats.chapterId).opening, updatedStats: { mission: { ...m, started: true } }, eventTriggered: 'none' };
@@ -202,7 +224,15 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
     narrative.push(`【${plan.tactic.tactic.title}】${plan.tactic.tactic.description}`);
     logs.push('本章战术牌已使用');
   }
-  if (plan.key === 'inner' || plan.key === 'river') {
+  if (plan.event) {
+    const settled=resolveDilemma(stats,plan.event.event.id,plan.event.option,random,()=>{});
+    if(plan.minutes===0)return {...settled,turnAdvanced:false};
+    const {mission:progress,...updates}=settled.updatedStats;
+    Object.assign(next,updates);if(progress)Object.assign(mission,progress);narrative.push(settled.narrative);
+  } else if (plan.key === 'clear') {
+    next.consequenceFlags=[...stats.consequenceFlags,'street_corner_cleared'];
+    narrative.push('内巷障碍清开了。队伍试过通行的位置，回报可以再走；尚未因此护送任何人。');
+  } else if (plan.key === 'inner' || plan.key === 'river') {
     mission.route = plan.key;
     return { ...say(plan.key === 'inner' ? '内巷撤收线已选定。路更绕，遮蔽也更多；护送每次25分钟，尚未有人因此抵达安全区。'
       : '沿河撤收线已选定。护送每次15分钟，但暴露压力更高；选路没有替任何人完成撤收。'), updatedStats: { mission } };
@@ -300,14 +330,22 @@ export const resolveChapterTurn = (stats: GameStats, raw: string, random: () => 
   }
   logs.push(`士气 ${stats.morale} → ${next.morale}`, `疲劳 ${stats.fatigue} → ${next.fatigue}`,
     `已用${mission.elapsedMinutes}/${CHAPTER_TIME_LIMIT}分钟`);
+  let dilemma:GameTurnResult['dilemma'];
+  if(!plan.event&&!next.isGameOver&&stats.chapterId==='street'&&stats.turnCount+1-(stats.lastDilemmaTurn??-999)>=2){
+    const offered={...next,turnCount:stats.turnCount+1};
+    const pool=ALL_DILEMMAS.filter(e=>canOfferEvent(offered,e));
+    if(pool.length&&random()<0.25){const event=pool[Math.floor(random()*pool.length)];Object.assign(next,issueEvent(offered,event.id));dilemma=presentEvent(next,event);}
+  }
   // Return only changed chapter-owned fields; no warehouse event or card settlement.
   const updatedStats: Partial<GameStats> = { mission, soldiers: next.soldiers, wounded: next.wounded,
     ammo: next.ammo, enemiesKilled: next.enemiesKilled, medkits: next.medkits, sandbags: next.sandbags, morale: next.morale,
     fatigue: next.fatigue, siegeMeter: next.siegeMeter, day: next.day, currentTime: next.currentTime,
     soldierDistribution: next.soldierDistribution, roster: next.roster, lastAttackTurn: next.lastAttackTurn,
     isGameOver: next.isGameOver, gameResult: next.gameResult, gameOverReason: next.gameOverReason, finalRank: next.finalRank,
-    equippedTactic: next.equippedTactic };
+    equippedTactic: next.equippedTactic,consequenceFlags:next.consequenceFlags,triggeredEvents:next.triggeredEvents,
+    pendingDilemmaId:next.pendingDilemmaId,pendingEvent:next.pendingEvent,lastDilemmaTurn:next.lastDilemmaTurn,campaignHistory:next.campaignHistory };
   return { narrative: narrative.join('\n\n') + '\n\n━━━━━━━━━━━━━━\n' + logs.join('\n'), updatedStats,
+    dilemma,
     turnAdvanced: true, eventTriggered: next.isGameOver ? (next.gameResult.startsWith('victory_') ? 'victory' : 'game_over') : attacked ? 'attack' : 'none',
     visualEffect: attacked ? 'shake' : 'none', enemyIntel: `敌军压力${next.siegeMeter}/100，距封锁${Math.max(0, CHAPTER_TIME_LIMIT - mission.elapsedMinutes)}分钟` };
 };

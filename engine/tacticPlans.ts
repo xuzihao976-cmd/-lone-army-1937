@@ -2,6 +2,7 @@ import { getTactic, tacticCommand, chapterTactics, TACTICS, TACTIC_RULES as R, t
 import type { GameStats, Location, TacticId } from '../types';
 import { canonicalCommand, getLanguageGuard, isQuestion } from './commandLanguage';
 import { isSectorHeld, SECTOR_LOCATIONS } from './strategicDefense';
+import { innerRoadBlocked } from './eventContext';
 
 export interface TacticPlan {
   tactic: TacticDefinition;
@@ -85,6 +86,10 @@ export function getTacticPlan(stats: GameStats, raw: string): TacticPlan | null 
     plan.available = false; plan.reason = '这张战术牌不适用于本章。';
   } else if (stats.isGameOver || (stats.chapterId !== 'sihang' ? !m?.started : stats.tutorialStep < 3)) {
     plan.available = false; plan.reason = stats.isGameOver ? '本章已结束。' : '接防完成后才能使用战术牌。';
+  }
+  if (stats.pendingDilemmaId) {plan.available=false;plan.reason='先处置当前待决事件。';}
+  if (definition.chapterId==='street' && m?.route==='inner' && innerRoadBlocked(stats)) {
+    plan.available=false;plan.reason='内巷转角仍被堵住，先清理内巷障碍，或改走已侦明的沿河线。';
   }
   plan.costs = [plan.ammo ? `七九弹${plan.ammo}发` : '', plan.materials ? `工事材料${plan.materials}份` : '',
     plan.medkits ? `急救包${plan.medkits}份` : '', plan.extraFatigue ? `额外疲劳最多+${plan.extraFatigue}` : '', '消耗本章唯一战术牌'].filter(Boolean);

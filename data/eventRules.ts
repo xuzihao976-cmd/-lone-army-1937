@@ -9,5 +9,10 @@ export const EVENT_RULES = {
   package: { minutes: 15, pressure: 10, successChance: 0.7, medkitsReward: 5, materialsReward: 100, moraleReward: 5 },
   groundRecovery: { minutes: 10, pressure: 4, materialsReward: 50 },
   returnBoat: { minutes: 15, pressure: 8, ammo: 300, machineGunAmmoReward: 1800 },
+  corner: { minutes: 10, pressure: 8 },
+  knocking: { minutes: 15, pressure: 10 },
+  beam: { minutes: 15, pressure: 8, integrityReward: 8 },
+  wetMedicine: { minutes: 15, pressure: 6, maxLoss: 2 },
+  hmgRepair: { minutes: 30, pressure: 8 },
   cooldownTurns: 2,
 } as const;

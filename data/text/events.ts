@@ -1,6 +1,7 @@
 
 // 事件、战地际遇、情报文本库。旧导出名保留以读取已有存档。
 import { Dilemma, TacticalCard } from "../../types";
+import { NEW_CHAPTER_EVENTS } from './newEvents';
 
 export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
   {
@@ -79,6 +80,7 @@ export const ALL_DILEMMAS: Dilemma[] = [
     requiresFlag: 'british_defied', excludesFlag: 'british_pressure_resolved', minDay: 3,
     options: [{ label: '核对来袭报告', actionCmd: 'EVT_RESOLVE:british_pressure:0', riskText: '免费揭示当前合法攻势；不扣材料、不凭空调兵，不再额外提前接敌' }],
   },
+  ...NEW_CHAPTER_EVENTS,
 ];
 
 export const MUTINY_SCENES = [

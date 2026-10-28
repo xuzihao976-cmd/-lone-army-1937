@@ -13,6 +13,7 @@ import { isShortChapter } from '../data/chapters';
 import { getMissionPreview } from './chapterEngine';
 import { getTacticPlan } from './tacticPlans';
 import { getEventPlan, getEventRuleHelp, getPendingEvent, validEventOperation } from './eventPlans';
+import { getHmgRepairPlan } from './eventContext';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
 
@@ -59,9 +60,13 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let reason: string | undefined;
 
   const tactic = getTacticPlan(stats, rawCommand);
+  const repair = getHmgRepairPlan(stats,rawCommand);
   const eventPlan = getEventPlan(stats, rawCommand);
-  const natural = tactic || eventPlan ? null : resolveNaturalCommand(stats, rawCommand);
-  if (eventPlan) {
+  const natural = tactic || eventPlan || repair ? null : resolveNaturalCommand(stats, rawCommand);
+  if (repair) {
+    action=`检修${repair.name}`;available=repair.available;durationMinutes=repair.minutes;baseThreat=repair.pressure;
+    reason=repair.available?'恢复已记录的故障，不补人员或弹药；敌军照常推进。':repair.reason;
+  } else if (eventPlan) {
     action = `${eventPlan.event.title} · ${eventPlan.event.options[eventPlan.option].label}`;
     available = eventPlan.available;
     durationMinutes = available ? eventPlan.minutes : 0;

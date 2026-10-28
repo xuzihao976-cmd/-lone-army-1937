@@ -17,6 +17,7 @@ import { isMoveCommand } from '../intents';
 import { applyNamedSoldierDeaths } from '../roster';
 import { getSpecialistEffectFactor } from '../specialists';
 import { resolveWarehouseTactic } from '../tacticActions';
+import { getHmgRepairPlan } from '../eventContext';
 import {
   canRecaptureSector,
   getRecaptureStagingSectors,
@@ -40,6 +41,12 @@ export const resolvePlayerAction = (
   cmd: string,
   random: RandomSource,
 ): PlayerActionResolution => {
+  const repair = getHmgRepairPlan(currentStats,cmd);
+  if (repair) return {updatedStats:repair.available ? {
+    hmgSquads:currentStats.hmgSquads.map((q,i)=>i===repair.index?{...q,jammed:false}:q),
+    fatigue:Math.min(100,currentStats.fatigue+1),
+  } : {},logs:[],narrative:[repair.available ? `${repair.name}完成检修，已记录的故障排除。枪组人员和弹药没有增补；恢复射击仍须有受控阵位和足够余弹。` : `未执行：${repair.reason}`],
+    timeCost:repair.minutes,actionType:repair.available?'hmg_repair':'idle',siegeIncrease:repair.pressure};
   const tactic = resolveWarehouseTactic(currentStats, cmd);
   if (tactic) {
     if (tactic.timeCost > 0) tactic.updatedStats.fatigue = Math.min(100, currentStats.fatigue + Math.max(1, Math.ceil(tactic.timeCost / 45)));

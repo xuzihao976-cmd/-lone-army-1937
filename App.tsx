@@ -896,16 +896,16 @@ const App: React.FC = () => {
                 )}
                 {/* Quick Actions Row */}
                 {!stats.isGameOver && stats.activeTacticalCard && <button type="button" disabled={isLoading || !!currentDilemma}
-                  onClick={() => setShowEncounterDetails(true)} className="flex min-h-10 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40">
+                  onClick={() => setShowEncounterDetails(true)} className={`${input.trim() ? 'hidden sm:flex' : 'flex'} min-h-10 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40`}>
                   <span>战地际遇 · {TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id)?.title ?? stats.activeTacticalCard.title}</span><span>查看</span>
                 </button>}
-                {!stats.isGameOver && stats.equippedTactic && <div className={shortChapter && input.trim() ? 'hidden sm:block' : undefined}>
+                {!stats.isGameOver && stats.equippedTactic && <div className={input.trim() ? 'hidden sm:block' : undefined}>
                   <TacticStatus stats={stats} disabled={isLoading || !!currentDilemma} onPreview={() => setShowTacticPreview(true)} />
                 </div>}
                 {!stats.isGameOver && (
                     shortChapter ? <div className={input.trim() ? 'hidden sm:block' : undefined}>
                       <ChapterMissionActions stats={stats} disabled={isLoading || !!currentDilemma} onAction={cmd => handleCommand(undefined, cmd)} />
-                    </div> : <>
+                    </div> : <div className={input.trim() ? 'hidden sm:block' : undefined}>
                       <TutorialGuide
                         stats={stats}
                         disabled={isLoading || !!currentDilemma}
@@ -916,7 +916,7 @@ const App: React.FC = () => {
                           disabled={isLoading || !!currentDilemma}
                           stats={stats}
                       />
-                    </>
+                    </div>
                 )}
 
                 {stats.isGameOver ? (

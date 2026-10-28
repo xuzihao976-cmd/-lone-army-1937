@@ -6,6 +6,8 @@ import { getActionPreview } from '../engine/actionPreview';
 import type { ChapterId, GameStats } from '../types';
 import { chapterTactics, tacticCommand } from '../data/tactics';
 import { getTacticPlan } from '../engine/tacticPlans';
+import { getEventPlan, getPendingEvent } from '../engine/eventPlans';
+import { streetHasTime } from '../engine/eventContext';
 
 const requested = Number(process.argv.find(arg => arg.startsWith('--runs='))?.split('=')[1] ?? 1000);
 const runs = Number.isSafeInteger(requested) ? Math.max(1, requested) : 1000;
@@ -20,6 +22,7 @@ const apply = (stats: GameStats, command: string) => {
   assert.equal(Object.values(after.soldierDistribution).reduce((a, b) => a + b, 0), after.soldiers);
   assert(after.mission!.evacuated <= after.mission!.found && after.mission!.found <= 12);
   assert(after.mission!.crossed <= 60);
+  if(after.pendingDilemmaId)assert(getPendingEvent(after),'invalid pending event');
   const reportedKills = [...result.narrative.matchAll(/确认毙敌(\d+)人/g)]
     .reduce((sum, match) => sum + Number(match[1]), 0);
   assert.equal(after.enemiesKilled - stats.enemiesKilled, reportedKills, 'Battle report and cumulative kills differ');
@@ -34,6 +37,7 @@ for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
  for (const loadout of [null, ...chapterTactics(id).map(card => card.id)]) {
   let wins = 0, survivors = 0, escorted = 0, crossed = 0;
   let minutes = 0, used = 0, ammo = 0, healthy = 0, wounded = 0;
+  const events:Record<string,number>={};
   for (let seed = 1; seed <= runs; seed++) {
     let stats = apply(createInitialStats(19370000 + seed * 7919, id, loadout), 'start_game');
     let decisions = 0;
@@ -48,12 +52,15 @@ for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
       }
       assert.equal(stats.rngState, before.rngState);
       let command: string;
-      if (stats.pendingRetreat) command = stats.pendingRetreat;
+      const event=getPendingEvent(stats);
+      if(event)command=event.options.find(option=>getEventPlan(stats,option.actionCmd)?.available)!.actionCmd;
+      else if (stats.pendingRetreat) command = stats.pendingRetreat;
       else if (id === 'street') command = !stats.mission!.recon ? '侦察路线'
         : !stats.mission!.route ? seed % 2 ? '选择内巷' : '选择沿河'
           : stats.mission!.evacuated >= 8 ? '组织撤离'
             : stats.mission!.found < 8 ? '搜救街巷'
-              : loadout && getTacticPlan(stats, tacticCommand(loadout))?.available ? tacticCommand(loadout) : '护送民众';
+              : loadout && getTacticPlan(stats, tacticCommand(loadout))?.available
+                && streetHasTime(stats,loadout==='wall_hug'?10:0,stats.mission!.route!) ? tacticCommand(loadout) : '护送民众';
       else command = stats.mission!.crossed >= 60
         ? loadout === 'covered_withdrawal' && !stats.equippedTactic?.spent ? tacticCommand(loadout) : '组织撤离'
         : loadout === 'rapid_crossing' && getTacticPlan(stats, tacticCommand(loadout))?.available ? tacticCommand(loadout)
@@ -72,12 +79,13 @@ for (const id of ['street', 'bridge'] as const satisfies readonly ChapterId[]) {
     used += stats.equippedTactic?.spent ? 1 : 0;
     ammo += stats.ammo;
     healthy += stats.soldiers; wounded += stats.wounded;
+    for(const event of stats.triggeredEvents)events[event]=(events[event]??0)+1;
   }
   report[`${id}/${loadout ?? 'none'}`] = { campaigns: runs, completed: wins, tacticUsed: used,
     averageMinutes: minutes / runs, averageFinalAmmo: Math.round(ammo / runs * 10) / 10,
     averageCombatReady: Math.round(healthy / runs * 10) / 10, averageWounded: Math.round(wounded / runs * 10) / 10,
     averageSquadSurvivors: Math.round(survivors / runs * 10) / 10,
-    averageSafelyEscorted: Math.round(escorted / runs * 10) / 10, averageCrossed: crossed / runs };
+    averageSafelyEscorted: Math.round(escorted / runs * 10) / 10, averageCrossed: crossed / runs,events };
  }
 }
 console.log(JSON.stringify({ runsPerLoadout: runs, totalRuns: runs * 6, checkedCommands, generatedAt: new Date().toISOString(), report }, null, 2));

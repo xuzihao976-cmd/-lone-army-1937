@@ -28,7 +28,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice, stats, o
         </div>
 
         {event && <p className="border-b border-neutral-800 px-4 py-3 text-xs leading-5 text-neutral-400">
-          当前第{stats.day}天 {stats.currentTime} · 步兵{stats.soldiers}人 · 待治{stats.wounded}人<br />
+          {stats.mission?`已用${stats.mission.elapsedMinutes}/180分钟`:`当前第${stats.day}天`} {stats.currentTime} · 步兵{stats.soldiers}人 · 待治{stats.wounded}人<br />
           七九弹{stats.ammo}发 · 急救包{stats.medkits}份 · 材料{stats.sandbags}份
         </p>}
 
@@ -59,7 +59,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice, stats, o
                       const preview = getActionPreview(stats, opt.actionCmd);
                       const clock = preview?.durationMinutes ? advanceCampaignClock(stats.day, stats.currentTime, preview.durationMinutes) : null;
                       return <>
-                        {clock && <p className="mt-1 text-xs leading-5 text-neutral-400">拟完成：第{clock.day}天 {clock.time}</p>}
+                        {clock && <p className="mt-1 text-xs leading-5 text-neutral-400">拟完成：{stats.mission?`${clock.time}（已用${stats.mission.elapsedMinutes+(preview?.durationMinutes??0)}/180分钟）`:`第${clock.day}天 ${clock.time}`}</p>}
                         {preview?.attackChance === 1 && <p className="mt-1 text-xs font-bold text-orange-300">本次行动将接敌。</p>}
                       </>;
                     })()}

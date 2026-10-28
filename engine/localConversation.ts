@@ -29,7 +29,7 @@ const contextLines = (s: GameStats, topic: DialogueTopic, input: string): readon
   if (!contextual.has(topic)) return null;
   if (s.sectorIntegrity[s.location] <= 0) return CONTEXT_DIALOGUE.lost_position;
   if (!s.soldierDistribution[s.location]) return CONTEXT_DIALOGUE.empty_position;
-  if (/机枪/.test(input) && !s.hmgSquads.some(q => q.status === 'active' && q.count > 0 && q.location !== '待命' && s.sectorIntegrity[q.location] > 0 && s.machineGunAmmo >= 200)) return CONTEXT_DIALOGUE.no_hmg;
+  if (/机枪/.test(input) && !s.hmgSquads.some(q => q.status === 'active' && !q.jammed && q.count > 0 && q.location !== '待命' && s.sectorIntegrity[q.location] > 0 && s.machineGunAmmo >= 200)) return CONTEXT_DIALOGUE.no_hmg;
   if (/伤员|军医|医务/.test(input) && s.wounded === 0) return CONTEXT_DIALOGUE.no_wounded;
   if (/伤员|军医|医务/.test(input) && s.wounded > 0 && s.medkits === 0) return CONTEXT_DIALOGUE.no_medkits;
   if (s.ammo === 0) return CONTEXT_DIALOGUE.no_ammo;
@@ -113,7 +113,7 @@ export const getBattlefieldQuery = (s: GameStats, raw: string): string | null =>
   if (/军令|命令|预备/.test(t)) lines.push(Object.entries(s.preparedOrders || {}).map(([l,o]) => `${l}：${({ rapid:'猛烈射击',conserve:'节约弹药',close:'近距开火',bayonet:'刺刀准备',hold:'死守阵位' })[o!]}`).join('；') || '目前没有待执行的预备军令。');
   if (/敌|接敌|压力|进攻方向/.test(t)) lines.push(`敌军压力 ${s.siegeMeter}/100。${getOperationIntel(s.enemyOperation)}`);
   if (/结构|仓库还|建筑|承重/.test(t)) lines.push(`仓库总结构 ${s.health}/100；总结构与各层完整度分别计算。`);
-  if (/机枪/.test(t)) lines.push(s.hmgSquads.map(q => `${q.name}：${q.location}，${q.count}人，${q.status === 'active' ? '现役' : '已失效'}`).join('；'));
+  if (/机枪/.test(t)) lines.push(s.hmgSquads.map(q => `${q.name}：${q.location}，${q.count}人，${q.status === 'active' ? q.jammed ? `现役，枪械故障；可下令“检修${q.name}”` : '现役' : '已失效'}`).join('；'));
   if (/小队|专业|特长/.test(t)) lines.push(s.specialistSquads.map(q => `${q.name}：${q.location}，编制${q.count}人，${q.status === 'active' ? '效能受本层驻军约束' : '失效'}`).join('；'));
   for (const l of findLocations(t)) lines.push(`${l}：${s.sectorIntegrity[l] > 0 ? '我军控制' : '已失守'}，步兵 ${s.soldierDistribution[l] || 0} 人，完整度 ${s.sectorIntegrity[l]}%，工事 ${s.fortificationLevel[l]} 级。`);
   if (/国旗|升旗/.test(t)) lines.push(s.hasFlagRaised ? '国旗当前已经升起。' : '国旗当前未升起。');

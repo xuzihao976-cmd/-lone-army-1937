@@ -9,7 +9,12 @@ const apply = (stats: GameStats, input: string) => {
   const result = runGameTurn(stats, input);
   return { result, stats: { ...stats, ...result.updatedStats, turnCount: stats.turnCount + (result.turnAdvanced ? 1 : 0) } };
 };
-const start = (id: ChapterId) => apply(createInitialStats(1937, id), 'start_game').stats;
+// Ordinary mission rules in isolation; interruptive encounters have dedicated integration coverage.
+const start = (id: ChapterId) => {
+  const s=apply(createInitialStats(1937,id),'start_game').stats;
+  if(id==='street')s.triggeredEvents=['wall_knocking']; // Already declined, with no resource or objective change.
+  return s;
+};
 const world = ({ localDialogue, pendingRetreat, ...state }: GameStats) => state;
 
 describe('distinct, local chapter objectives', () => {

@@ -22,6 +22,7 @@ const selectedTactic = (requestedTactic ?? null) as TacticId | null;
 type Policy = 'defensive' | 'balanced' | 'aggressive' | 'novice';
 
 interface CampaignResult {
+  events: string[];
   tacticUsed: boolean;
   policy: Policy;
   ending: GameStats['gameResult'];
@@ -202,6 +203,7 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
 
   const hmgSurvivors = stats.hmgSquads.reduce((sum, squad) => sum + (squad.status === 'active' ? squad.count : 0), 0);
   return {
+    events: stats.triggeredEvents,
     tacticUsed: !!stats.equippedTactic?.spent,
     policy,
     ending: stats.gameResult,
@@ -232,6 +234,7 @@ const report = Object.fromEntries(policies.map((policy) => {
   const commanderDeaths = group.filter((result) => result.reason === 'commander_killed').length;
   const sectorLosses = group.filter((result) => result.firstSectorLossDay !== null);
   return [policy, {
+    events: Object.fromEntries([...new Set(group.flatMap(result=>result.events))].map(id=>[id,group.filter(result=>result.events.includes(id)).length])),
     tacticUsed: group.filter(result => result.tacticUsed).length,
     campaigns: group.length,
     winRate: `${Math.round(wins / group.length * 1000) / 10}%`,

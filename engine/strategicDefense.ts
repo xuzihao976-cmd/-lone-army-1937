@@ -110,7 +110,8 @@ export const getSectorDefenseProfile = (stats: GameStats, location: Location): S
   // A token handful of rounds cannot sustain suppressive fire. Each local HMG
   // needs at least 200 rounds before it contributes to the displayed/combat
   // mitigation value.
-  const fireReadyHmgSquads = Math.min(activeHmgSquads, Math.floor(Math.max(0, stats.machineGunAmmo) / 200));
+  const serviceable = stats.hmgSquads.filter(squad => squad.status === 'active' && squad.count > 0 && squad.location === location && !squad.jammed).length;
+  const fireReadyHmgSquads = Math.min(serviceable, Math.floor(Math.max(0, stats.machineGunAmmo) / 200));
 
   return {
     localFortLevel,

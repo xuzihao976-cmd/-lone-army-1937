@@ -154,6 +154,9 @@ export const resolveAttack = ({
 
   calculatedStats.ammo = currentAmmo - outcome.rifleAmmoUsed;
   calculatedStats.machineGunAmmo = currentMgAmmo - outcome.machineGunAmmoUsed;
+  calculatedStats.lastBattle = {turn:currentStats.turnCount+1,location:attackLocation,attackType:damageType,
+    hmgFired:outcome.machineGunAmmoUsed>0 ? strategicStateAfterAction.hmgSquads
+      .filter(q=>q.status==='active'&&q.count>0&&q.location===attackLocation&&!q.jammed).slice(0,fireReadySquadsCount).map(q=>q.name) : []};
   calculatedStats.grenades = currentGrenades - outcome.grenadesUsed;
   if (outcome.rifleAmmoUsed > 0) statsLog.push(`🔻 消耗七九弹: ${outcome.rifleAmmoUsed}`);
   if (outcome.machineGunAmmoUsed > 0) statsLog.push(`🔻 消耗机枪弹: ${outcome.machineGunAmmoUsed}`);
