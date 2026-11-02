@@ -1,3 +1,4 @@
+import { ALL_DILEMMAS, presentDilemma, SMUGGLER_COVER_AMMO_COST, SMUGGLER_COVER_MG_GAIN } from '../data/text/events';
 import type { GameStats, GameTurnResult } from '../types';
 import { createEnemyOperation, revealEnemyOperation } from './battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from './campaignProgress';
@@ -143,13 +144,22 @@ export const resolveDilemma = (
     logs.push('📦 急救包 +8', '💪 士气 +8');
     appendCampaignHistory(stats, updates, '民众支援抵达', '此前救下的学生带来了药品和来自租界的声援。', 'good');
   } else if (eventId === 'smuggler_return') {
+    if (optionIndex === 0 && stats.ammo < SMUGGLER_COVER_AMMO_COST) {
+      const source = ALL_DILEMMAS.find((event) => event.id === 'smuggler_return');
+      return {
+        narrative: `【交易未成】掩护要${SMUGGLER_COVER_AMMO_COST}发七九弹，库里只剩${stats.ammo}发。步枪遮断不了岸边巡逻队，机枪弹没有卸下，这条水路尚未了结。`,
+        updatedStats: {},
+        eventTriggered: 'none',
+        dilemma: source ? presentDilemma(source, stats.ammo) : undefined,
+      };
+    }
     updates.consequenceFlags = addConsequenceFlag(stats.consequenceFlags, 'smuggler_network_resolved');
-    if (optionIndex === 0 && stats.ammo >= 300) {
-      updates.ammo = stats.ammo - 300;
-      updates.machineGunAmmo = stats.machineGunAmmo + 1800;
+    if (optionIndex === 0) {
+      updates.ammo = stats.ammo - SMUGGLER_COVER_AMMO_COST;
+      updates.machineGunAmmo = stats.machineGunAmmo + SMUGGLER_COVER_MG_GAIN;
       text = '【水路接力】守军用步枪火力遮断巡逻队，小船贴着阴影完成卸货。此前的信任终于换成真正的重火力补给。';
-      logs.push('🔻 七九弹 -300', '📦 机枪弹 +1800');
-      appendCampaignHistory(stats, updates, '水路补给线', '掩护私枭撤离，获得1800发机枪弹。', 'good');
+      logs.push(`🔻 七九弹 -${SMUGGLER_COVER_AMMO_COST}`, `📦 机枪弹 +${SMUGGLER_COVER_MG_GAIN}`);
+      appendCampaignHistory(stats, updates, '水路补给线', `掩护私枭撤离，获得${SMUGGLER_COVER_MG_GAIN}发机枪弹。`, 'good');
     } else {
       text = '你拒绝继续拿弟兄们的命赌这条水路。小船熄灯离开，此后再也没有出现。';
       appendCampaignHistory(stats, updates, '中止水路联系', '选择保存火力，放弃后续机枪弹补给。', 'neutral');

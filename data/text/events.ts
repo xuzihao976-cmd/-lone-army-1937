@@ -1,6 +1,31 @@
 
 // 事件、卡牌、情报文本库
-import { Dilemma, TacticalCard } from "../../types";
+import { Dilemma, DilemmaOption, TacticalCard } from "../../types";
+
+export const SMUGGLER_COVER_AMMO_COST = 300;
+export const SMUGGLER_COVER_MG_GAIN = 1800;
+
+const smugglerCoverOption = (option: DilemmaOption, ammo: number): DilemmaOption => {
+    if (!option.actionCmd.toLowerCase().endsWith('smuggler_return:0')) return option;
+    if (ammo >= SMUGGLER_COVER_AMMO_COST) {
+        return {
+            ...option,
+            disabled: false,
+            riskText: `机枪弹+${SMUGGLER_COVER_MG_GAIN} | 七九弹-${SMUGGLER_COVER_AMMO_COST}`,
+        };
+    }
+    return {
+        ...option,
+        disabled: true,
+        riskText: `七九弹不足${SMUGGLER_COVER_AMMO_COST}，无法成交`,
+    };
+};
+
+/** 按当前库存改写选项。目录里的 riskText 在漏调用时也不把不足库存说成必成。 */
+export const presentDilemma = (dilemma: Dilemma, ammo: number): Dilemma => {
+    if (dilemma.id !== 'smuggler_return') return dilemma;
+    return { ...dilemma, options: dilemma.options.map((option) => smugglerCoverOption(option, ammo)) };
+};
 
 export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
     {
@@ -8,7 +33,7 @@ export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
         title: '学生冲桥',
         description: '【高风险补给】一群爱国学生和童子军扛着巨大的包裹，正试图冲过新垃圾桥！日军的机枪已经调转枪口。如果【接应】，必须用火力压制日军，这会暴露我们的位置并遭到反击。如果不接应，他们必死无疑。',
         options: [
-            { label: '火力接应', actionCmd: 'EVT_RESOLVE:student_run:0', riskText: '七九弹最多-600 | 急救包+10 | 阵亡0-15人 | 建立民间支援线' },
+            { label: '火力接应', actionCmd: 'EVT_RESOLVE:student_run:0', riskText: '七九弹最多-600 | 急救包+10 | 阵亡0-15人 | 士气-阵亡×2 | 建立民间支援线' },
             { label: '含泪拒止', actionCmd: 'EVT_RESOLVE:student_run:1', riskText: '士气 -3' }
         ]
     },
@@ -35,7 +60,7 @@ export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
         title: '损毁卡车',
         description: '【弹药补给】观察哨报告：一辆国军撤退时遗弃的运输车侧翻在距离大门50米的弹坑旁。望远镜显示车厢里有几箱未开封的七九弹。日军狙击手正盯着那个位置。',
         options: [
-            { label: '烟雾掩护抢运', actionCmd: 'EVT_RESOLVE:wrecked_truck:0', riskText: '获得大量弹药 | 阵亡 1-5 人' },
+            { label: '烟雾掩护抢运', actionCmd: 'EVT_RESOLVE:wrecked_truck:0', riskText: '七九弹+2000 | 阵亡1-5人 | 士气-阵亡×2' },
             { label: '风险太大，放弃', actionCmd: 'EVT_RESOLVE:wrecked_truck:1', riskText: '士气 -2' }
         ]
     },
@@ -44,8 +69,8 @@ export const NEW_SUPPLY_DILEMMAS: Dilemma[] = [
         title: '偏离的空投',
         description: '【意外物资】一架试图飞越租界的飞机抛下了一个补给包，但风向不对，挂在了仓库外墙三楼摇摇欲坠的避雷针上。',
         options: [
-            { label: '攀爬取回', actionCmd: 'EVT_RESOLVE:stray_airdrop:0', riskText: '获得全套物资 | 士兵可能坠亡' },
-            { label: '开枪击落', actionCmd: 'EVT_RESOLVE:stray_airdrop:1', riskText: '物资减半 | 安全' }
+            { label: '攀爬取回', actionCmd: 'EVT_RESOLVE:stray_airdrop:0', riskText: '成功：急救包+5、工事材料+100、士气+5 | 坠亡：阵亡1人、士气-5、无物资' },
+            { label: '开枪击落', actionCmd: 'EVT_RESOLVE:stray_airdrop:1', riskText: '仅工事材料+50 | 药品损毁 | 无人伤亡' }
         ]
     }
 ];
@@ -80,7 +105,7 @@ export const ALL_DILEMMAS = [
         excludesFlag: 'smuggler_network_resolved',
         minDay: 3,
         options: [
-            { label: '掩护运输线', actionCmd: 'EVT_RESOLVE:smuggler_return:0', riskText: '机枪弹+1800 | 七九弹-300' },
+            { label: '掩护运输线', actionCmd: 'EVT_RESOLVE:smuggler_return:0', riskText: '机枪弹+1800 | 七九弹-300（不足300则无法成交，水路未了结）' },
             { label: '不再冒险', actionCmd: 'EVT_RESOLVE:smuggler_return:1', riskText: '无物资 | 保持隐蔽' },
         ]
     },
