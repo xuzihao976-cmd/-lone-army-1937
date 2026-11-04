@@ -143,7 +143,8 @@ const playCampaign = (seed: number, policy: Policy): CampaignResult => {
     decisions += 1;
     let command: string;
     if (pendingDilemma) {
-      command = pendingDilemma.options[0].actionCmd;
+      const option = pendingDilemma.options.find((item) => !item.disabled) ?? pendingDilemma.options[0];
+      command = option.actionCmd;
       pendingDilemma = null;
     } else if (stats.activeTacticalCard) {
       command = stats.activeTacticalCard.actionCmd;

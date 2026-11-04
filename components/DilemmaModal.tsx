@@ -30,14 +30,16 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice }) => {
             {dilemma.options.map((opt, idx) => (
                 <button
                     key={idx}
+                    type="button"
+                    disabled={opt.disabled}
                     onClick={() => onChoice(opt.actionCmd)}
-                    className="group min-w-0 w-full rounded border border-neutral-700 bg-neutral-800 p-3 text-left transition-all hover:border-neutral-500 hover:bg-neutral-700 sm:p-4"
+                    className={`group min-w-0 w-full rounded border p-3 text-left transition-all sm:p-4 ${opt.disabled ? 'cursor-not-allowed border-neutral-800 bg-neutral-900 opacity-60' : 'border-neutral-700 bg-neutral-800 hover:border-neutral-500 hover:bg-neutral-700'}`}
                 >
-                    <div className="mb-1 break-words font-bold leading-5 text-neutral-200 group-hover:text-white">
+                    <div className={`mb-1 break-words font-bold leading-5 ${opt.disabled ? 'text-neutral-500' : 'text-neutral-200 group-hover:text-white'}`}>
                         {String.fromCharCode(65 + idx)}. {opt.label}
                     </div>
                     {opt.riskText && (
-                        <div className="break-words font-mono text-xs leading-4 text-neutral-500 group-hover:text-amber-500/80">
+                        <div className={`break-words font-mono text-xs leading-4 ${opt.disabled ? 'text-amber-700' : 'text-neutral-500 group-hover:text-amber-500/80'}`}>
                             后果: {opt.riskText}
                         </div>
                     )}

@@ -21,6 +21,8 @@ export interface DilemmaOption {
     label: string;
     actionCmd: string; // The command string to send to backend
     riskText?: string;
+    /** When true, the choice is shown but cannot be submitted. */
+    disabled?: boolean;
 }
 
 export interface Dilemma {

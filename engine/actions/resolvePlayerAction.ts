@@ -3,7 +3,7 @@ import { getLocalDialogue } from '../localConversation';
 import { resolveNaturalCommand } from '../naturalCommands';
 import type { GameStats } from '../../types';
 import { playSound } from '../../utils/sound';
-import { RAID_FAIL_TEXTS, RAID_SUCCESS_TEXTS } from '../../data/text/combat';
+import { RAID_FAIL_TEXTS, raidSuccessTexts } from '../../data/text/combat';
 import { getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from '../actionDynamics';
 import { createEnemyOperation, getOperationIntel, revealEnemyOperation } from '../battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from '../campaignProgress';
@@ -168,7 +168,7 @@ export const resolvePlayerAction = (
         updatedStats.ammo = currentStats.ammo + ammoGain;
         updatedStats.medkits = currentStats.medkits + medGain;
         applyNamedSoldierDeaths(currentStats, updatedStats, died, narrative, random);
-        narrative.push(pick(RAID_SUCCESS_TEXTS));
+        narrative.push(pick(raidSuccessTexts(died)));
         if (died > 0) {
           logs.push(`🔴 阵亡: ${died}人`);
           logs.push(`💔 士气 -${died * 2}`);

@@ -1,7 +1,7 @@
 import type { Dilemma, GameStats, Location } from '../types';
 import { playSound } from '../utils/sound';
 import { BUILD_SCENES, COMMAND_RESPONSES, HEAL_SUCCESS_SCENES, SPEECH_SCENES } from '../data/text/commands';
-import { ALL_DILEMMAS, MUTINY_SCENES, TACTICAL_CARDS } from '../data/text/events';
+import { ALL_DILEMMAS, MUTINY_SCENES, presentDilemma, TACTICAL_CARDS } from '../data/text/events';
 import { pickWith, type RandomSource } from './commandUtils';
 import { calculateCampaignScore } from './endings/campaignScore';
 import { reconcileSoldierDistribution } from './roster';
@@ -177,7 +177,10 @@ export const finalizeTurn = ({
       && (!candidate.requiresFlag || flags.includes(candidate.requiresFlag))
       && (!candidate.excludesFlag || !flags.includes(candidate.excludesFlag))
       && (candidate.minDay === undefined || finalDay >= candidate.minDay));
-    if (potentialDilemmas.length > 0) { dilemma = pick(potentialDilemmas); calculatedStats.pendingDilemmaId = dilemma.id; }
+    if (potentialDilemmas.length > 0) {
+      dilemma = presentDilemma(pick(potentialDilemmas), calculatedStats.ammo ?? currentStats.ammo);
+      calculatedStats.pendingDilemmaId = dilemma.id;
+    }
   }
 
   let narrative = narrativeParts.join('');
