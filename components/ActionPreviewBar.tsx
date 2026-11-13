@@ -3,8 +3,8 @@ import type { ActionPreview } from '../types';
 import { formatMissionTiming } from '../engine/chapterGuidance';
 
 const riskColor: Record<ActionPreview['risk'], string> = {
-  safe: 'text-green-600 border-green-950/60',
-  low: 'text-lime-600 border-lime-950/60',
+  safe: 'text-green-300 border-green-950/60',
+  low: 'text-lime-300 border-lime-950/60',
   medium: 'text-amber-500 border-amber-950/70',
   high: 'text-orange-500 border-orange-950/70',
   critical: 'text-red-500 border-red-900/70',
@@ -15,7 +15,7 @@ const ActionPreviewBar: React.FC<{ preview: ActionPreview | null; compact?: bool
 
   return (
     <div role={compact ? 'region' : undefined} aria-label={compact ? '军令预览' : undefined} tabIndex={compact ? 0 : undefined}
-      className={`rounded-md border bg-black/60 px-3 py-2.5 font-sans ${compact ? 'max-h-[min(24dvh,12rem)] overflow-y-auto overscroll-contain' : ''} ${preview.available ? riskColor[preview.risk] : 'border-neutral-800 text-neutral-500'}`}>
+      className={`action-preview rounded-sm border bg-black/30 px-3 py-2.5 font-sans ${compact ? 'max-h-[min(24dvh,12rem)] overflow-y-auto overscroll-contain' : ''} ${preview.available ? riskColor[preview.risk] : 'border-neutral-700 text-neutral-300'}`}>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-sm font-black text-neutral-100">{preview.action}</span>
         <span className="rounded bg-neutral-900 px-2 py-1 font-bold">耗时 {preview.durationLabel}</span>

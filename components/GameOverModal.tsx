@@ -18,14 +18,13 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
   let borderColor = 'border-neutral-700';
   let bgColor = 'bg-neutral-900/10';
   let titleColor = 'text-neutral-500';
-  let icon = '🏁';
   let mainTitle = '战斗结束';
   let subTitle = 'GAME OVER';
 
   switch (endingType) {
       case 'victory_evacuation': case 'victory_cover':
           borderColor = 'border-amber-700'; titleColor = 'text-amber-300';
-          bgColor = 'bg-amber-950/20'; icon = endingType === 'victory_evacuation' ? '🕯' : '🌉';
+          bgColor = 'bg-amber-950/20';
           mainTitle = endingType === 'victory_evacuation' ? '撤收完成' : '掩护完成';
           subTitle = '任务完成 · 小队已撤出';
           break;
@@ -37,7 +36,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           borderColor = 'border-yellow-600';
           bgColor = 'bg-yellow-900/10';
           titleColor = 'text-yellow-500';
-          icon = '🎖️';
           mainTitle = '四行孤军';
           subTitle = '任务到期 · DEFENSE COMPLETE';
           break;
@@ -45,7 +43,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           borderColor = 'border-blue-700';
           bgColor = 'bg-blue-900/10';
           titleColor = 'text-blue-400';
-          icon = '🌉';
           mainTitle = '孤军撤退';
           subTitle = '奉命撤离 · ORDERED WITHDRAWAL';
           break;
@@ -53,7 +50,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           borderColor = 'border-red-600';
           bgColor = 'bg-red-900/20';
           titleColor = 'text-red-500';
-          icon = '🇹🇼';
           mainTitle = '血染孤旗';
           subTitle = '孤旗为证 · NO COMBAT FORCE';
           break;
@@ -61,7 +57,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           borderColor = 'border-orange-700';
           bgColor = 'bg-orange-900/10';
           titleColor = 'text-orange-500';
-          icon = '⚔️';
           mainTitle = '反攻失败';
           subTitle = '反攻的代价 · ASSAULT FAILED';
           break;
@@ -69,7 +64,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           borderColor = 'border-neutral-500';
           bgColor = 'bg-gray-900/50';
           titleColor = 'text-gray-400';
-          icon = '🏳️';
           mainTitle = '提前撤离';
           subTitle = '防务未竟 · EARLY WITHDRAWAL';
           break;
@@ -77,7 +71,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           borderColor = 'border-stone-500';
           bgColor = 'bg-stone-900/30';
           titleColor = 'text-stone-300';
-          icon = '✦';
           mainTitle = '将星陨落';
           subTitle = '指挥链中断 · COMMANDER FALLEN';
           break;
@@ -86,15 +79,12 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           bgColor = 'bg-red-900/10';
           titleColor = 'text-red-500';
           if (stats.gameOverReason === 'position_collapsed') {
-              icon = '🏚️';
               mainTitle = '阵地失守';
               subTitle = '仓库防线被突破 · POSITION LOST';
           } else if (stats.gameOverReason === 'combat_force_collapsed') {
-              icon = '🕯️';
               mainTitle = '防线崩溃';
               subTitle = '可战力量不足 · FORCE COLLAPSED';
           } else {
-              icon = '🔥';
               mainTitle = '四行失守';
               subTitle = '兵力与阵地同时崩溃 · TOTAL COLLAPSE';
           }
@@ -117,14 +107,14 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
   } as const;
   
   return (
-    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center p-6 animate-fade-in">
-      <div className={`max-h-[92dvh] w-full max-w-md overflow-y-auto border-2 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center relative flex flex-col gap-4 ${borderColor} ${bgColor}`}>
+    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="ending-title">
+      <div className={`max-h-[92dvh] w-full max-w-md overflow-y-auto border rounded-sm p-5 shadow-2xl text-center relative flex flex-col gap-4 ${borderColor} ${bgColor}`}>
         
         {/* Background Effect */}
         <div className={`absolute inset-0 opacity-5 pointer-events-none ${borderColor.replace('border', 'bg')}`}></div>
 
-        <div className="text-6xl mb-2 filter drop-shadow-lg animate-bounce-slow">
-            {icon}
+        <div className="border-b border-neutral-700 pb-3 text-xs tracking-[0.25em] text-neutral-300">
+            战役记录
         </div>
 
         {stats.campaignHistory.length > 0 && (
@@ -141,7 +131,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
         )}
         
         <div>
-            <h2 className={`text-3xl font-bold font-serif tracking-[0.2em] mb-1 ${titleColor}`}>
+            <h2 id="ending-title" className={`text-3xl font-bold font-serif tracking-[0.2em] mb-1 ${titleColor}`}>
                 {mainTitle}
             </h2>
             <div className="text-sm font-mono text-neutral-400 uppercase tracking-widest border-t border-white/10 pt-2 inline-block px-4">

@@ -623,8 +623,9 @@ const App: React.FC = () => {
 
   const actionPreview = stats.isGameOver || currentDilemma ? null : getActionPreview(stats, input);
 
+  const hideMobileActions = !!input.trim() || (!shortChapter && showMap);
   return (
-    <div className={`readable-panel relative mx-auto flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden border-x border-neutral-800 bg-[#111] text-[#ddd] shadow-2xl ${containerEffectClass}`}>
+    <div className={`game-shell ${showMap ? 'map-open' : ''} readable-panel relative mx-auto flex h-[100dvh] w-full max-w-5xl flex-col overflow-hidden border-x border-neutral-800 bg-[#141513] text-[#e9e3d7] shadow-2xl ${containerEffectClass}`}>
       
       {/* Modals */}
       {showSaveLoadModal && (
@@ -771,10 +772,11 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {!shortChapter && <div className="relative z-10 flex shrink-0 justify-center border-b border-neutral-800 bg-neutral-900 px-4 py-2">
+            {!shortChapter && <div className="map-toggle relative z-10 flex shrink-0 justify-center border-b border-neutral-800 bg-neutral-900 px-4">
                 <button 
                     onClick={() => { playSound('click'); setShowMap(!showMap); }}
-                    className="flex items-center gap-2 text-xs font-bold tracking-wider text-neutral-300 hover:text-white"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 text-xs tracking-wider text-neutral-300 hover:text-white"
+                    aria-expanded={showMap}
                 >
                     {showMap ? '▼ 隐藏战略地图' : '▲ 显示战略地图'}
                 </button>
@@ -782,14 +784,17 @@ const App: React.FC = () => {
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
             {!shortChapter && showMap && (
-                <div className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[32vh]">
+                <div className="map-panel max-h-[28dvh] min-h-0 shrink overflow-y-auto border-b border-neutral-800 bg-neutral-950 custom-scrollbar sm:max-h-[32dvh]" tabIndex={0} aria-label="地图详情滚动区" role="region">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
             )}
 
             <div 
                 ref={scrollRef}
-                className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 font-mono scroll-smooth sm:space-y-6 sm:p-6"
+                className="battle-log min-h-0 flex-1 space-y-5 overflow-y-auto p-4 scroll-smooth sm:space-y-6 sm:p-6"
+                aria-label="作战记录"
+                role="region"
+                tabIndex={0}
                 onClick={() => {
                     const lastLog = logs[logs.length - 1];
                     if (lastLog?.isTyping) finishTyping(lastLog.id);
@@ -806,7 +811,7 @@ const App: React.FC = () => {
                     <div className={`max-w-[95%] sm:max-w-[90%] ${
                     log.sender === 'user' 
                         ? 'rounded-r border-l-2 border-neutral-500 bg-neutral-900/40 py-2 pr-3 pl-3 text-sm font-bold text-neutral-300'
-                        : 'text-[15px] leading-7 text-neutral-200 sm:text-base sm:leading-8'
+                        : 'war-prose text-base leading-7 text-neutral-200 sm:leading-8'
                     }`}>
                     {log.sender === 'system' && log.isTyping ? (
                         <>
@@ -818,7 +823,7 @@ const App: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={(event) => { event.stopPropagation(); finishTyping(log.id); }}
-                                className="ml-2 inline-flex rounded border border-neutral-700 px-2 py-1 align-middle text-[11px] font-bold leading-none text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+                                className="ml-2 inline-flex min-h-11 items-center rounded border border-neutral-700 px-3 align-middle text-xs leading-none text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
                             >
                                 跳过
                             </button>
@@ -847,14 +852,15 @@ const App: React.FC = () => {
                 )}
             </div>
 
-            <div className="relative z-20 flex shrink-0 flex-col gap-2 border-t border-neutral-600 bg-[#171717] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_rgba(0,0,0,0.45)]">
+            <div className="command-dock relative z-20 flex shrink-0 flex-col gap-2 border-t border-neutral-700 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                <div className="command-options custom-scrollbar">
                 
                 {!stats.isGameOver && (
-                    <div className="flex justify-between items-center px-1 mb-1">
+                    <div className="command-toolbar flex items-center justify-between gap-2">
                         <div className="flex gap-2">
                              <button 
                                 onClick={() => { playSound('click'); setShowAdvisor(true); }}
-                                className="flex items-center gap-1.5 rounded border border-green-900/70 bg-neutral-950 px-3 py-2 text-xs font-bold text-green-300 transition-colors hover:text-green-200"
+                                className="flex min-h-11 items-center gap-1.5 px-2 text-xs text-neutral-200 transition-colors hover:text-white"
                             >
                                 <span>☍</span> 战地顾问
                             </button>
@@ -862,12 +868,12 @@ const App: React.FC = () => {
                                 type="button"
                                 onClick={toggleAiEnhancement}
                                 disabled={IS_STATIC_HOSTING || shortChapter}
-                                className={`flex items-center gap-1.5 rounded border px-3 py-2 text-xs font-bold transition-colors ${
+                                className={`local-mode flex min-h-11 items-center gap-1.5 rounded px-2 text-xs transition-colors ${
                                   IS_STATIC_HOSTING
-                                    ? 'text-green-700 bg-black border-green-950/70 cursor-default'
+                                    ? 'text-neutral-400 cursor-default'
                                     : aiEnabled
                                     ? 'text-amber-500/90 bg-neutral-900 border-amber-900/50 hover:border-amber-700'
-                                    : 'text-neutral-600 bg-black border-neutral-800 hover:text-neutral-400'
+                                    : 'text-neutral-400 hover:text-neutral-200'
                                 }`}
                                 title={shortChapter ? '本关使用本地规则与对白，不发送模型请求' : IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况经 Cloudflare 网关发送至千问服务；AI 军令经确认才执行，失败回退本地。不发送完整存档或身份资料。'}
                             >
@@ -882,12 +888,13 @@ const App: React.FC = () => {
                                 setShowGameMenu(true);
                                 setConfirmExit(false);
                             }}
-                            className="flex items-center gap-1.5 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs font-bold text-neutral-300 transition-colors hover:text-white"
+                            className="flex min-h-11 items-center gap-1.5 px-2 text-xs text-neutral-300 transition-colors hover:text-white"
                         >
                             <span>☰</span> 菜单
                         </button>
                     </div>
                 )}
+                {!hideMobileActions && !stats.isGameOver && (shortChapter || stats.tutorialStep !== 1 && stats.tutorialStep !== 2) && <p className={`action-scroll-hint ${shortChapter ? '' : 'long-order-hint'}`}>常用行动 <span>横滑查看更多 →</span></p>}
 
                 {!shortChapter && aiEnabled && aiFailure && !isInterpreting && (
                   <div role="status" className="max-h-24 overflow-y-auto rounded border border-amber-900/50 bg-amber-950/20 px-2 py-1.5 text-xs text-amber-200">
@@ -896,16 +903,16 @@ const App: React.FC = () => {
                 )}
                 {/* Quick Actions Row */}
                 {!stats.isGameOver && stats.activeTacticalCard && <button type="button" disabled={isLoading || !!currentDilemma}
-                  onClick={() => setShowEncounterDetails(true)} className={`${input.trim() ? 'hidden sm:flex' : 'flex'} min-h-10 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40`}>
+                  onClick={() => setShowEncounterDetails(true)} className={`${hideMobileActions ? 'hidden sm:flex' : 'flex'} min-h-11 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40`}>
                   <span>战地际遇 · {TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id)?.title ?? stats.activeTacticalCard.title}</span><span>查看</span>
                 </button>}
-                {!stats.isGameOver && stats.equippedTactic && <div className={input.trim() ? 'hidden sm:block' : undefined}>
+                {!stats.isGameOver && stats.equippedTactic && <div className={hideMobileActions ? 'hidden sm:block' : undefined}>
                   <TacticStatus stats={stats} disabled={isLoading || !!currentDilemma} onPreview={() => setShowTacticPreview(true)} />
                 </div>}
                 {!stats.isGameOver && (
-                    shortChapter ? <div className={input.trim() ? 'hidden sm:block' : undefined}>
+                    shortChapter ? <div className={hideMobileActions ? 'hidden sm:block' : undefined}>
                       <ChapterMissionActions stats={stats} disabled={isLoading || !!currentDilemma} onAction={cmd => handleCommand(undefined, cmd)} />
-                    </div> : <div className={input.trim() ? 'hidden sm:block' : undefined}>
+                    </div> : <div className={hideMobileActions ? 'hidden sm:block' : undefined}>
                       <TutorialGuide
                         stats={stats}
                         disabled={isLoading || !!currentDilemma}
@@ -918,7 +925,7 @@ const App: React.FC = () => {
                       />
                     </div>
                 )}
-
+                </div>
                 {stats.isGameOver ? (
                   <div className="flex items-center justify-between gap-2 rounded border border-amber-900/40 bg-black/40 p-2">
                     <div className="min-w-0">
@@ -946,7 +953,7 @@ const App: React.FC = () => {
                   <>
                     <ActionPreviewBar preview={actionPreview} compact />
 
-                    <form onSubmit={(e) => handleCommand(e)} className="relative flex gap-2">
+                    <form onSubmit={(e) => handleCommand(e)} className="command-form relative flex gap-2">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-mono select-none">
                         {'>'}
                     </div>
@@ -958,15 +965,16 @@ const App: React.FC = () => {
                         onCompositionStart={() => isComposing.current = true}
                         onCompositionEnd={() => isComposing.current = false}
                         placeholder={stats.isGameOver ? "本局已结束，可复盘战报" : (currentDilemma ? "请先完成当前选择" : "问战况、说两句，或下达一条军令")}
+                        aria-label="军令或对话"
                         disabled={stats.isGameOver || !!currentDilemma}
                         autoComplete="off"
                         autoCorrect="off"
-                        className="w-full bg-neutral-900 text-white pl-8 pr-4 py-2.5 rounded-md border border-neutral-700 focus:border-neutral-500 focus:outline-none font-mono placeholder-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                        className="min-h-11 min-w-0 flex-1 rounded-sm border border-neutral-600 bg-neutral-950 py-2.5 pl-8 pr-3 text-base text-neutral-100 placeholder-neutral-400 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <button 
                         type="submit" 
                         disabled={isLoading || stats.isGameOver || !!currentDilemma}
-                        className="whitespace-nowrap rounded-md border border-neutral-600 bg-neutral-700 px-4 py-2 text-sm font-black text-neutral-100 transition-colors hover:bg-neutral-600 disabled:opacity-50"
+                        className="send-order min-h-11 shrink-0 whitespace-nowrap rounded-sm px-4 py-2 text-sm font-bold transition-colors disabled:opacity-50"
                     >
                         {isLoading ? '...' : '发送'}
                     </button>

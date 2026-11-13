@@ -80,28 +80,27 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-        <div className="bg-[#1a1a1a] w-full max-w-md h-[min(500px,calc(100dvh-2rem))] border border-neutral-600 rounded-sm shadow-2xl flex flex-col relative font-mono">
+        <div className="bg-neutral-950 w-full max-w-md h-[min(560px,calc(100dvh-2rem))] border border-neutral-600 rounded-sm shadow-2xl flex flex-col relative readable-panel" role="dialog" aria-modal="true" aria-labelledby="advisor-title">
             {/* Header */}
-            <div className="bg-neutral-800 p-3 border-b border-neutral-700 flex justify-between items-center">
+            <div className="bg-neutral-900 px-4 py-2 border-b border-neutral-700 flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <h3 className="text-neutral-200 font-bold tracking-widest text-sm">战地顾问 · 只读问答</h3>
+                    <h3 id="advisor-title" className="text-neutral-200 font-bold tracking-wider text-sm">战地顾问 · 只读问答</h3>
                 </div>
-                <button onClick={closeAdvisor} className="text-neutral-400 hover:text-white transition-colors" aria-label="关闭战地顾问">
+                <button onClick={closeAdvisor} className="min-h-11 min-w-11 text-neutral-300 hover:text-white transition-colors" aria-label="关闭战地顾问">
                     ✕
                 </button>
             </div>
 
             {/* Chat Area */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#111]">
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-950">
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] whitespace-pre-wrap break-words text-xs sm:text-sm p-2 rounded leading-relaxed border ${
+                        <div className={`max-w-[95%] whitespace-pre-wrap break-words text-sm p-3 rounded-sm leading-7 border ${
                             msg.role === 'user' 
                                 ? 'bg-neutral-800 text-neutral-300 border-neutral-700' 
-                                : 'bg-[#0a200a] text-green-100/90 border-green-900/50'
+                                : 'bg-neutral-900 text-neutral-100 border-neutral-700'
                         }`}>
-                            {msg.role === 'advisor' && <div className="mb-1 text-[11px] font-bold text-green-500">参谋部：</div>}
+                            {msg.role === 'advisor' && <div className="mb-1 text-xs font-bold text-amber-200">参谋部：</div>}
                             {msg.text}
                         </div>
                     </div>
@@ -133,12 +132,13 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="询问：怎么获胜？士气有什么用？"
-                        className="flex-1 bg-black text-white text-sm px-3 py-2 border border-neutral-600 focus:border-neutral-400 outline-none rounded-sm placeholder-neutral-600"
+                        aria-label="顾问问题"
+                        className="min-h-11 min-w-0 flex-1 bg-neutral-950 text-neutral-100 text-base px-3 py-2 border border-neutral-600 rounded-sm placeholder-neutral-400"
                     />
                     <button 
                         type="submit" 
                         disabled={isLoading}
-                        className="bg-neutral-700 hover:bg-neutral-600 text-neutral-200 px-4 py-2 text-xs font-bold border border-neutral-600 rounded-sm transition-colors disabled:opacity-50"
+                        className="min-h-11 shrink-0 bg-neutral-700 hover:bg-neutral-600 text-neutral-100 px-4 py-2 text-sm font-bold border border-neutral-600 rounded-sm transition-colors disabled:opacity-50"
                     >
                         查询
                     </button>
