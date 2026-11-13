@@ -28,37 +28,37 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
   const primaryStats = [
     { label: '可战', value: combatReady, tone: combatReady < 100 ? 'text-red-400' : 'text-neutral-100', alert: combatReady < 100 },
     { label: '伤员', value: stats.wounded, tone: stats.wounded > 0 ? 'text-orange-400' : 'text-neutral-300', alert: stats.wounded > 20 },
-    { label: '士气', value: stats.morale, tone: stats.morale < 30 ? 'text-red-400' : 'text-amber-300', alert: stats.morale < 30 },
-    { label: '总结构', value: stats.health, tone: stats.health < 30 ? 'text-red-400' : 'text-cyan-200', alert: stats.health < 30 },
+    { label: '士气', value: stats.morale, tone: stats.morale < 30 ? 'text-red-400' : 'text-neutral-100', alert: stats.morale < 30 },
+    { label: '总结构', value: stats.health, tone: stats.health < 30 ? 'text-red-400' : 'text-neutral-100', alert: stats.health < 30 },
   ];
 
   const resources = [
-    { label: '七九弹', value: stats.ammo, tone: stats.ammo < 5000 ? 'text-red-400' : 'text-amber-200' },
-    { label: '机枪弹', value: stats.machineGunAmmo, tone: stats.machineGunAmmo < 2000 ? 'text-red-400' : 'text-orange-300' },
+    { label: '七九弹', value: stats.ammo, tone: stats.ammo < 5000 ? 'text-red-400' : 'text-neutral-200' },
+    { label: '机枪弹', value: stats.machineGunAmmo, tone: stats.machineGunAmmo < 2000 ? 'text-red-400' : 'text-neutral-200' },
     { label: '手榴弹', value: stats.grenades, tone: stats.grenades < 50 ? 'text-red-400' : 'text-neutral-200' },
     { label: '工事材料', value: stats.sandbags, tone: stats.sandbags < 150 ? 'text-red-400' : 'text-stone-300' },
-    { label: '急救', value: stats.medkits, tone: stats.medkits < 10 ? 'text-red-400' : 'text-green-300' },
+    { label: '急救包', value: stats.medkits, tone: stats.medkits < 10 ? 'text-red-400' : 'text-neutral-200' },
   ];
   const commandPostThreatened = !!stats.enemyOperation?.revealed
     && stats.enemyOperation.target === stats.location;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-700 bg-black/95 shadow-2xl backdrop-blur" aria-label="战况总览">
+    <header className="battle-overview shrink-0 border-b border-neutral-700 bg-neutral-950" aria-label="战况总览">
       <div className="mx-auto max-w-4xl font-sans">
         <div className="grid grid-cols-[1fr_auto] items-stretch border-b border-neutral-800">
-          <div className="flex min-w-0 items-center gap-3 px-3 py-2">
+          <div className="flex min-w-0 items-center gap-3 px-3 py-1">
             <div className="shrink-0 border-r border-neutral-700 pr-3">
-              <div className="text-[11px] font-bold text-neutral-400">D{stats.day} · {currentDate}</div>
+              <div className="text-xs text-neutral-400">第{stats.day}天 · {currentDate}</div>
               <div className="font-mono text-xl font-black leading-none text-amber-300">{stats.currentTime}</div>
             </div>
             <div className="min-w-0">
-              <div className="text-[11px] font-bold text-neutral-500">指挥部</div>
+              <div className="text-xs text-neutral-400">四行 · 指挥部</div>
               <div className="truncate text-sm font-black text-amber-100">{stats.location}</div>
             </div>
           </div>
 
           <div className="flex min-w-[88px] flex-col items-center justify-center border-l border-neutral-800 px-3 text-center">
-              <span className="text-[11px] font-bold text-neutral-500">国旗</span>
+              <span className="text-xs text-neutral-400">国旗</span>
             <span className={`rounded border px-2 py-0.5 text-xs font-black ${stats.hasFlagRaised
               ? 'border-red-700 bg-red-950/60 text-red-300'
               : 'border-neutral-700 bg-neutral-900 text-neutral-300'}`}>
@@ -69,15 +69,15 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
 
         <div className="grid grid-cols-4 divide-x divide-neutral-800 border-b border-neutral-800 bg-[#0b0b0b]">
           {primaryStats.map((item) => (
-            <div key={item.label} className={`relative flex min-w-0 flex-col items-center justify-center px-1 py-2 ${item.alert ? 'bg-red-950/15' : ''}`}>
-              <span className="text-[11px] font-bold text-neutral-400">{item.label}</span>
+            <div key={item.label} className={`relative flex min-w-0 flex-col items-center justify-center px-1 py-1 ${item.alert ? 'bg-red-950/15' : ''}`}>
+              <span className="text-xs text-neutral-400">{item.label}</span>
               <span className={`font-mono text-lg font-black leading-tight ${item.tone}`}>{item.value}</span>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)_128px] border-b border-neutral-800 bg-neutral-950 sm:grid-cols-[minmax(0,1fr)_190px]">
-          <div className="min-w-0 px-3 py-2">
+          <div className="min-w-0 px-3 py-1">
             <div className="flex items-center gap-2">
               <span className={`shrink-0 text-xs font-black ${lostSectorCount > 0 ? 'text-red-400' : 'text-neutral-300'}`}>
                 ⚠ {lostSectorCount > 0 ? `失守 ${lostSectorCount}/4` : dayProfile.title}
@@ -85,8 +85,8 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
               <span className="truncate text-xs text-neutral-300" title={enemyIntel}>{enemyIntel || '通讯中断……'}</span>
             </div>
           </div>
-          <div className="border-l border-neutral-800 px-3 py-2" title="敌军压力影响攻势规模；达到100%时，会把接敌时间压缩至最后1回合。">
-            <div className="flex items-center justify-between text-[11px] font-bold">
+          <div className="border-l border-neutral-800 px-3 py-1" title="敌军压力影响攻势规模；达到100%时，会把接敌时间压缩至最后1回合。">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-neutral-400">敌军压力</span>
               <span className={siegePercent >= 80 ? 'text-red-400' : 'text-neutral-200'}>{siegePercent}%</span>
             </div>
@@ -96,11 +96,11 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 divide-x divide-neutral-800 border-b border-neutral-800 bg-[#070707] text-[11px] font-bold">
-          <div className="flex items-center justify-between px-3 py-1.5 text-neutral-400">
-            <span>守军疲劳</span><span className={stats.fatigue >= 55 ? 'text-red-400' : 'text-cyan-300'}>{stats.fatigue}%</span>
+        <div className="grid grid-cols-2 divide-x divide-neutral-800 border-b border-neutral-800 bg-neutral-950 text-xs">
+          <div className="flex items-center justify-between px-3 py-1 text-neutral-400">
+            <span>守军疲劳</span><span className={stats.fatigue >= 55 ? 'text-red-400' : 'text-neutral-200'}>{stats.fatigue}%</span>
           </div>
-          <div className="flex items-center justify-between px-3 py-1.5 text-neutral-400">
+          <div className="flex items-center justify-between px-3 py-1 text-neutral-400">
             <span>接敌时间</span><span className={stats.enemyOperation?.turnsRemaining === 1 ? 'text-red-400' : 'text-amber-300'}>{stats.enemyOperation ? `${stats.enemyOperation.turnsRemaining} 回合` : '重整中'}</span>
           </div>
         </div>
@@ -112,10 +112,10 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, enemyIntel }) => {
           </div>
         )}
 
-        <div className="flex overflow-x-auto border-b border-neutral-800 bg-[#080808] no-scrollbar">
+        <div className="supply-grid" aria-label="现有物资">
           {resources.map((item) => (
-            <div key={item.label} className="flex min-w-[92px] flex-1 items-center justify-between gap-2 border-r border-neutral-800 px-2.5 py-2 last:border-r-0">
-              <span className="whitespace-nowrap text-[11px] font-bold text-neutral-500">{item.label}</span>
+            <div key={item.label} className="supply-cell">
+              <span className="whitespace-nowrap text-xs text-neutral-400">{item.label}</span>
               <span className={`font-mono text-xs font-black ${item.tone}`}>{item.value}</span>
             </div>
           ))}

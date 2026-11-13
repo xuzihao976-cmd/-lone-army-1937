@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: dark;
-  background: #090909;
+  background: #10120f;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -20,10 +20,10 @@ body,
 
 body {
   overflow: hidden;
-  color: #e5e5e5;
+  color: #eee9dd;
   background:
-    radial-gradient(circle at 50% -20%, rgba(127, 29, 29, 0.11), transparent 44%),
-    #090909;
+    radial-gradient(ellipse at 50% 0, #272a22, transparent 70%),
+    #10120f;
   font-family: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", serif;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
@@ -40,9 +40,137 @@ input {
 }
 
 button:focus-visible,
-input:focus-visible {
-  outline: 2px solid rgba(245, 158, 11, 0.7);
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid #ddca9c;
   outline-offset: 2px;
+}
+
+button { touch-action: manipulation; }
+
+.war-prose {
+  font-family: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", serif;
+  overflow-wrap: anywhere;
+  line-height: 1.85;
+}
+
+/* Original typographic art direction. No remote fonts or borrowed game assets. */
+.archive-screen {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  background: radial-gradient(ellipse at 0 0, #2a2d22 0, transparent 55%), #141712;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.archive-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.archive-layout { width: 100%; max-width: 1060px; margin: 0 auto; padding: 28px 20px 24px; }
+.archive-heading { position: relative; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #45473e; }
+.archive-kicker { color: #bdb9a9; font-size: 12px; letter-spacing: .2em; }
+.archive-heading h1 { display: flex; align-items: center; gap: 20px; margin-top: 12px; font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif; font-size: 56px; font-weight: 700; line-height: 1.2; letter-spacing: .12em; color: #eee9dd; }
+.archive-seal { writing-mode: vertical-rl; padding: 5px 3px; border: 1px solid #ba7461; color: #d59983; font-family: serif; font-size: 11px; font-weight: 400; line-height: 1.4; letter-spacing: .15em; }
+.archive-tagline { margin-top: 12px; color: #c7c1b5; font-size: 14px; line-height: 1.9; }
+.archive-rule { display: none; }
+.archive-note { font-size: 13px; line-height: 2; color: #aaa699; }
+.archive-section-label { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; font-size: 12px; color: #aaa699; }
+.archive-section-label h2 { color: #eee9dd; font-size: 14px; font-weight: 600; letter-spacing: .1em; }
+.chapter-list { border-top: 1px solid #45473e; }
+.chapter-entry { display: flex; width: 100%; align-items: center; gap: 12px; padding: 16px 10px; border-bottom: 1px solid #45473e; border-left: 3px solid transparent; text-align: left; transition: background-color 150ms; }
+.chapter-entry:hover { background: #25291f; }
+.chapter-entry[aria-pressed="true"] { border-left-color: #d4b77b; background: #2a2d22; }
+.chapter-number { width: 24px; flex-shrink: 0; font-family: serif; font-size: 24px; color: #aaa699; }
+.chapter-entry[aria-pressed="true"] .chapter-number { color: #ddca9c; }
+.chapter-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; color: #aaa699; font-size: 12px; }
+.chapter-state { color: #c7c1b5; }
+.chapter-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-top: 5px; }
+.chapter-title h3 { font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif; font-size: 21px; font-weight: 700; color: #eee9dd; }
+.chapter-title > span { font-size: 12px; color: #aaa699; }
+.chapter-check { flex-shrink: 0; width: 16px; color: #ddca9c; font-size: 16px; }
+.chapter-brief { padding: 16px 0 0; }
+.chapter-background { margin-top: 6px; font-size: 12px; line-height: 1.8; color: #aaa699; }
+.chapter-background summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; }
+.chapter-background p { padding-bottom: 10px; }
+.archive-sheet { border: 1px solid #45473e; background: #191c16; border-radius: 2px; }
+.tactic-picker button[aria-pressed="true"] { border-color: #c9a765; background: #2c2c20; }
+.archive-utilities { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.archive-utilities button { flex: 1 1 42%; min-height: 44px; padding: 8px; border: 1px solid #45473e; border-radius: 2px; font-size: 12px; color: #c7c1b5; }
+.archive-utilities button:disabled { opacity: .5; }
+.archive-utilities button:hover:enabled { background: #25291f; }
+.archive-medal { color: #d4b77b; font-size: 24px; }
+.archive-footer { padding-top: 24px; font-size: 12px; line-height: 1.9; color: #aaa699; }
+.archive-dock { flex-shrink: 0; border-top: 1px solid #625f55; padding: 12px 20px max(12px, env(safe-area-inset-bottom)); background: #1b1e17; }
+.archive-dock-inner { max-width: 1020px; margin: auto; }
+.archive-selection { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-bottom: 10px; font-size: 12px; line-height: 1.5; color: #bdb9a9; }
+.archive-selection > span:first-child { color: #eee9dd; }
+.archive-primary, .send-order { background: #d4bd89; color: #191c16; border: 1px solid #d4bd89; }
+.archive-primary { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 48px; padding: 12px 16px; border-radius: 2px; font-size: 15px; font-weight: 600; }
+.archive-primary:hover, .send-order:hover:enabled { background: #e2cea3; }
+.archive-primary:focus-visible, .send-order:focus-visible { outline-color: #fff8e8; outline-offset: 3px; }
+
+.game-shell { background-image: radial-gradient(ellipse at 50% 30%, #1d2019 0, transparent 80%); }
+.battle-log { scrollbar-gutter: stable; }
+.map-open .battle-log { min-height: 64px; }
+.battle-log > div { max-width: 44rem; margin-left: auto; margin-right: auto; }
+.supply-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #191c16; }
+.supply-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; gap: 2px; padding: 6px 2px; border-right: 1px solid #30332d; }
+.supply-cell:last-child { border-right: none; }
+.supply-cell > span:last-child { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.command-dock { background: #1b1e17; }
+.command-options { display: flex; min-height: 0; max-height: 32dvh; flex-direction: column; gap: 6px; overflow-y: auto; }
+.command-toolbar { flex-shrink: 0; border-bottom: 1px solid #30332d; }
+.local-mode:disabled { opacity: 1; }
+.action-scroll-hint { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; color: #aaa699; }
+.action-scroll-hint > span { font-size: 12px; }
+.order-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 128px; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; scrollbar-color: #625f55 transparent; }
+.order-button { display: flex; min-width: 0; min-height: 54px; flex-direction: column; justify-content: center; align-items: center; gap: 5px; border: 1px solid #625f55; border-radius: 2px; padding: 8px 5px; background: #24271f; color: #eee9dd; transition: background-color 150ms; }
+.order-button:enabled:hover { background: #35392d; border-color: #aaa699; }
+.order-button:disabled { background: #171a14; border-color: #30332d; color: #aaa699; cursor: not-allowed; }
+.order-button[aria-current="step"] { border-color: #d4b77b; background: #3b3424; box-shadow: inset 0 0 0 1px #d4b77b; }
+.order-label { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.order-caption { font-size: 12px; color: #c7c1b5; white-space: nowrap; }
+.order-button:disabled .order-caption { color: #aaa699; }
+.withdraw-order { border-color: #c9a765; color: #ddca9c; }
+.tutorial-note { display: flex; align-items: flex-start; gap: 6px; border-left: 2px solid #c9a765; background: #28271c; padding: 0 6px 0 10px; }
+.tutorial-summary { display: flex; min-height: 44px; align-items: center; flex-wrap: wrap; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #eee9dd; }
+.tutorial-summary::marker { content: ''; }
+.tutorial-summary::-webkit-details-marker { display: none; }
+.command-guide { max-height: 22dvh; overflow-y: auto; }
+.command-form input:focus-visible { outline-offset: -3px; }
+
+@media (min-width: 640px) {
+  .archive-layout { padding: 40px 32px 32px; }
+  .archive-dock { padding-left: 32px; padding-right: 32px; }
+  .supply-cell { flex-direction: row; justify-content: space-between; padding: 8px 12px; }
+}
+@media (min-width: 1024px) {
+  .order-strip:not(.chapter-orders) { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .long-order-hint { display: none; }
+  .archive-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 64px; padding-top: 64px; }
+  .archive-heading { align-self: start; position: sticky; top: 40px; margin: 0; border: none; padding-top: 12px; }
+  .archive-heading h1 { margin-top: 28px; font-size: 88px; }
+  .archive-tagline { margin-top: 24px; font-family: "Songti SC", STSong, serif; font-size: 20px; line-height: 2; }
+  .archive-rule { display: flex; justify-content: space-between; max-width: 240px; margin: 40px 0 20px; padding-top: 12px; border-top: 1px solid #625f55; color: #aaa699; font-size: 12px; }
+  .archive-dock-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+  .archive-selection { flex: 1; margin: 0; justify-content: start; gap: 12px 24px; }
+  .archive-primary { max-width: 400px; }
+}
+@media (max-width: 639px) {
+  .archive-layout { padding: 20px 20px 24px; }
+  .archive-heading { margin-bottom: 20px; padding-bottom: 14px; }
+  .archive-heading h1 { margin-top: 8px; font-size: 48px; }
+  .archive-tagline { margin-top: 8px; font-size: 13px; }
+  .chapter-entry { padding-top: 10px; padding-bottom: 10px; }
+}
+@media (max-height: 560px) {
+  .battle-overview, .mission-overview { max-height: 28dvh; overflow-y: auto; }
+  .command-options { max-height: 20dvh; }
+  .command-dock .action-preview { max-height: 18dvh; }
+  .map-open .battle-log { min-height: 24px; }
+  .archive-layout { padding-top: 20px; }
+  .archive-heading { margin-bottom: 20px; }
+  .archive-dock { padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 }
 
 ::-webkit-scrollbar {

@@ -28,7 +28,7 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
             <h2 className="text-xl font-bold font-serif tracking-widest text-amber-500">
                 {mode === 'save' ? '保存作战记录' : '读取作战记录'}
             </h2>
-            <button onClick={onClose} className="text-neutral-500 hover:text-white px-2 text-xl">✕</button>
+            <button onClick={onClose} aria-label="关闭作战记录" className="min-h-11 min-w-11 text-neutral-300 hover:text-white px-2 text-xl">✕</button>
         </div>
 
         {/* Grid Area */}

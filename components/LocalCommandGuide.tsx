@@ -5,8 +5,8 @@ const examples = [
   ['怎么治疗伤员','问规则 · 不执行治疗'], ['我想回家','聊心事 · 不等于撤退'],
 ];
 export default function LocalCommandGuide({onFill}:{onFill:(input:string)=>void}) {
-  return <details className="mt-2 text-xs text-neutral-400">
-    <summary className="cursor-pointer py-1 hover:text-neutral-200">本地交流与军令示例 · 无需 AI</summary>
+  return <details className="command-guide text-xs text-neutral-400">
+    <summary className="min-h-6 cursor-pointer py-1 hover:text-neutral-200">交流与军令示例 · 聊天不耗时</summary>
     <div className="max-h-52 overflow-y-auto pr-1">
       <p className="my-2 leading-relaxed">点击只填入，查看预览后再发送。聊天不耗时；有效行动推进战场。一次一条命令。</p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{examples.map(([input,label])=><button type="button" key={input} onClick={()=>onFill(input)} className="min-w-0 rounded border border-neutral-700 px-3 py-2 text-left leading-relaxed hover:bg-neutral-800"><span className="block break-words text-neutral-200">{input}</span><span className="text-neutral-500">{label}</span></button>)}</div>
