@@ -42,7 +42,7 @@ export type LanguageGuard = 'too_long' | 'injection' | 'ethics' | 'conditional' 
 export const getLanguageGuard = (raw: string): LanguageGuard | null => {
   const input = canonicalCommand(raw);
   if (raw.length > 500) return 'too_long';
-  if (/confirm_|evt_resolve|card_resolve|start_game|skip_tutorial|__proto__|<script|javascript:|(?:rngstate|soldiers|morale|ammo)\s*[:=]|(?:忽略|无视|绕过|修改|重写).{0,12}(?:规则|限制|系统|设定)|(?:给我|增加|加到|修改|设置|改成).{0,12}(?:无限|无敌|[0-9]{3,})|无限(?:子弹|弹药|资源)|一键(?:通关|胜利)|我是(?:开发者|管理员)|开发者模式|上帝模式|作弊器/.test(input)) return 'injection';
+  if (/confirm_|evt_resolve|card_resolve|tactic_use|encounter_skip|start_game|skip_tutorial|__proto__|<script|javascript:|(?:rngstate|soldiers|morale|ammo)\s*[:=]|(?:忽略|无视|绕过|修改|重写).{0,12}(?:规则|限制|系统|设定)|(?:给我|增加|加到|修改|设置|改成).{0,12}(?:无限|无敌|[0-9]{3,})|无限(?:子弹|弹药|资源)|一键(?:通关|胜利)|我是(?:开发者|管理员)|开发者模式|上帝模式|作弊器/.test(input)) return 'injection';
   if (/(?:杀|毙|处决|枪决|开火|扫射|射击|烧|炸|虐待|折磨|强奸|侮辱).{0,12}(?:俘虏|平民|百姓|自己人|副官|伤员|伤兵|投降的|妇女|女人|孩子)|(?:俘虏|平民|百姓|自己人|副官|伤员|伤兵).{0,10}(?:杀掉|杀光|打死|枪毙|处决|扫射|烧死)|(?:向|朝|对着)租界.{0,5}(?:开火|扫射)|杀了我|枪毙我|弄死我|强奸|轮奸/.test(input)) return 'ethics';
   if (/如果|一旦|假如|要是|若是|倘若|倘使|只要.{1,20}就|等.{1,20}以后/.test(input)) return 'conditional';
   if (/[“”「」『』"'`]|比如|例如|假装|扮演|测试一下|测试命令|复述|重复说|照着念/.test(input)) return 'quotation';

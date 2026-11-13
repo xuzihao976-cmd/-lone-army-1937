@@ -18,7 +18,7 @@ interface AdvisorChatProps {
 
 const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEnabled }) => {
   const [messages, setMessages] = useState<Message[]>([
-    { id: 'init', role: 'advisor', text: '指挥官，可以问战况、规则或聊两句。这里只回答和预览，不执行军令；要行动，请回主界面下令。常见问题由本地回答，无需 AI。' }
+    { id: 'init', role: 'advisor', text: '长官，我在。问战况、问规则，或说两句都行。这里仅答复和预览，不执行军令；要行动，请回主界面下令。本地问答无需 AI。' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +85,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
             <div className="bg-neutral-800 p-3 border-b border-neutral-700 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <h3 className="text-neutral-200 font-bold tracking-widest text-sm">战地顾问 / 教程指南</h3>
+                    <h3 className="text-neutral-200 font-bold tracking-widest text-sm">战地顾问 · 只读问答</h3>
                 </div>
                 <button onClick={closeAdvisor} className="text-neutral-400 hover:text-white transition-colors" aria-label="关闭战地顾问">
                     ✕
@@ -96,7 +96,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#111]">
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] text-xs sm:text-sm p-2 rounded leading-relaxed border ${
+                        <div className={`max-w-[85%] whitespace-pre-wrap break-words text-xs sm:text-sm p-2 rounded leading-relaxed border ${
                             msg.role === 'user' 
                                 ? 'bg-neutral-800 text-neutral-300 border-neutral-700' 
                                 : 'bg-[#0a200a] text-green-100/90 border-green-900/50'
@@ -109,7 +109,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
                 {isLoading && (
                     <div className="flex justify-start">
                         <div className="bg-[#0a200a] border border-green-900/50 p-2 rounded text-xs text-green-500 animate-pulse">
-                            正在查阅档案...
+                            正在整理答复……
                         </div>
                     </div>
                 )}
@@ -119,7 +119,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
             <div className="p-3 bg-neutral-800 border-t border-neutral-700">
                 <div className="mb-2 flex items-center justify-between text-[11px] font-mono">
                     <span className={source === 'cloudflare' ? 'text-green-500' : 'text-neutral-500'}>
-                        {source === 'cloudflare' ? '● 千问 AI 增强' : '● 本地规则顾问'}
+                        {source === 'cloudflare' ? '● 本次由 AI 回答' : '● 本地规则顾问'}
                     </span>
                     {isLoading && (
                       <button type="button" onClick={() => requestRef.current?.abort()} className="text-red-500/70 hover:text-red-400">

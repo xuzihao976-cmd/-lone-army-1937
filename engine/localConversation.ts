@@ -4,6 +4,18 @@ import { canonicalCommand, compactCommand, isQuestion } from './commandLanguage'
 import { getOperationIntel } from './battlefield';
 import { findLocations } from './commandUtils';
 const hashText = (text: string): number => { let hash = 2166136261; for (const char of text) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619); return hash >>> 0; };
+/** Pure display selection for chapter-owned text. Existing warehouse dialogue
+ * keeps its own selection behavior; neither path consumes battlefield RNG. */
+export const rotateDialogueLines = <T>(s: GameStats, input: string, topic: DialogueTopic, lines: readonly T[]) => {
+  if (lines.length === 0) throw new Error('Dialogue pool must not be empty');
+  const previous = sanitizeDialogueMemory(s.localDialogue);
+  const inputHash = hashText(compactCommand(input));
+  const repeats = previous?.inputHash === inputHash ? Math.min(100, previous.repeats + 1) : 0;
+  const variant = previous?.topic === topic ? (previous.variant + 1) % lines.length
+    : (hashText(topic) + (previous?.sequence ?? 0)) % lines.length;
+  const memory: LocalDialogueMemory = { sequence: ((previous?.sequence ?? 0) + 1) % 1000001, topic, variant, inputHash, repeats };
+  return { line: lines[variant], memory };
+};
 export const sanitizeDialogueMemory = (value: unknown): LocalDialogueMemory | undefined => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const m = value as Record<string, unknown>;
@@ -17,7 +29,7 @@ const contextLines = (s: GameStats, topic: DialogueTopic, input: string): readon
   if (!contextual.has(topic)) return null;
   if (s.sectorIntegrity[s.location] <= 0) return CONTEXT_DIALOGUE.lost_position;
   if (!s.soldierDistribution[s.location]) return CONTEXT_DIALOGUE.empty_position;
-  if (/机枪/.test(input) && !s.hmgSquads.some(q => q.status === 'active' && q.count > 0 && q.location !== '待命' && s.sectorIntegrity[q.location] > 0 && s.machineGunAmmo >= 200)) return CONTEXT_DIALOGUE.no_hmg;
+  if (/机枪/.test(input) && !s.hmgSquads.some(q => q.status === 'active' && !q.jammed && q.count > 0 && q.location !== '待命' && s.sectorIntegrity[q.location] > 0 && s.machineGunAmmo >= 200)) return CONTEXT_DIALOGUE.no_hmg;
   if (/伤员|军医|医务/.test(input) && s.wounded === 0) return CONTEXT_DIALOGUE.no_wounded;
   if (/伤员|军医|医务/.test(input) && s.wounded > 0 && s.medkits === 0) return CONTEXT_DIALOGUE.no_medkits;
   if (s.ammo === 0) return CONTEXT_DIALOGUE.no_ammo;
@@ -86,7 +98,7 @@ export const getBattlefieldQuery = (s: GameStats, raw: string): string | null =>
   const t = canonicalCommand(raw);
   if (!isQuestion(t)) return null;
   const roster = s.roster.filter(q => t.includes(q.name));
-  if (roster.length) return roster.map(q => `${q.name}：${q.status === 'alive' ? '名册登记存活' : `已阵亡${q.deathReason ? `（${q.deathReason}）` : ''}`}，籍贯 ${q.origin}，特点 ${q.trait}。`).join('\n');
+  if (roster.length) return roster.map(q => `${q.name}：${q.status === 'alive' ? '名册登记存活' : `已阵亡${q.deathReason ? `（${q.deathReason === 'combat' ? '战斗阵亡' : q.deathReason}）` : ''}`}，籍贯 ${q.origin}，特点 ${q.trait}。`).join('\n');
   if (/我是谁|你是谁|你叫什么|名字|身份|真人|人工智能|机器人/.test(t)) return null;
   const lines: string[] = [];
   if (/弹药|子弹|七九弹|机枪弹|手榴弹|弹夹|弹匣/.test(t)) lines.push(`七九弹 ${s.ammo} 发，机枪弹 ${s.machineGunAmmo} 发，手榴弹 ${s.grenades} 枚。`);
@@ -94,14 +106,14 @@ export const getBattlefieldQuery = (s: GameStats, raw: string): string | null =>
   if (/伤亡|伤员|伤兵|兵力|人数|弟兄|战士|士兵|几个人|死了|阵亡/.test(t)) {
     const crew = s.hmgSquads.reduce((n,q) => n + (q.status === 'active' ? q.count : 0), 0);
     lines.push(`步兵 ${s.soldiers} 人，现役机枪人员 ${crew} 人，伤员 ${s.wounded} 人；合计可战人员 ${s.soldiers + crew} 人。专业小队包含在步兵中，不重复计算。`);
-    if (/死了|阵亡|伤亡/.test(t)) lines.push(`具名名册记录 ${s.roster.filter(q => q.status === 'dead').length} 人阵亡；名册仅覆盖部分人物，不能当作全军累计阵亡数。`);
+    if (/死了|阵亡|伤亡/.test(t)) lines.push(`具名名册记录 ${s.roster.filter(q => q.status === 'dead').length} 人阵亡；它只覆盖部分人物，不能当作全军累计阵亡数。名册命运属于本局游戏演绎，不作史实。`);
   }
   if (/士气|信心|能守住|撑得住|能赢/.test(t)) lines.push(`士气 ${s.morale}/100。${s.morale < 35 ? '士气低落，要留意逃兵风险。' : '士气不能保证下一战结果，仍需看兵力、资源和防线。'}`);
   if (/疲劳|精神|累不累|困不困|多累/.test(t)) lines.push(`疲劳 ${s.fatigue}/100。轮换休息才会实际降低疲劳。`);
   if (/军令|命令|预备/.test(t)) lines.push(Object.entries(s.preparedOrders || {}).map(([l,o]) => `${l}：${({ rapid:'猛烈射击',conserve:'节约弹药',close:'近距开火',bayonet:'刺刀准备',hold:'死守阵位' })[o!]}`).join('；') || '目前没有待执行的预备军令。');
   if (/敌|接敌|压力|进攻方向/.test(t)) lines.push(`敌军压力 ${s.siegeMeter}/100。${getOperationIntel(s.enemyOperation)}`);
   if (/结构|仓库还|建筑|承重/.test(t)) lines.push(`仓库总结构 ${s.health}/100；总结构与各层完整度分别计算。`);
-  if (/机枪/.test(t)) lines.push(s.hmgSquads.map(q => `${q.name}：${q.location}，${q.count}人，${q.status === 'active' ? '现役' : '已失效'}`).join('；'));
+  if (/机枪/.test(t)) lines.push(s.hmgSquads.map(q => `${q.name}：${q.location}，${q.count}人，${q.status === 'active' ? q.jammed ? `现役，枪械故障；可下令“检修${q.name}”` : '现役' : '已失效'}`).join('；'));
   if (/小队|专业|特长/.test(t)) lines.push(s.specialistSquads.map(q => `${q.name}：${q.location}，编制${q.count}人，${q.status === 'active' ? '效能受本层驻军约束' : '失效'}`).join('；'));
   for (const l of findLocations(t)) lines.push(`${l}：${s.sectorIntegrity[l] > 0 ? '我军控制' : '已失守'}，步兵 ${s.soldierDistribution[l] || 0} 人，完整度 ${s.sectorIntegrity[l]}%，工事 ${s.fortificationLevel[l]} 级。`);
   if (/国旗|升旗/.test(t)) lines.push(s.hasFlagRaised ? '国旗当前已经升起。' : '国旗当前未升起。');

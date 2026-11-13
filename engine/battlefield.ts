@@ -11,6 +11,10 @@ const ROUTE_NAMES: Record<Location, string> = {
   '地下室': '苏州河岸 → 地下室侧墙',
 };
 
+export const retargetEnemyOperation = (operation: EnemyOperation, target: Location): EnemyOperation => ({
+  ...operation, target, routeName: ROUTE_NAMES[target], revealed: false, confidence: 25,
+});
+
 const pick = <T>(items: T[], random: RandomSource): T =>
   items[Math.min(items.length - 1, Math.floor(random() * items.length))];
 

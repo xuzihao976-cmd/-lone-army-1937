@@ -9,6 +9,11 @@ import { getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from 
 import { getOperationAdvanceSteps, projectEnemyOperation } from './battlefield';
 import { getSpecialistEffectFactor } from './specialists';
 import type { Location } from '../types';
+import { isShortChapter } from '../data/chapters';
+import { getMissionPreview } from './chapterEngine';
+import { getTacticPlan } from './tacticPlans';
+import { getEventPlan, getEventRuleHelp, getPendingEvent, validEventOperation } from './eventPlans';
+import { getHmgRepairPlan } from './eventContext';
 
 const includesAny = (command: string, words: string[]) => words.some((word) => command.includes(word));
 
@@ -38,6 +43,12 @@ const riskFor = (turnsAfterAction: number | null, pressureCompressed = false): P
 };
 
 export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPreview | null => {
+  if (isShortChapter(stats)) return getMissionPreview(stats, rawCommand);
+  const eventHelp = getEventRuleHelp(stats, rawCommand);
+  if (eventHelp) return { action: '事件规则', durationMinutes: 0, durationLabel: '不耗时', threatIncrease: 0,
+    predictedThreat: stats.siegeMeter, attackChance: 0, enemyAdvanceSteps: 0,
+    projectedContactTurns: stats.enemyOperation?.turnsRemaining ?? null, risk: 'safe', riskLabel: '查询不耗时',
+    costs: [], available: true, reason: eventHelp, short: '规则查询不耗时' };
   const command = normalizeExecutableAction(rawCommand);
   if (!command) return null;
 
@@ -48,8 +59,28 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   let available = true;
   let reason: string | undefined;
 
-  const natural = resolveNaturalCommand(stats, rawCommand);
-  if (natural) {
+  const tactic = getTacticPlan(stats, rawCommand);
+  const repair = getHmgRepairPlan(stats,rawCommand);
+  const eventPlan = getEventPlan(stats, rawCommand);
+  const natural = tactic || eventPlan || repair ? null : resolveNaturalCommand(stats, rawCommand);
+  if (repair) {
+    action=`检修${repair.name}`;available=repair.available;durationMinutes=repair.minutes;baseThreat=repair.pressure;
+    reason=repair.available?'恢复已记录的故障，不补人员或弹药；敌军照常推进。':repair.reason;
+  } else if (eventPlan) {
+    action = `${eventPlan.event.title} · ${eventPlan.event.options[eventPlan.option].label}`;
+    available = eventPlan.available;
+    durationMinutes = available ? eventPlan.minutes : 0;
+    baseThreat = available ? eventPlan.pressure : 0;
+    costs = available ? eventPlan.costs : [];
+    reason = available ? eventPlan.riskText : eventPlan.reason;
+  } else if (tactic) {
+    action = tactic.tactic.title + (tactic.target ? ` · ${tactic.target}` : '');
+    available = tactic.available;
+    durationMinutes = available ? tactic.minutes : 0;
+    baseThreat = available ? tactic.pressure : 0;
+    costs = available ? tactic.costs : [];
+    reason = tactic.reason;
+  } else if (natural) {
     action = natural.actionType === 'encourage' ? '简短鼓励' : '交流 / 预备军令';
     durationMinutes = natural.timeCost; baseThreat = natural.siegeIncrease; costs = natural.logs; reason = natural.narrative.join('');
   } else if (!isExecutableLocalAction(command)) {
@@ -88,7 +119,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     action = '调派步兵';
     durationMinutes = 30;
     baseThreat = 8;
-    reason = '从兵力最充足的防区抽调，原防区至少保留20人';
+    reason = '按命令指定的来源与目标调动，来源至少保留20人；实际人数以可抽调兵力为限';
   } else if (command.includes('部署机枪') && command.includes('至')) {
     action = '转移机枪组';
     durationMinutes = 20;
@@ -101,16 +132,18 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     reason = '小队专长只会在实际驻扎的防区生效';
   } else if (command.startsWith('evt_resolve:')) {
     action = '事件抉择';
-    reason = '抉择会立即生效，具体结果取决于事件风险';
+    available = false;
+    reason = '没有当前有效的事件选项，未执行。';
   } else if (includesAny(command, ['突袭', '夜袭', '偷袭', '反击', '进攻'])) {
     action = '夜间突袭';
     const hour = Number(stats.currentTime.split(':')[0]);
-    available = hour >= 0 && hour < 5;
+    available = hour >= 0 && hour < 5 && stats.soldiers > 0;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 5 : 0;
     const recon = Math.max(0, stats.reconBonus || 0);
     const chance = Math.round(getRaidSuccessChance(stats) * 100);
-    reason = available ? `预计成功率${chance}%${recon ? `（含侦察+${recon}%）` : ''}；结果会消耗侦察优势` : '仅可在 00:00–04:59 发动';
+    reason = available ? `预计成功率${chance}%${recon ? `（含侦察+${recon}%）` : ''}；结果会消耗侦察优势`
+      : stats.soldiers <= 0 ? '没有可派出的步兵，未行动，不消耗侦察优势。' : '仅可在 00:00–04:59 发动';
   } else if (includesAny(command, ['搜寻', '寻找', '搜'])) {
     action = '搜寻物资';
     durationMinutes = 30;
@@ -121,7 +154,7 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     action = '侦察敌情';
     durationMinutes = 15;
     baseThreat = 5;
-    reason = '查明下一轮敌军目标、路线、规模和武器，并使下一次夜袭成功率+20%';
+    reason = '查明下一轮目标、路线、规模和武器；夜袭加成提高20个百分点，上限30个百分点';
   } else if (isMoveCommand(command)) {
     action = '转移阵位';
     const target = commandLocation(command);
@@ -147,47 +180,54 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
     durationMinutes = available ? 120 : 0;
     baseThreat = available ? 15 : 0;
     costs = level >= 3 && integrity >= 100 ? [] : [`工事材料 ${materialCost}`];
-    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `恢复${repair}%防区完整度；每两次施工强化一次实际减伤${engineerFactor > 0 ? `（工兵效能${Math.round(engineerFactor * 100)}%）` : ''}`;
+    reason = !isSectorHeld(stats, target) ? '敌占防区必须先夺回' : level >= 3 && integrity >= 100 ? `${target}掩体与防区完整度均已修复` : stats.sandbags < materialCost ? `工事材料不足 ${materialCost}` : `最多恢复${repair}个百分点的防区完整度；每两次施工强化一次实际减伤${engineerFactor > 0 ? `（工兵效能${Math.round(engineerFactor * 100)}%）` : ''}`;
   } else if (includesAny(command, ['休息', '睡', '整顿'])) {
     action = '轮换休整';
     durationMinutes = 120;
     baseThreat = 35;
-    reason = `恢复士气、仓库结构与35%疲劳；耗时较长，敌军推进2格（当前疲劳${stats.fatigue}%）`;
+    reason = `士气最多+10、结构最多+5，疲劳最多降低35点；耗时较长，敌军推进2格（当前疲劳${stats.fatigue}%）`;
   } else if (includesAny(command, ['治疗', '抢救', '救', '医'])) {
     action = '救治伤员';
     available = isSectorHeld(stats, '地下室') && stats.wounded > 0 && stats.medkits > 0;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 10 : 0;
-    costs = available ? ['急救包 2–5'] : [];
+    costs = available ? [`急救包按实际救回人数扣除，最多${Math.min(stats.wounded, stats.medkits, 5 + Math.round(2 * getSpecialistEffectFactor(stats, 'medic', '地下室')))}份`] : [];
     reason = !isSectorHeld(stats, '地下室') ? '地下室医院已经失守' : stats.wounded <= 0 ? '目前没有伤员需要救治' : stats.medkits <= 0 ? '急救包已经耗尽' : '实际消耗取决于成功救回的人数';
   } else if (command.includes('升旗')) {
     action = '升起国旗';
     available = stats.location === '屋顶' && !stats.hasFlagRaised;
     durationMinutes = available && stats.flagWarned ? 30 : 0;
     baseThreat = available && stats.flagWarned ? 50 : 0;
-    reason = stats.hasFlagRaised ? '国旗已经升起' : stats.location !== '屋顶' ? '必须先移动到屋顶' : stats.flagWarned ? '士气大增，但白天会招致轰炸' : '副官会要求再次确认风险';
+    reason = stats.hasFlagRaised ? '国旗已经升起' : stats.location !== '屋顶' ? '必须先移动到屋顶' : stats.flagWarned ? '士气最多+30，敌军压力上升，屋顶将成为空袭优先目标' : '副官会要求再次确认风险';
   } else if (includesAny(command, ['演讲', '训话', '鼓舞', '动员', '坚持', '顶住', '拼了', '万岁'])) {
     action = '战前动员';
     durationMinutes = 60;
     baseThreat = 10;
     const moraleGain = getSpeechMoraleGain(stats);
-    reason = `本次预计士气+${moraleGain}；连续演讲效果递减，休整后恢复`;
+    reason = `本次预计士气+${Math.min(moraleGain, 100 - stats.morale)}；连续演讲效果递减，休整后恢复`;
   } else if (includesAny(command, ['补给', '物资']) && !command.includes('整理')) {
     action = '请求补给';
     available = false;
-    reason = '封锁期间没有外部补给线路';
+    reason = '当前没有可直接调用的补给；实际出现的支援事件另行选择';
   }
 
+  if (!eventPlan && getPendingEvent(stats) && (isExecutableLocalAction(command) || tactic
+    || (natural && (natural.timeCost > 0 || Object.keys(natural.updatedStats).some(key => key !== 'localDialogue'))))) {
+    available = false; durationMinutes = 0; baseThreat = 0; costs = [];
+    reason = '请先处理当前事件，再执行其他军令。';
+  }
   const multiplier = getDayProfile(stats.day).threatMultiplier;
   const threatIncrease = Math.max(0, Math.ceil(baseThreat * multiplier * 0.6));
   const predictedThreat = Math.min(100, stats.siegeMeter + threatIncrease);
   const enemyAdvanceSteps = available ? getOperationAdvanceSteps(durationMinutes) : 0;
-  const projectedOperation = stats.enemyOperation && enemyAdvanceSteps > 0
-    ? projectEnemyOperation(stats.enemyOperation, durationMinutes, predictedThreat)
-    : stats.enemyOperation;
+  const operationBefore = available && eventPlan?.event.id === 'brit_ceasefire' && eventPlan.option === 1 && stats.enemyOperation
+    ? validEventOperation(stats, stats.enemyOperation, true) : stats.enemyOperation;
+  const projectedOperation = operationBefore && enemyAdvanceSteps > 0
+    ? projectEnemyOperation(operationBefore, durationMinutes, predictedThreat)
+    : operationBefore;
   const turnsAfterAction = projectedOperation?.turnsRemaining ?? null;
-  const turnsAfterMovement = stats.enemyOperation
-    ? Math.max(0, stats.enemyOperation.turnsRemaining - enemyAdvanceSteps)
+  const turnsAfterMovement = operationBefore
+    ? Math.max(0, operationBefore.turnsRemaining - enemyAdvanceSteps)
     : null;
   const pressureCompressed = predictedThreat >= 100
     && turnsAfterMovement !== null

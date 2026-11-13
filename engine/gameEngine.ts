@@ -1,7 +1,6 @@
 
 import { canonicalCommand, resolveNaturalCommand } from './naturalCommands';
 import { compactCommand, isExecutableLocalAction } from './commandLanguage';
-import { ALL_DILEMMAS } from '../data/text/events';
 import { GameStats, GameTurnResult, Location } from "../types";
 import { playSound } from "../utils/sound";
 import { isExplicitRetreatCommand } from './intents';
@@ -16,13 +15,17 @@ import { resolveDilemma } from './dilemmaResolver';
 import { pickWith, type RandomSource } from './commandUtils';
 import { applyNamedSoldierDeaths } from './roster';
 import { calculateCampaignScore } from './endings/campaignScore';
-import { resolvePlayerAction } from './actions/resolvePlayerAction';
+import { resolvePlayerAction, type PlayerActionResolution } from './actions/resolvePlayerAction';
 import { resolveAttack } from './combatResolution/resolveAttack';
 import { finalizeTurn } from './turnFinalizer';
 import { isSectorHeld } from './strategicDefense';
+import { isShortChapter } from '../data/chapters';
+import { resolveChapterTurn } from './chapterEngine';
+import { getEventPlan, getEventRuleHelp, getPendingEvent, presentEvent } from './eventPlans';
 
 // Import Narrative Data Modules
 import { WOUNDED_DEATH_SCENES } from "../data/text/combat";
+import { ENDING_TEXTS } from '../data/text/endings';
 
 
 
@@ -54,6 +57,7 @@ const runGameTurnInternal = (
   currentStats: GameStats,
   userCommand: string
 ): GameTurnResult => {
+    if (isShortChapter(currentStats)) return resolveChapterTurn(currentStats, userCommand, random);
     
     let calculatedStats: Partial<GameStats> = {};
     let statsLog: string[] = []; 
@@ -66,10 +70,17 @@ const runGameTurnInternal = (
     const cmd = canonicalCommand(userCommand);
     if (cmd.startsWith('confirm_') && currentStats.pendingRetreat !== cmd) return { narrative: '未收到有效的撤退确认请求，命令未执行。', updatedStats: {}, eventTriggered: 'none' };
     if (currentStats.isGameOver) return { narrative: '本次战役已结束。', updatedStats: {}, eventTriggered: 'none' };
+    const pendingEvent = getPendingEvent(currentStats);
+    if (pendingEvent && !cmd.startsWith('evt_resolve:')) return {
+      narrative: '当前有待处理事件，尚未执行其他行动。请先选择本事件的处置。', updatedStats: {}, eventTriggered: 'none', turnAdvanced: false,
+      dilemma: presentEvent(currentStats, pendingEvent),
+    };
     if (currentStats.day >= 6) {
       const final = finalizeTurn({currentStats, calculatedStats, actionType:'idle', attackLocation:null, eventTriggered:'none', visualEffect:'none', narrativeParts, statsLog, random, allowRandomEvents:false});
       return {narrative:final.narrative, updatedStats:calculatedStats,eventTriggered:final.eventTriggered};
     }
+    const eventHelp = getEventRuleHelp(currentStats, userCommand);
+    if (eventHelp) return { narrative: eventHelp, updatedStats: {}, eventTriggered: 'none', turnAdvanced: false };
 
     if (userCommand.length>500) {
       const r=resolveNaturalCommand(currentStats,userCommand)!;
@@ -80,7 +91,7 @@ const runGameTurnInternal = (
     const isRetreat = isExplicitRetreatCommand(cmd);
     if (cmd === 'cancel_retreat') {
         return {
-            narrative: '你收回了命令。副官松了一口气，阵地上的弟兄重新握紧了枪。',
+            narrative: '你取消了这项待确认命令。副官把确认单放下；没有撤离，也没有推进时间。',
             updatedStats: { pendingRetreat: null },
             eventTriggered: 'none'
         };
@@ -107,12 +118,12 @@ const runGameTurnInternal = (
         // ENDING 4: Historical Retreat (Day 4+)
         if (currentStats.day >= 4) {
             return {
-                narrative: '师部的撤退命令已经送达。跨过新垃圾桥后，孤军的命运将进入另一个篇章。',
+                narrative: '本局已开放奉命撤退。副官把确认单推到你面前：“再核一遍，确认后就离开这场防守。”当前尚未撤离。',
                 updatedStats: { pendingRetreat: 'confirm_historical_retreat' },
                 eventTriggered: 'none',
                 dilemma: {
                     id: 'confirm_historical_retreat',
-                    title: '执行历史撤退？',
+                    title: '确认奉命撤退？',
                     description: '这会立即结束当前战役并进入“孤军撤退”结局。',
                     options: [
                         { label: '奉命撤退', actionCmd: 'confirm_historical_retreat', riskText: '不可逆：结束战役' },
@@ -122,7 +133,7 @@ const runGameTurnInternal = (
             };
         }
 
-        narrativeParts.push('副官答复：当前尚未开放历史撤退，本次未撤离。');
+        narrativeParts.push('副官核对了命令：“第4天起才能奉命撤退。”当前尚未开放，本次未撤离。');
         return {
             narrative: narrativeParts.join(""),
             updatedStats: { pendingRetreat: null },
@@ -138,7 +149,7 @@ const runGameTurnInternal = (
             const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_deserter');
             calculatedStats.finalRank = report.rank;
             return {
-                narrative: "【懦夫的结局】\n你甚至没有等到日军发动总攻，就脱下了军装试图混入租界。在桥头，督战队的机枪对准了你...\n\n“只有战死的鬼，没有逃跑的人。”\n\n结局达成：【懦夫】",
+                narrative: `${ENDING_TEXTS.earlyRetreat}\n${report.text}`,
                 updatedStats: calculatedStats,
                 eventTriggered: 'game_over',
                 visualEffect: 'heavy-damage'
@@ -153,7 +164,7 @@ const runGameTurnInternal = (
             const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_retreat');
             calculatedStats.finalRank = report.rank;
             return {
-                narrative: "【孤军撤退】\n10月31日凌晨，接上级命令，谢晋元团附含泪下令撤退。你们利用夜色冲过新垃圾桥，进入公共租界。虽然被英军缴械，但四百壮士的英名已震动世界。\n\n结局达成：【孤军撤退】",
+                narrative: `${ENDING_TEXTS.orderedRetreat}\n${report.text}`,
                 updatedStats: calculatedStats,
                 eventTriggered: 'victory'
             };
@@ -186,10 +197,10 @@ const runGameTurnInternal = (
         playSound('radio'); 
         
         return {
-            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n冷雨中，你刚刚接管防务。副官指向摇摇欲坠的大门：“团附，先把一楼入口加固起来！”\n\n按照下方的新手引导完成两步操作，随后正式开战。",
+            narrative: "1937年10月26日，19:00。上海闸北，四行仓库。\n\n雨水顺着军帽往领口里淌。你接过防务记录，纸角已经软了，里面却清清楚楚写着人和弹药的数目。\n\n副官等你看完，才指向一楼入口：“这里先补牢。人得有个能站住的地方。”\n\n完成下方两步引导后正式开战。本作含具体伤势、死亡与战地创伤；对白、可变战况及结局为游戏演绎，不作史料。",
             updatedStats: calculatedStats,
             eventTriggered: 'none',
-            enemyIntel: "侦察兵报告：日军正在集结步兵，似乎准备进行试探性进攻。"
+            enemyIntel: "具体来袭路线尚未确证，先完成布防。"
         };
     }
     
@@ -209,7 +220,7 @@ const runGameTurnInternal = (
                 narrative: "【教程已跳过】\n\n一楼工事与守军状态已按教程完成后的标准配置。10月27日，第一天，正式战斗开始。",
                 updatedStats: calculatedStats,
                 eventTriggered: 'new_day',
-                enemyIntel: "侦察兵报告：日军步兵已展开，主要威胁为冷枪和轻型迫击炮。"
+                enemyIntel: "第一天防务开始，具体攻势请通过侦察确认。"
             };
         }
 
@@ -226,7 +237,7 @@ const runGameTurnInternal = (
                  playSound('click');
                  statsLog.push("🔨 一楼入口：加固掩体完成");
                  return {
-                     narrative: "【第 1/2 步完成】\n\n沙袋和钢板封住了一楼入口，加固掩体已经成形。副官提醒：“弟兄们两天没合眼了，该轮换休息。”\n\n现在点击下方发光的【休息】。",
+                     narrative: "【第 1/2 步完成】\n\n新补的掩体压实了，出入的通道仍留着。工兵直起腰揉了揉手，副官看了一眼队列：“接下来轮休。别等站不住才让人歇。”\n\n现在点击下方发光的【休息】。",
                      updatedStats: calculatedStats,
                      eventTriggered: 'none',
                      visualEffect: 'shake'
@@ -249,10 +260,10 @@ const runGameTurnInternal = (
                  
                  playSound('click');
                  return {
-                     narrative: "【新手引导完成】\n\n守军完成轮换，士气恢复。天亮了——10月27日，第一天，日军已在废墟中展开，真正的战斗开始。\n\n💤 士气 +15",
+                     narrative: `【新手引导完成】\n\n轮休结束，接班的人揉着脸站起来，先找自己的阵位。天亮了——10月27日，第一天。仓库里那些还不熟悉的声音，从现在起要彼此认得。\n\n💤 士气 ${currentStats.morale} → ${calculatedStats.morale}`,
                      updatedStats: calculatedStats,
                      eventTriggered: 'new_day',
-                     enemyIntel: "侦察兵报告：日军步兵已展开，主要威胁为冷枪和轻型迫击炮。"
+                     enemyIntel: "第一天防务开始，具体攻势请通过侦察确认。"
                  };
              }
              return { narrative: "【新手引导 2/2】请点击下方发光的【休息】。需要直接开战，也可以选择“跳过教程”。", updatedStats: {} };
@@ -262,7 +273,11 @@ const runGameTurnInternal = (
     // --- TACTICAL CARD RESOLUTION ---
     // Cards resolve their advertised effects directly. They no longer borrow a
     // normal command whose balance, time cost or effect can silently differ.
-    if (cmd.startsWith('card_resolve:')) {
+    if (cmd === 'encounter_skip') {
+        if (!currentStats.activeTacticalCard) return { narrative: '当前没有待处理的战地际遇，未执行。', updatedStats: {}, eventTriggered: 'none' };
+        return { narrative: '你没有接受这次机会。没有领取物资或补员，也没有消耗行动时间。', updatedStats: { activeTacticalCard: null }, eventTriggered: 'none' };
+    }
+    if (/^card_resolve:[a-z_]+$/.test(cmd)) {
         const cardId = cmd.split(':')[1];
         const resolution = resolveTacticalCard(currentStats, cardId);
         if (resolution) {
@@ -273,29 +288,39 @@ const runGameTurnInternal = (
         return { narrative: '这张战术卡已经失效。', updatedStats: {}, eventTriggered: 'none' };
     }
 
+    let eventAction: PlayerActionResolution | undefined;
+    let newEventWounded = 0;
     // --- DILEMMA RESOLUTION ---
     if (cmd.startsWith('evt_resolve:')) {
-        const [, eventId, rawOption] = cmd.split(':');
-        const event=ALL_DILEMMAS.find(e=>e.id===eventId);
-        const flags=currentStats.consequenceFlags || [];
-        if (!event || currentStats.pendingDilemmaId!==eventId || currentStats.triggeredEvents.includes(eventId)
-          || !/^\d+$/.test(rawOption || '') || !event.options[Number(rawOption)]
-          || event.options[Number(rawOption)].actionCmd.toLowerCase()!==cmd
-          || (event.minDay!==undefined && currentStats.day<event.minDay)
-          || (event.requiresFlag && !flags.includes(event.requiresFlag)) || (event.excludesFlag && flags.includes(event.excludesFlag))) {
-          return {narrative:'该事件当前未等待这项选择，或已结算；本次未执行。',updatedStats:{},eventTriggered:'none'};
+        const plan = getEventPlan(currentStats, cmd);
+        if (!plan?.available) {
+          return { narrative: `未执行：${plan?.reason ?? '该事件选项当前无效，或已结算。'}`, updatedStats: {}, eventTriggered: 'none', turnAdvanced: false,
+            dilemma: pendingEvent ? presentEvent(currentStats, pendingEvent) : undefined };
         }
         playSound('click');
-        return resolveDilemma(
+        const resolution = resolveDilemma(
             currentStats,
-            eventId,
-            Number(rawOption),
+            plan.event.id,
+            plan.option,
             random,
             (updates, deaths, eventNarrative) => applyNamedSoldierDeaths(currentStats, updates, deaths, eventNarrative, random),
         );
+        if (plan.minutes <= 0) {
+          Object.assign(calculatedStats, resolution.updatedStats);
+          const finalized = finalizeTurn({ currentStats, calculatedStats, actionType: 'event', attackLocation: null,
+            eventTriggered: 'none', visualEffect: resolution.visualEffect ?? 'none', narrativeParts: [resolution.narrative],
+            statsLog: [], random, allowRandomEvents: false, allowDilemmas: false });
+          return { narrative: finalized.narrative, updatedStats: calculatedStats, eventTriggered: finalized.eventTriggered,
+            visualEffect: finalized.visualEffect, turnAdvanced: false };
+        }
+        newEventWounded = Math.max(0, (resolution.updatedStats.wounded ?? currentStats.wounded) - currentStats.wounded);
+        eventAction = { updatedStats: { ...resolution.updatedStats,
+          fatigue: Math.min(100, currentStats.fatigue + Math.max(1, Math.ceil(plan.minutes / 45))), speechStreak: 0 },
+          logs: [`事件行动耗时${plan.minutes}分钟`], narrative: [resolution.narrative], timeCost: plan.minutes,
+          actionType: 'event', siegeIncrease: plan.pressure, visualEffect: resolution.visualEffect };
     }
 
-    const actionResolution = resolvePlayerAction(currentStats, cmd, random);
+    const actionResolution = eventAction ?? resolvePlayerAction(currentStats, cmd, random);
     Object.assign(calculatedStats, actionResolution.updatedStats);
     statsLog.push(...actionResolution.logs);
     narrativeParts.push(...actionResolution.narrative);
@@ -334,7 +359,9 @@ const runGameTurnInternal = (
         // action uses the same duration/pressure projection as the UI preview.
         contactOperation = projectEnemyOperation(contactOperation, timeCost, newSiege);
         calculatedStats.enemyOperation = contactOperation;
-        if (contactAllowed && contactOperation.turnsRemaining <= 0) {
+        const combatantsAfterAction = (calculatedStats.soldiers ?? currentStats.soldiers)
+          + (calculatedStats.hmgSquads ?? currentStats.hmgSquads).reduce((n, squad) => n + (squad.status === 'active' ? squad.count : 0), 0);
+        if (contactAllowed && contactOperation.turnsRemaining <= 0 && combatantsAfterAction > 0) {
             attackTriggered = true;
             newSiege = Math.max(10, newSiege - 65);
             calculatedStats.lastAttackTurn = currentStats.turnCount + 1;
@@ -359,16 +386,17 @@ const runGameTurnInternal = (
         currentTimer += totalMinutesPassed;
         if (currentTimer >= treatmentWindow) {
             const deathToll = hospitalHeld ? Math.floor(random() * 5) + 1 : Math.floor(random() * 7) + 3;
-            const actualDeaths = Math.min(currentWoundedCount, deathToll);
+            const actualDeaths = Math.min(Math.max(0, currentWoundedCount - newEventWounded), deathToll);
             if (actualDeaths > 0) {
                 calculatedStats.wounded = currentWoundedCount - actualDeaths;
                 const moraleLoss = actualDeaths;
                 const minM = calculatedStats.minMorale ?? currentStats.minMorale ?? 0;
-                calculatedStats.morale = Math.max(minM, (calculatedStats.morale ?? currentStats.morale) - moraleLoss);
+                const moraleBeforeLoss = calculatedStats.morale ?? currentStats.morale;
+                calculatedStats.morale = Math.max(minM, moraleBeforeLoss - moraleLoss);
                 narrativeParts.push("\n\n" + pick(WOUNDED_DEATH_SCENES));
                 if (!hospitalHeld) narrativeParts.push('\n地下室失守后，伤员只能分散在楼梯间，死亡速度明显加快。');
                 statsLog.push(`⚰️ 重伤员不治: ${actualDeaths}人`);
-                statsLog.push(`💔 士气 -${moraleLoss}`);
+                statsLog.push(`💔 伤员不治后的士气 ${moraleBeforeLoss} → ${calculatedStats.morale}`);
                 currentTimer = hospitalHeld ? 660 : 300;
             }
         }
@@ -416,6 +444,7 @@ const runGameTurnInternal = (
         statsLog,
         random,
         allowRandomEvents: turnAdvanced,
+        allowDilemmas: !eventAction,
     });
 
     return {

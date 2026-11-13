@@ -286,6 +286,10 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                   ? `${selectedHmg.map((squad) => squad.name).join('、')}（${selectedDefense.fireReadyHmgSquads}/${selectedHmg.length}可开火）`
                   : '无机枪组'}
               </div>
+              {selectedHmg.filter(q=>q.jammed).map(q=><p key={q.name} className="mt-2 text-xs leading-5 text-amber-300">
+                {q.name}：枪械故障，人员仍在；不能射击或提供掩护。
+                {selectedHeld&&<button type="button" onClick={()=>onAction?.(`检修${q.name}`)} className="ml-2 min-h-11 rounded border border-amber-800 px-3 py-2">检修 · 30分钟</button>}
+              </p>)}
               {selectedSpecialists.length > 0 && (
                 <div className="mt-1.5 space-y-1">
                   {selectedSpecialists.map((squad) => {

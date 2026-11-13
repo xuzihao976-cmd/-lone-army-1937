@@ -4,6 +4,7 @@ import { findLocations } from './commandUtils';
 import { canonicalCommand, directiveCore, getLanguageGuard, isQuestion, isExecutableLocalAction } from './commandLanguage';
 import { getBattlefieldQuery, getLocalDialogue, replyOnTopic } from './localConversation';
 import { getLocalRuleHelp } from '../data/text/localRules';
+import { getTacticRuleHelp } from './tacticPlans';
 export { canonicalCommand } from './commandLanguage';
 export const ORDER_LABELS = { rapid: '猛烈射击', conserve: '节约弹药', close: '近距开火', bayonet: '刺刀准备', hold: '死守阵位' } as const;
 export const ORDER_HELP = { rapid: '步枪杀伤潜力提高25%，每次击杀耗弹提高35%（受弹药限制）', conserve: '步枪杀伤潜力降低20%，每次击杀耗弹降低30%', close: '步枪杀伤潜力提高15%，步兵接战伤亡提高15%', bayonet: '白刃杀伤潜力提高25%，白刃伤亡降低15%', hold: '本次伤亡降低10%，疲劳增加5' } as const;
@@ -14,6 +15,8 @@ export function resolveNaturalCommand(stats: GameStats, input: string): PlayerAc
   const topic = (name: Parameters<typeof replyOnTopic>[2]) => { const reply = replyOnTopic(stats,input,name); result.updatedStats.localDialogue = reply.memory; return say(reply.text); };
   const guard = getLanguageGuard(input);
   if (guard) return topic(guard);
+  const tacticHelp = getTacticRuleHelp(stats, input);
+  if (tacticHelp) return say(tacticHelp);
   const rule = getLocalRuleHelp(cmd);
   if (rule) return say(rule);
   if (isQuestion(cmd)) {

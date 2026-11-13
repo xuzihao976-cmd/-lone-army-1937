@@ -1,11 +1,26 @@
 
 export type Location = '地下室' | '一楼入口' | '二楼阵地' | '屋顶';
 
+export type ChapterId = 'street' | 'bridge' | 'sihang';
+
+/** Short chapters share resources, but keep their own objectives and battlefield. */
+export interface ChapterMission {
+  started: boolean;
+  elapsedMinutes: number;
+  recon: boolean;
+  route: 'inner' | 'river' | null;
+  found: number;
+  evacuated: number;
+  crossed: number;
+  cover: number;
+}
+
 export interface HmgSquad {
     name: string; // "机枪一连"
     location: Location | '待命'; 
     count: number; // Specific number of men (starts at 30)
     status: 'active' | 'destroyed' | 'disbanded'; // Added 'disbanded' for ammo depletion
+    jammed?: boolean; // Repairable weapon fault; crew remain present.
 }
 
 export interface Soldier {
@@ -21,8 +36,8 @@ export interface DilemmaOption {
     label: string;
     actionCmd: string; // The command string to send to backend
     riskText?: string;
-    /** When true, the choice is shown but cannot be submitted. */
-    disabled?: boolean;
+    available?: boolean;
+    unavailableReason?: string;
 }
 
 export interface Dilemma {
@@ -33,6 +48,19 @@ export interface Dilemma {
   requiresFlag?: string;
   excludesFlag?: string;
   minDay?: number;
+  presentation?: 'choice' | 'notice';
+  chapterId?: ChapterId; // Legacy definitions belong to sihang.
+}
+
+export interface PendingEventTicket {
+  version: 1;
+  eventId: string;
+  campaignId: string;
+  day: number;
+  time: string;
+  turn: number;
+  location?: Location;
+  hmgName?: string;
 }
 
 export interface TacticalCard {
@@ -43,6 +71,9 @@ export interface TacticalCard {
     actionCmd: string;
     color: string; // 'gold' | 'red' | 'blue'
 }
+
+export type TacticId = 'group_escort' | 'wall_hug' | 'rapid_crossing' | 'covered_withdrawal' | 'emergency_shoring' | 'urgent_aid';
+export interface EquippedTactic { id: TacticId; spent: boolean; }
 
 export type SpecialistRole = 'veteran' | 'engineer' | 'medic' | 'assault';
 
@@ -90,6 +121,9 @@ export type EndingType =
   | 'defeat_martyr'     // 5. 血染孤旗 (升旗后阵亡)
   | 'defeat_commander'  // 指挥官在交战区阵亡
   | 'defeat_generic'    // 普通战败
+  | 'victory_evacuation'
+  | 'victory_cover'
+  | 'defeat_mission'
   | 'ongoing';
 
 export type GameOverReason =
@@ -99,9 +133,14 @@ export type GameOverReason =
   | 'commander_killed'
   | 'early_retreat'
   | 'historical_retreat'
-  | 'mission_complete';
+  | 'mission_complete'
+  | 'chapter_complete'
+  | 'chapter_failed';
 
 export interface GameStats {
+  chapterId: ChapterId;
+  campaignId: string;
+  mission?: ChapterMission;
   location: Location;
   soldiers: number; // Healthy Riflemen/Infantry
   wounded: number;  
@@ -134,6 +173,9 @@ export interface GameStats {
   tutorialStep: number; // 0: Not started, 1: Fortify entrance, 2: Rest troops, 3: Done/skipped
   siegeMeter: number; // 0-100, triggers attack when full
   activeTacticalCard?: TacticalCard | null;
+  // Legacy activeTacticalCard fields store battlefield encounters, separately
+  // from the single chapter tactic selected before a new campaign.
+  equippedTactic: EquippedTactic | null;
 
   // Resources
   ammo: number; 
@@ -147,7 +189,10 @@ export interface GameStats {
   lastEncourageTurn?: number;
   localDialogue?: LocalDialogueMemory;
   pendingDilemmaId?: string | null;
-  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | null;
+  pendingEvent?: PendingEventTicket | null;
+  lastDilemmaTurn?: number;
+  lastBattle?: { turn: number; location: Location; attackType: EnemyAttackType; hmgFired: string[] };
+  pendingRetreat?: 'confirm_desertion' | 'confirm_historical_retreat' | 'confirm_chapter_retreat' | 'confirm_tactic_retreat' | null;
   hasFlagRaised: boolean;
   flagWarned: boolean; 
   enemiesKilled: number; // NEW: Track total enemies killed
@@ -218,6 +263,16 @@ export interface TurnSummary {
   notes: string[];
 }
 
+/** Display-only projection; never stored in GameStats or save data. */
+export interface MissionTiming {
+  elapsedAfter: number;
+  remainingAfter: number;
+  extracting: boolean;
+  confirmationRequired: boolean;
+  reachesDeadline: boolean;
+  canWithdrawAfter: boolean;
+}
+
 export interface ActionPreview {
   action: string;
   durationMinutes: number;
@@ -233,6 +288,7 @@ export interface ActionPreview {
   available: boolean;
   reason?: string;
   short: string;
+  missionTiming?: MissionTiming;
 }
 
 export interface GameTurnResult {
@@ -256,6 +312,7 @@ export interface SaveData {
 }
 
 export interface SaveSlotMeta {
+    chapterId?: ChapterId;
     id: number;
     isEmpty: boolean;
     savedAt: number;

@@ -1,15 +1,17 @@
 
 import React from 'react';
 import { GameStats, EndingType } from '../types';
+import { getChapter, isShortChapter } from '../data/chapters';
 
 interface GameOverModalProps {
   stats: GameStats;
   onRestart: () => void;
   onExit: () => void;
   onReview: () => void;
+  onNext?: () => void;
 }
 
-const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit, onReview }) => {
+const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit, onReview, onNext }) => {
   const endingType = stats.gameResult as EndingType;
   
   // Define Visuals based on Ending Type
@@ -21,13 +23,23 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
   let subTitle = 'GAME OVER';
 
   switch (endingType) {
+      case 'victory_evacuation': case 'victory_cover':
+          borderColor = 'border-amber-700'; titleColor = 'text-amber-300';
+          bgColor = 'bg-amber-950/20'; icon = endingType === 'victory_evacuation' ? '🕯' : '🌉';
+          mainTitle = endingType === 'victory_evacuation' ? '撤收完成' : '掩护完成';
+          subTitle = '任务完成 · 小队已撤出';
+          break;
+      case 'defeat_mission':
+          borderColor = 'border-red-900'; titleColor = 'text-red-300';
+          mainTitle = '任务未竟'; subTitle = stats.finalRank ?? '本章结束';
+          break;
       case 'victory_hold':
           borderColor = 'border-yellow-600';
           bgColor = 'bg-yellow-900/10';
           titleColor = 'text-yellow-500';
           icon = '🎖️';
           mainTitle = '四行孤军';
-          subTitle = '永垂不朽 · GLORY TO HEROES';
+          subTitle = '任务到期 · DEFENSE COMPLETE';
           break;
       case 'victory_retreat':
           borderColor = 'border-blue-700';
@@ -35,7 +47,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-blue-400';
           icon = '🌉';
           mainTitle = '孤军撤退';
-          subTitle = '保存火种 · STRATEGIC WITHDRAWAL';
+          subTitle = '奉命撤离 · ORDERED WITHDRAWAL';
           break;
       case 'defeat_martyr':
           borderColor = 'border-red-600';
@@ -43,7 +55,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-red-500';
           icon = '🇹🇼';
           mainTitle = '血染孤旗';
-          subTitle = '浩气长存 · ETERNAL GLORY';
+          subTitle = '孤旗为证 · NO COMBAT FORCE';
           break;
       case 'defeat_assault':
           borderColor = 'border-orange-700';
@@ -51,15 +63,15 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
           titleColor = 'text-orange-500';
           icon = '⚔️';
           mainTitle = '反攻失败';
-          subTitle = '血色冲锋 · LAST STAND';
+          subTitle = '反攻的代价 · ASSAULT FAILED';
           break;
       case 'defeat_deserter':
           borderColor = 'border-neutral-500';
           bgColor = 'bg-gray-900/50';
           titleColor = 'text-gray-400';
           icon = '🏳️';
-          mainTitle = '懦夫结局';
-          subTitle = '遗臭万年 · DESERTER';
+          mainTitle = '提前撤离';
+          subTitle = '防务未竟 · EARLY WITHDRAWAL';
           break;
       case 'defeat_commander':
           borderColor = 'border-stone-500';
@@ -99,12 +111,14 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
     commander_killed: '指挥官在所在防区遭袭阵亡',
     early_retreat: '战斗初期擅自撤离',
     historical_retreat: '奉命撤入公共租界',
-    mission_complete: '完成六日坚守任务',
+    mission_complete: '坚守至第六天，任务完成',
+    chapter_complete: '人数目标达成，小队已及时撤出',
+    chapter_failed: stats.finalRank ?? '本章未完成目标',
   } as const;
   
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center p-6 animate-fade-in">
-      <div className={`w-full max-w-md border-2 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center relative overflow-hidden flex flex-col gap-4 ${borderColor} ${bgColor}`}>
+      <div className={`max-h-[92dvh] w-full max-w-md overflow-y-auto border-2 rounded-lg p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center relative flex flex-col gap-4 ${borderColor} ${bgColor}`}>
         
         {/* Background Effect */}
         <div className={`absolute inset-0 opacity-5 pointer-events-none ${borderColor.replace('border', 'bg')}`}></div>
@@ -137,19 +151,24 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
         
         {/* Stats Grid */}
         <div className="bg-black/50 p-4 rounded border border-white/10 grid grid-cols-2 gap-y-3 gap-x-6 text-sm font-mono text-left mt-2">
-            <div className="text-neutral-500 text-right text-xs">最终存活</div>
+            <div className="text-neutral-500 text-right text-xs">记录存活</div>
             <div className="text-white font-bold">{totalSurvivors} 人</div>
 
             <div className="text-neutral-500 text-right text-xs">可战人员</div>
             <div className="text-white font-bold">{combatReady} 人</div>
             
-            <div className="text-neutral-500 text-right text-xs">坚守时长</div>
-            <div className="text-white font-bold">第{stats.day}天 {stats.currentTime}</div>
+            <div className="text-neutral-500 text-right text-xs">{isShortChapter(stats) ? '任务用时' : '坚守时长'}</div>
+            <div className="text-white font-bold">{stats.mission ? `${stats.mission.elapsedMinutes}分钟` : `第${stats.day}天 ${stats.currentTime}`}</div>
+
+            {stats.mission && <>
+              <div className="text-neutral-400 text-right text-xs">{stats.chapterId === 'street' ? '民众安全抵达' : '友军已过桥'}</div>
+              <div className="text-amber-300 font-bold">{stats.chapterId === 'street' ? `${stats.mission.evacuated}/12人` : `${stats.mission.crossed}/60人`}</div>
+            </>}
 
             <div className="text-neutral-500 text-right text-xs">结束原因</div>
             <div className="text-red-400 font-bold">{stats.gameOverReason ? reasonLabels[stats.gameOverReason] : '战役结算'}</div>
 
-            <div className="text-neutral-500 text-right text-xs">历史评价</div>
+            <div className="text-neutral-500 text-right text-xs">本局评价</div>
             <div className={`font-bold ${titleColor}`}>{stats.finalRank || '无名英雄'}</div>
 
             <div className="text-neutral-500 text-right text-xs">击毙日军</div>
@@ -158,6 +177,10 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
 
         {/* Buttons */}
         <div className="flex flex-col gap-3 mt-4 z-10">
+            {onNext && stats.gameResult.startsWith('victory_') && <button type="button" onClick={onNext}
+              className="w-full rounded border border-amber-700 bg-amber-950/40 py-3 font-bold text-amber-200">
+              前往下一章 · {getChapter(getChapter(stats.chapterId).next).title}
+            </button>}
             <button 
                 onClick={onReview}
                 className="w-full py-3 bg-neutral-100 hover:bg-white text-black font-bold tracking-widest rounded shadow-lg transition-transform active:scale-95"

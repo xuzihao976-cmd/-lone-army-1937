@@ -2,198 +2,198 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import DilemmaModal from '../components/DilemmaModal';
-import { raidSuccessTexts } from '../data/text/combat';
-import { ALL_DILEMMAS, presentDilemma, SMUGGLER_COVER_AMMO_COST, SMUGGLER_COVER_MG_GAIN } from '../data/text/events';
+import { RAID_SUCCESS_TEXTS, raidSuccessTexts } from '../data/text/combat';
+import { EVENT_RULES as R } from '../data/eventRules';
+import { TACTICAL_CARDS } from '../data/text/events';
+import { getEvent, getEventPlan, issueEvent, presentEvent } from '../engine/eventPlans';
 import { resolvePlayerAction } from '../engine/actions/resolvePlayerAction';
 import { resolveDilemma } from '../engine/dilemmaResolver';
 import { runGameTurn } from '../engine/gameEngine';
-import { createInitialStats } from '../storage/saveStore';
+import { getActionPreview } from '../engine/actionPreview';
+import { localAdvisorResponse } from '../engine/localAdvisor';
+import { createInitialStats, migrateSaveData, SAVE_SCHEMA_VERSION } from '../storage/saveStore';
 import type { GameStats } from '../types';
 
-const ZERO_CASUALTY_CLAIM = /无一人伤亡|全身而退|干净利落/;
-
+const ZERO_CASUALTY_CLAIM = /无一人伤亡|无人伤亡|全身而退|毫发无损|干净利落|全员归来|一个不少/;
 const scripted = (values: number[]) => {
   let index = 0;
-  return () => {
-    const value = values[Math.min(index, values.length - 1)] ?? 0;
-    index += 1;
-    return value;
-  };
+  return () => values[Math.min(index++, values.length - 1)] ?? 0;
 };
-
-const dilemmaOption = (id: string, index: number) => {
-  const dilemma = ALL_DILEMMAS.find((event) => event.id === id);
-  if (!dilemma) throw new Error(`missing dilemma ${id}`);
-  const option = dilemma.options[index];
-  if (!option) throw new Error(`missing option ${id}:${index}`);
-  return option;
-};
-
 const ready = (): GameStats => {
   const stats = createInitialStats(21);
-  stats.tutorialStep = 3;
-  stats.day = 3;
-  return stats;
+  Object.assign(stats, { tutorialStep: 3, day: 3, currentTime: '10:00', activeTacticalCard: TACTICAL_CARDS[0] });
+  stats.enemyOperation!.turnsRemaining = 6;
+  stats.enemyOperation!.revealed = true;
+  return migrateSaveData({ schemaVersion: SAVE_SCHEMA_VERSION, stats })!.stats;
 };
+const pending = (id: string, ammo?: number): GameStats => {
+  const stats = ready(), event = getEvent(id)!;
+  stats.consequenceFlags = event.requiresFlag ? [event.requiresFlag] : [];
+  if (ammo !== undefined) stats.ammo = ammo;
+  return { ...stats, ...issueEvent(stats, id) };
+};
+const resolve = (stats: GameStats, id: string, option: number, rolls: number[]) =>
+  resolveDilemma(stats, id, option, scripted(rolls), () => undefined);
 
-describe('night raid success copy', () => {
-  it('keeps zero-casualty lines out of any resolution that killed soldiers', () => {
-    for (let deaths = 1; deaths <= 5; deaths += 1) {
-      expect(raidSuccessTexts(deaths).length).toBeGreaterThan(0);
-      for (const text of raidSuccessTexts(deaths)) {
-        expect(text, text).not.toMatch(ZERO_CASUALTY_CLAIM);
+describe('P0 raid protection with the newer narrative library', () => {
+  it('keeps the newer success library for casualty-free raids and excludes zero-loss claims after deaths', () => {
+    expect(raidSuccessTexts(0)).toEqual(RAID_SUCCESS_TEXTS);
+    for (let deaths = 1; deaths <= 5; deaths++) {
+      const candidates = raidSuccessTexts(deaths);
+      expect(candidates.length).toBeGreaterThan(0);
+      for (const text of candidates) {
+        expect(text).not.toMatch(ZERO_CASUALTY_CLAIM);
+        expect(RAID_SUCCESS_TEXTS).toContain(text);
       }
     }
-    expect(raidSuccessTexts(0).some((text) => ZERO_CASUALTY_CLAIM.test(text))).toBe(true);
   });
 
-  it('does not narrate a clean escape when the assault actually lost men', () => {
-    const stats = createInitialStats(11);
-    stats.currentTime = '02:00';
+  it('uses current prose and actual casualty logs when a successful raid loses men', () => {
+    const stats = ready(); stats.currentTime = '02:00';
     for (const pickRoll of [0, 0.2, 0.45, 0.7, 0.99]) {
       const result = resolvePlayerAction(stats, '夜袭', scripted([0, 0.9, 0, 0, 0.99, pickRoll]));
-      const died = stats.soldiers - (result.updatedStats.soldiers ?? stats.soldiers);
-      expect(died).toBeGreaterThan(0);
-      const line = result.narrative.at(-1) ?? '';
-      expect(raidSuccessTexts(died)).toContain(line);
-      expect(line).not.toMatch(ZERO_CASUALTY_CLAIM);
-      expect(result.logs.some((log) => log.includes(`阵亡: ${died}人`))).toBe(true);
+      const deaths = stats.soldiers - result.updatedStats.soldiers!;
+      expect(deaths).toBeGreaterThan(0);
+      expect(raidSuccessTexts(deaths)).toContain(result.narrative.at(-1));
+      expect(result.narrative.join('')).not.toMatch(ZERO_CASUALTY_CLAIM);
+      expect(result.logs).toContain(`🔴 阵亡: ${deaths}人`);
+      expect(result.logs).toContain(`💪 行动士气 ${stats.morale} → ${result.updatedStats.morale}`);
     }
   });
 
-  it('can still say the force got out clean when nobody died', () => {
-    const stats = createInitialStats(12);
-    stats.currentTime = '02:00';
-    const clean = resolvePlayerAction(stats, '夜袭', scripted([0, 0, 0, 0, 0]));
-    expect(clean.updatedStats.soldiers).toBe(stats.soldiers);
-    expect(clean.narrative[0]).toMatch(ZERO_CASUALTY_CLAIM);
-    expect(clean.logs.some((log) => log.includes('阵亡'))).toBe(false);
+  it('keeps zero-death, zero-loot success grounded without requiring an old triumphant line', () => {
+    const stats = ready(); stats.currentTime = '02:00';
+    const result = resolvePlayerAction(stats, '夜袭', scripted([0, 0, 0, 0, 0]));
+    expect(result.updatedStats.soldiers).toBe(stats.soldiers);
+    expect(result.updatedStats.ammo).toBe(stats.ammo);
+    expect(result.updatedStats.medkits).toBe(stats.medkits);
+    expect(RAID_SUCCESS_TEXTS).toContain(result.narrative[0]);
+    expect(result.logs.join('')).not.toMatch(/阵亡|缴获/);
+  });
+
+  it('bounds successful and failed raid losses, morale and named deaths by actual infantry', () => {
+    for (const [rolls, morale] of [[[0, 0.99, 0, 0], 86], [[0.99, 0.99], 61]] as const) {
+      const stats = ready(); stats.currentTime = '02:00'; stats.soldiers = 2;
+      stats.soldierDistribution = { '一楼入口': 2, '二楼阵地': 0, '地下室': 0, '屋顶': 0 };
+      const result = resolvePlayerAction(stats, '夜袭', scripted([...rolls]));
+      expect(result.updatedStats.soldiers).toBe(0);
+      expect(result.updatedStats.morale).toBe(morale);
+      expect(result.logs).toContain('🔴 阵亡: 2人');
+      expect(result.updatedStats.roster?.filter(person => person.status === 'dead').length ?? 0).toBeLessThanOrEqual(2);
+    }
+    const capped = ready(); capped.currentTime = '02:00'; capped.morale = 100;
+    const result = resolvePlayerAction(capped, '夜袭', scripted([0, 0, 0, 0]));
+    expect(result.logs).toContain('💪 行动士气 100 → 100');
+  });
+
+  it('blocks a raid with no infantry in execution, preview and advisor without advancing RNG or time', () => {
+    const stats = ready(); stats.currentTime = '02:00'; stats.soldiers = 0;
+    stats.soldierDistribution = { '一楼入口': 0, '二楼阵地': 0, '地下室': 0, '屋顶': 0 };
+    const before = structuredClone(stats);
+    const preview = getActionPreview(stats, '夜袭');
+    expect(preview).toMatchObject({ available: false, durationMinutes: 0 });
+    expect(localAdvisorResponse('夜袭', stats).text).toContain('没有可派出的步兵');
+    expect(stats).toEqual(before);
+    const result = runGameTurn(stats, '夜袭');
+    expect({ ...stats, ...result.updatedStats }).toEqual(before);
+    expect(result.turnAdvanced).toBe(false);
   });
 });
 
-describe('dilemma risk text', () => {
-  it('includes the morale loss student rescue and the truck salvage actually apply', () => {
-    expect(dilemmaOption('student_run', 0).riskText).toBe('七九弹最多-600 | 急救包+10 | 阵亡0-15人 | 士气-阵亡×2 | 建立民间支援线');
-    expect(dilemmaOption('wrecked_truck', 0).riskText).toBe('七九弹+2000 | 阵亡1-5人 | 士气-阵亡×2');
+describe('P0 dilemma risk stays aligned with the current shared plan', () => {
+  it('discloses actual death caps and morale consequences for student rescue and truck salvage', () => {
+    for (const id of ['student_run', 'wrecked_truck']) {
+      const stats = pending(id); stats.soldiers = 2;
+      const plan = getEventPlan(stats, `evt_resolve:${id}:0`)!;
+      expect(plan.available).toBe(true);
+      expect(plan.maxDeaths).toBe(2);
+      expect(plan.riskText).toContain('2');
+      expect(plan.riskText).toContain('每名实际阵亡另损2点士气');
+      const result = resolve(stats, id, 0, [0.99]);
+      expect(result.updatedStats.soldiers).toBe(0);
+      expect(result.updatedStats.morale).toBe(stats.morale - 4);
+    }
   });
 
-  it('describes the shot-down airdrop as sandbags, not a halved supply drop', () => {
-    expect(dilemmaOption('stray_airdrop', 1).riskText).toBe('仅工事材料+50 | 药品损毁 | 无人伤亡');
-    expect(dilemmaOption('stray_airdrop', 0).riskText).toBe('成功：急救包+5、工事材料+100、士气+5 | 坠亡：阵亡1人、士气-5、无物资');
-    expect(dilemmaOption('smuggler_return', 0).riskText).toContain('不足300');
-    expect(dilemmaOption('smuggler_return', 0).riskText).toContain('水路未了结');
-  });
-
-  it('cuts morale with student and truck deaths, and grants only sandbags for a shot-down crate', () => {
-    const students = ready();
-    const rescue = resolveDilemma(students, 'student_run', 0, scripted([0.5]), () => undefined);
-    expect(students.soldiers - (rescue.updatedStats.soldiers ?? students.soldiers)).toBe(8);
-    expect(rescue.updatedStats.morale).toBe(students.morale - 16);
-    expect(rescue.updatedStats.medkits).toBe(students.medkits + 10);
-    expect(rescue.updatedStats.ammo).toBe(students.ammo - 600);
-
-    const unscathed = resolveDilemma(students, 'student_run', 0, scripted([0]), () => undefined);
-    expect(unscathed.updatedStats.soldiers).toBe(students.soldiers);
-    expect(unscathed.updatedStats.morale).toBeUndefined();
-
-    const truck = ready();
-    const light = resolveDilemma(truck, 'wrecked_truck', 0, scripted([0]), () => undefined);
-    expect(truck.soldiers - (light.updatedStats.soldiers ?? truck.soldiers)).toBe(1);
-    expect(light.updatedStats.ammo).toBe(truck.ammo + 2000);
-    expect(light.updatedStats.morale).toBe(truck.morale - 2);
-    const heavy = resolveDilemma(truck, 'wrecked_truck', 0, scripted([0.99]), () => undefined);
-    expect(truck.soldiers - (heavy.updatedStats.soldiers ?? truck.soldiers)).toBe(5);
-    expect(heavy.updatedStats.morale).toBe(truck.morale - 10);
-
-    const crate = ready();
-    const shot = resolveDilemma(crate, 'stray_airdrop', 1, scripted([0.9]), () => undefined);
-    expect(shot.updatedStats.sandbags).toBe(crate.sandbags + 50);
-    expect(shot.updatedStats.medkits).toBeUndefined();
-    expect(shot.updatedStats.ammo).toBeUndefined();
-    expect(shot.updatedStats.morale).toBeUndefined();
-    expect(shot.updatedStats.soldiers).toBeUndefined();
-
-    const climbed = resolveDilemma(crate, 'stray_airdrop', 0, scripted([0.31]), () => undefined);
-    expect(climbed.updatedStats.medkits).toBe(crate.medkits + 5);
-    expect(climbed.updatedStats.sandbags).toBe(crate.sandbags + 100);
-    expect(climbed.updatedStats.morale).toBe(Math.min(100, crate.morale + 5));
-
-    const fallen = resolveDilemma(crate, 'stray_airdrop', 0, scripted([0.3]), () => undefined);
-    expect(fallen.updatedStats.soldiers).toBe(crate.soldiers - 1);
-    expect(fallen.updatedStats.morale).toBe(crate.morale - 5);
+  it('describes and settles ground recovery separately from the high package, without phantom medicine loss', () => {
+    const stats = pending('stray_airdrop');
+    const ground = resolve(stats, 'stray_airdrop', 1, [0.9]);
+    expect(ground.updatedStats.sandbags).toBe(stats.sandbags + R.groundRecovery.materialsReward);
+    expect(ground.updatedStats.medkits).toBeUndefined();
+    expect(ground.updatedStats.soldiers).toBeUndefined();
+    expect(getEventPlan(stats, 'evt_resolve:stray_airdrop:1')?.minutes).toBe(R.groundRecovery.minutes);
+    const climbed = resolve(stats, 'stray_airdrop', 0, [0.9]);
+    expect(climbed.updatedStats.medkits).toBe(stats.medkits + R.package.medkitsReward);
+    expect(climbed.updatedStats.sandbags).toBe(stats.sandbags + R.package.materialsReward);
+    const fallen = resolve(stats, 'stray_airdrop', 0, [0.1]);
+    expect(fallen.updatedStats.soldiers).toBe(stats.soldiers - 1);
+    expect(fallen.updatedStats.morale).toBe(stats.morale - 5);
     expect(fallen.updatedStats.medkits).toBeUndefined();
     expect(fallen.updatedStats.sandbags).toBeUndefined();
   });
+
+  it('uses actual mortality and morale when student rescue and salvage resolve', () => {
+    const students = pending('student_run');
+    const rescued = resolve(students, 'student_run', 0, [0.5]);
+    expect(rescued.updatedStats.soldiers).toBe(students.soldiers - 8);
+    expect(rescued.updatedStats.morale).toBe(students.morale - 16);
+    expect(rescued.updatedStats.medkits).toBe(students.medkits + R.student.medkitsReward);
+    expect(rescued.updatedStats.ammo).toBe(students.ammo - R.student.ammo);
+    const zero = resolve(students, 'student_run', 0, [0]);
+    expect(zero.updatedStats.soldiers).toBe(students.soldiers);
+    expect(zero.updatedStats.morale).toBeUndefined();
+    const truck = pending('wrecked_truck');
+    for (const [roll, deaths] of [[0, 1], [0.99, 5]]) {
+      const result = resolve(truck, 'wrecked_truck', 0, [roll]);
+      expect(result.updatedStats.soldiers).toBe(truck.soldiers - deaths);
+      expect(result.updatedStats.ammo).toBe(truck.ammo + R.truck.ammoReward);
+      expect(result.updatedStats.morale).toBe(truck.morale - deaths * 2);
+    }
+  });
 });
 
-describe('smuggler return ammo', () => {
-  const pending = (ammo: number): GameStats => {
-    const stats = ready();
-    stats.pendingDilemmaId = 'smuggler_return';
-    stats.consequenceFlags = ['smuggler_trusted'];
-    stats.ammo = ammo;
-    return stats;
-  };
-
-  it('disables the cover option and does not close the route when rifle ammo is short', () => {
-    const source = ALL_DILEMMAS.find((event) => event.id === 'smuggler_return');
-    if (!source) throw new Error('missing smuggler_return');
-    const stats = pending(SMUGGLER_COVER_AMMO_COST - 1);
-    const shown = presentDilemma(source, stats.ammo);
-    expect(shown.options[0]?.disabled).toBe(true);
-    expect(shown.options[0]?.riskText).toBe(`七九弹不足${SMUGGLER_COVER_AMMO_COST}，无法成交`);
-    expect(shown.options[0]?.riskText).not.toContain(`机枪弹+${SMUGGLER_COVER_MG_GAIN}`);
-    expect(source.options[0]?.disabled).toBeUndefined();
-
+describe('P0 trade protection with owned, restorable current events', () => {
+  it('keeps an unaffordable trade pending and disabled through a save/load round-trip', () => {
+    const stats = pending('smuggler_return', R.returnBoat.ammo - 1);
+    const before = structuredClone(stats);
     const result = runGameTurn(stats, 'EVT_RESOLVE:smuggler_return:0');
-    const merged = { ...stats, ...result.updatedStats };
-    expect(result.updatedStats.ammo).toBeUndefined();
-    expect(result.updatedStats.machineGunAmmo).toBeUndefined();
-    expect(result.updatedStats.consequenceFlags).toBeUndefined();
-    expect(result.updatedStats.triggeredEvents).toBeUndefined();
-    expect(merged.consequenceFlags).toEqual(['smuggler_trusted']);
-    expect(merged.pendingDilemmaId).toBe('smuggler_return');
-    expect(merged.triggeredEvents).not.toContain('smuggler_return');
-    expect(merged.ammo).toBe(stats.ammo);
-    expect(merged.machineGunAmmo).toBe(stats.machineGunAmmo);
-    expect(result.narrative).toContain(`只剩${stats.ammo}发`);
-    expect(result.narrative).toContain('没有卸下');
-    expect(result.narrative).toContain('尚未了结');
-    expect(result.narrative).not.toContain('机枪弹 +');
-    expect(result.narrative).not.toContain('你拒绝');
-    expect(result.dilemma?.id).toBe('smuggler_return');
-    expect(result.dilemma?.options[0]?.disabled).toBe(true);
+    const after = { ...stats, ...result.updatedStats };
+    expect(after).toEqual(before);
+    expect(result.dilemma?.options[0].available).toBe(false);
+    expect(result.dilemma?.options[0].unavailableReason).toContain('当前只有299发');
+    const loaded = migrateSaveData({ schemaVersion: SAVE_SCHEMA_VERSION, stats: after })!.stats;
+    expect(loaded).toEqual(before);
+    const shown = presentEvent(loaded, getEvent('smuggler_return')!);
     const html = renderToStaticMarkup(createElement(DilemmaModal, {
-      dilemma: result.dilemma!,
-      onChoice: () => { throw new Error('disabled cover option must not be submitted'); },
+      dilemma: shown, stats: loaded, onChoice: () => undefined, onSaveExit: () => undefined,
     }));
     expect(html).toContain('disabled=""');
-    expect(html).toContain(`七九弹不足${SMUGGLER_COVER_AMMO_COST}，无法成交`);
-    expect(html).not.toContain(`机枪弹+${SMUGGLER_COVER_MG_GAIN}`);
+    expect(html).toContain('当前只有299发');
+    expect(loaded.consequenceFlags).not.toContain('smuggler_network_resolved');
   });
 
-  it('spends the rifle ammo and closes the route when the cover can be paid', () => {
-    const source = ALL_DILEMMAS.find((event) => event.id === 'smuggler_return');
-    if (!source) throw new Error('missing smuggler_return');
-    const stats = pending(SMUGGLER_COVER_AMMO_COST);
-    const shown = presentDilemma(source, stats.ammo);
-    expect(shown.options[0]?.disabled).toBe(false);
-    expect(shown.options[0]?.riskText).toBe(`机枪弹+${SMUGGLER_COVER_MG_GAIN} | 七九弹-${SMUGGLER_COVER_AMMO_COST}`);
-
+  it('pays exactly the affordable trade once and keeps the real fifteen-minute pipeline', () => {
+    const stats = pending('smuggler_return', R.returnBoat.ammo);
+    expect(getEventPlan(stats, 'evt_resolve:smuggler_return:0')?.available).toBe(true);
     const result = runGameTurn(stats, 'EVT_RESOLVE:smuggler_return:0');
-    expect(result.updatedStats.ammo).toBe(0);
-    expect(result.updatedStats.machineGunAmmo).toBe(stats.machineGunAmmo + SMUGGLER_COVER_MG_GAIN);
-    expect(result.updatedStats.consequenceFlags).toContain('smuggler_network_resolved');
-    expect(result.updatedStats.triggeredEvents).toContain('smuggler_return');
-    expect(result.updatedStats.pendingDilemmaId).toBeNull();
-    expect(result.narrative).toContain(`机枪弹 +${SMUGGLER_COVER_MG_GAIN}`);
+    const after = { ...stats, ...result.updatedStats, turnCount: stats.turnCount + 1 };
+    expect(after.ammo).toBe(0);
+    expect(after.machineGunAmmo).toBe(stats.machineGunAmmo + R.returnBoat.machineGunAmmoReward);
+    expect(after.pendingDilemmaId).toBeNull();
+    expect(after.consequenceFlags).toContain('smuggler_network_resolved');
+    expect(after.currentTime).toBe('10:15');
+    expect(result.summary?.durationMinutes).toBe(R.returnBoat.minutes);
+    const replay = runGameTurn(after, 'EVT_RESOLVE:smuggler_return:0');
+    expect({ ...after, ...replay.updatedStats }).toEqual(after);
   });
 
-  it('still lets the commander refuse the route without paying', () => {
-    const result = runGameTurn(pending(0), 'EVT_RESOLVE:smuggler_return:1');
+  it('allows an explicit refusal without paying or inventing a shipment', () => {
+    const stats = pending('smuggler_return', 0);
+    const result = runGameTurn(stats, 'EVT_RESOLVE:smuggler_return:1');
     expect(result.updatedStats.consequenceFlags).toContain('smuggler_network_resolved');
     expect(result.updatedStats.machineGunAmmo).toBeUndefined();
     expect(result.updatedStats.ammo).toBeUndefined();
-    expect(result.narrative).toContain('拒绝');
+    expect(result.turnAdvanced).toBe(false);
+    expect(result.narrative).toContain('没有卸货');
   });
 });

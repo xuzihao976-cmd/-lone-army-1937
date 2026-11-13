@@ -1,3 +1,4 @@
+import { issueEvent } from '../engine/eventPlans';
 import { TACTICAL_CARDS } from '../data/text/events';
 import { describe, expect, it } from 'vitest';
 import { runGameTurn } from '../engine/gameEngine';
@@ -82,7 +83,8 @@ describe('local game engine endings', () => {
   it('turns event choices into persistent, mechanical consequences', () => {
     const students = createInitialStats(83);
     students.tutorialStep = 3;
-    students.pendingDilemmaId = 'student_run';
+    students.day = 1;
+    Object.assign(students, issueEvent(students, 'student_run'));
     const rescue = runGameTurn(students, 'EVT_RESOLVE:student_run:0');
     expect(rescue.updatedStats.consequenceFlags).toContain('students_rescued');
     expect(rescue.updatedStats.ammo).toBe(students.ammo - 600);
@@ -92,7 +94,8 @@ describe('local game engine endings', () => {
 
     const british = createInitialStats(84);
     british.tutorialStep = 3;
-    british.pendingDilemmaId = 'brit_ceasefire';
+    british.day = 2;
+    Object.assign(british, issueEvent(british, 'brit_ceasefire'));
     const defiance = runGameTurn(british, 'EVT_RESOLVE:brit_ceasefire:1');
     expect(defiance.updatedStats.consequenceFlags).toContain('british_defied');
     expect(defiance.updatedStats.enemyOperation?.target).toBe('地下室');

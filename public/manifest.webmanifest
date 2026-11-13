@@ -1,7 +1,7 @@
 {
-  "name": "孤军：四行1937",
-  "short_name": "孤军1937",
-  "description": "离线优先的四行仓库文字策略网页游戏",
+  "name": "孤军 · 战役档案",
+  "short_name": "孤军",
+  "description": "街巷撤收、桥头阻击与四行1937，三章均可本地游玩的文字策略游戏",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",

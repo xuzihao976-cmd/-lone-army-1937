@@ -1,10 +1,15 @@
 import type { Dilemma, GameStats, Location } from '../types';
 import { playSound } from '../utils/sound';
 import { BUILD_SCENES, COMMAND_RESPONSES, HEAL_SUCCESS_SCENES, SPEECH_SCENES } from '../data/text/commands';
-import { ALL_DILEMMAS, MUTINY_SCENES, presentDilemma, TACTICAL_CARDS } from '../data/text/events';
+import { ALL_DILEMMAS, MUTINY_SCENES } from '../data/text/events';
+import { ENDING_TEXTS } from '../data/text/endings';
 import { pickWith, type RandomSource } from './commandUtils';
 import { calculateCampaignScore } from './endings/campaignScore';
 import { reconcileSoldierDistribution } from './roster';
+import { eligibleBattlefieldEncounters } from './tacticalCards';
+import { canOfferEvent, issueEvent, presentEvent } from './eventPlans';
+import { EVENT_RULES } from '../data/eventRules';
+import { resolveDilemma } from './dilemmaResolver';
 
 type TurnEvent = 'attack' | 'new_day' | 'none' | 'game_over' | 'victory';
 type VisualEffect = 'shake' | 'heavy-damage' | 'none';
@@ -20,6 +25,8 @@ interface FinalizeTurnInput {
   statsLog: string[];
   random: RandomSource;
   allowRandomEvents: boolean;
+  allowDilemmas?: boolean;
+  checkCollapse?: boolean;
 }
 
 interface FinalizeTurnResult {
@@ -45,27 +52,32 @@ export const finalizeTurn = ({
   statsLog,
   random,
   allowRandomEvents,
+  allowDilemmas = true,
+  checkCollapse = false,
 }: FinalizeTurnInput): FinalizeTurnResult => {
   const pick = <T>(items: T[]): T => pickWith(items, random);
   let eventTriggered = initialEvent;
   let visualEffect = initialVisualEffect;
+  const combatantsNow = () => (calculatedStats.soldiers ?? currentStats.soldiers)
+    + (calculatedStats.hmgSquads ?? currentStats.hmgSquads).reduce((n, squad) => n + (squad.status === 'active' ? squad.count : 0), 0);
 
   const finalMorale = calculatedStats.morale ?? currentStats.morale;
-  if (allowRandomEvents && !calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
+  if (allowRandomEvents && combatantsNow() > 0 && !calculatedStats.isGameOver && finalMorale < 30 && random() < 0.4) {
     narrativeParts.push('\n\n' + pick(MUTINY_SCENES));
     const lost = Math.floor(random() * 10) + 5;
-    calculatedStats.soldiers = Math.max(0, (calculatedStats.soldiers ?? currentStats.soldiers) - lost);
-    statsLog.push(`🏃 逃兵/失踪: ${lost}人`);
+    const soldiersBeforeLoss = calculatedStats.soldiers ?? currentStats.soldiers;
+    calculatedStats.soldiers = Math.max(0, soldiersBeforeLoss - lost);
+    statsLog.push(`🏃 逃兵/失踪: ${soldiersBeforeLoss - calculatedStats.soldiers}人`);
   }
 
-  if (allowRandomEvents && !currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
+  if (allowRandomEvents && combatantsNow() > 0 && !currentStats.activeTacticalCard && random() < 0.1 && !calculatedStats.isGameOver) {
     const used = calculatedStats.usedTacticalCards || currentStats.usedTacticalCards || [];
-    const availableCards = TACTICAL_CARDS.filter((card) => !used.includes(card.id));
+    const availableCards = eligibleBattlefieldEncounters({ ...currentStats, ...calculatedStats, usedTacticalCards: used }, actionType);
     if (availableCards.length > 0) {
       const newCard = pick(availableCards);
       calculatedStats.activeTacticalCard = newCard;
       calculatedStats.usedTacticalCards = [...used, newCard.id];
-      statsLog.push(`🃏 触发战机: ${newCard.title}`);
+      statsLog.push(`战地际遇：${newCard.title}`);
       playSound('alert');
     }
   }
@@ -105,8 +117,8 @@ export const finalizeTurn = ({
     eventTriggered = 'victory';
     const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_hold');
     calculatedStats.finalRank = report.rank;
-    narrativeParts.push(`\n\n【战役胜利】坚守至第六天，孤军完成了任务。\n结局达成：【固若金汤】\n${report.text}`);
-  } else if (allowRandomEvents && collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
+    narrativeParts.push(`\n\n${ENDING_TEXTS.hold}\n${report.text}`);
+  } else if ((allowRandomEvents || checkCollapse) && collapseDetected && !immediateCollapse && !lastStandAlreadyUsed) {
     calculatedStats.lastStandUsed = true;
     calculatedStats.siegeMeter = Math.min(35, calculatedStats.siegeMeter ?? currentStats.siegeMeter);
     visualEffect = 'heavy-damage';
@@ -115,7 +127,7 @@ export const finalizeTurn = ({
       : '一楼、二楼与地下室已经全部失守';
     narrativeParts.push(`\n\n【最后防线】\n${collapseWarning}，但残余守军仍在抵抗。副官为你争取到一次补救机会：立即救治伤员或从仍控制的楼层发动反攻，夺回一个核心防区；若局面仍未恢复，战役才会结束。`);
     statsLog.push('⚠ 最后防线已启用：本局仅有一次补救机会');
-  } else if (collapseDetected && (allowRandomEvents || immediateCollapse)) {
+  } else if (collapseDetected && (allowRandomEvents || checkCollapse || immediateCollapse)) {
     calculatedStats.isGameOver = true;
     eventTriggered = 'game_over';
     visualEffect = 'heavy-damage';
@@ -129,22 +141,22 @@ export const finalizeTurn = ({
       calculatedStats.gameResult = 'defeat_martyr';
       const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_martyr');
       calculatedStats.finalRank = report.rank;
-      narrativeParts.push(`\n\n【壮烈殉国】\n成建制战斗力量已经耗尽。那面曾经升起的国旗，成为这场抵抗留下的见证。伤员与失散人员的命运尚未确定。\n\n结局达成：【血染孤旗】\n${report.text}`);
+      narrativeParts.push(`\n\n${ENDING_TEXTS.martyr}\n${report.text}`);
     } else if (aggression > 3) {
       calculatedStats.gameResult = 'defeat_assault';
       const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_assault');
       calculatedStats.finalRank = report.rank;
-      narrativeParts.push(`\n\n【反攻失败】\n连续主动出击耗尽了最后的成建制战斗力量。仍有伤员和失散士兵活着，但四行仓库已经无法继续防守。\n\n结局达成：【反攻的号角】\n${report.text}`);
+      narrativeParts.push(`\n\n${ENDING_TEXTS.assault}\n${report.text}`);
     } else {
       calculatedStats.gameResult = 'defeat_generic';
       const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'defeat_generic');
       calculatedStats.finalRank = report.rank;
       const collapseText = forceCollapsed && corePositionsLost
-        ? `可战兵力只剩 ${finalCombatants} 人，核心楼层也已全部失守。残余人员被迫停止成建制抵抗。`
+        ? `可战兵力只剩 ${finalCombatants} 人，核心楼层也已全部失守，已经无法继续成建制抵抗。`
         : forceCollapsed
-          ? `可战兵力只剩 ${finalCombatants} 人，已经无法覆盖各处防线。伤员和幸存者仍在，但成建制防守宣告结束。`
-          : `一楼、二楼与地下室相继失守，仓库纵深已被敌军切断。仍有 ${finalCombatants} 名可战人员与伤员幸存，但阵地已经无法恢复。`;
-      narrativeParts.push(`\n\n【战役结束】\n${collapseText}\n\n最终军衔评价：${report.rank}\n${report.text}`);
+          ? `可战兵力只剩 ${finalCombatants} 人，已经无法覆盖各处防线。现存伤员 ${finalWounded} 人，成建制防守宣告结束。`
+          : `一楼、二楼与地下室相继失守，仓库纵深已被敌军切断。现存可战人员 ${finalCombatants} 人、伤员 ${finalWounded} 人，但核心阵地已经无法恢复。`;
+      narrativeParts.push(`\n\n【战役结束】\n${collapseText}\n\n作战图上还有线，线后却已经接不上足够的人或阵地。失败不替任何人的死亡作证明；伤员、失散与残余守军，都只能按现有记录分别登记。\n\n本局指挥评价：${report.rank}\n${report.text}`);
     }
   } else if (finalDay > 5) {
     calculatedStats.isGameOver = true;
@@ -153,7 +165,7 @@ export const finalizeTurn = ({
     eventTriggered = 'victory';
     const report = calculateCampaignScore({ ...currentStats, ...calculatedStats }, 'victory_hold');
     calculatedStats.finalRank = report.rank;
-    narrativeParts.push(`\n\n【战役胜利】\n你坚守了整整六天。在全世界的注视下，孤军完成了不可能的任务。\n\n结局达成：【固若金汤】\n${report.text}`);
+    narrativeParts.push(`\n\n${ENDING_TEXTS.hold}\n${report.text}`);
   }
 
   let responseText = '';
@@ -169,17 +181,25 @@ export const finalizeTurn = ({
   if (responseText) narrativeParts.unshift(responseText);
 
   let dilemma: Dilemma | undefined;
-  if (allowRandomEvents && !calculatedStats.isGameOver && !eventTriggered.includes('attack') && random() < 0.2) {
-    const alreadyTriggered = calculatedStats.triggeredEvents || currentStats.triggeredEvents || [];
-    const flags = calculatedStats.consequenceFlags || currentStats.consequenceFlags || [];
-    const potentialDilemmas = ALL_DILEMMAS.filter((candidate) =>
-      !alreadyTriggered.includes(candidate.id)
-      && (!candidate.requiresFlag || flags.includes(candidate.requiresFlag))
-      && (!candidate.excludesFlag || !flags.includes(candidate.excludesFlag))
-      && (candidate.minDay === undefined || finalDay >= candidate.minDay));
-    if (potentialDilemmas.length > 0) {
-      dilemma = presentDilemma(pick(potentialDilemmas), calculatedStats.ammo ?? currentStats.ammo);
-      calculatedStats.pendingDilemmaId = dilemma.id;
+  const projectedTurn = currentStats.turnCount + 1;
+  if (allowRandomEvents && allowDilemmas && !calculatedStats.isGameOver
+    && projectedTurn - (currentStats.lastDilemmaTurn ?? -999) >= EVENT_RULES.cooldownTurns) {
+    const offeredState = { ...currentStats, ...calculatedStats, day: finalDay, turnCount: projectedTurn };
+    const candidates = ALL_DILEMMAS.filter(event => canOfferEvent(offeredState, event)
+      && (eventTriggered !== 'attack' || ['beam_creak','hmg_jam'].includes(event.id)));
+    const followUps = candidates.filter(event => event.requiresFlag);
+    const pool = followUps.length ? followUps : random() < 0.2 ? candidates : [];
+    if (pool.length) {
+      const event = pick(pool);
+      const ticket = issueEvent(offeredState, event.id);
+      if (event.presentation === 'notice') {
+        const notice = resolveDilemma({ ...offeredState, ...ticket }, event.id, 0, random, () => {});
+        Object.assign(calculatedStats, ticket, notice.updatedStats);
+        narrativeParts.push('\n\n' + notice.narrative);
+      } else {
+        Object.assign(calculatedStats, ticket);
+        dilemma = presentEvent({ ...offeredState, ...ticket }, event);
+      }
     }
   }
 

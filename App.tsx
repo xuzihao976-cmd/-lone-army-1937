@@ -14,12 +14,19 @@ import GameOverModal from './components/GameOverModal';
 import BattleResultCard from './components/BattleResultCard';
 import ActionPreviewBar from './components/ActionPreviewBar';
 import TutorialGuide from './components/TutorialGuide';
-import { GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType } from './types';
+import { ChapterMissionPanel, ChapterMissionActions } from './components/ChapterMissionPanel';
+import { TacticStatus, TacticUseModal } from './components/TacticControls';
+import { TACTICAL_CARDS } from './data/text/events';
+import { getChapter, isShortChapter } from './data/chapters';
+import { readChapterArchive, recordChapterResult, type ChapterArchive } from './storage/chapterArchive';
+import { ChapterId, GameStats, GameLog, GameTurnResult, SaveSlotMeta, Dilemma, Location, EndingType, TacticId } from './types';
 import { runGameTurn } from './engine/gameEngine';
 import { getActionPreview } from './engine/actionPreview';
+import { getPendingEvent } from './engine/eventPlans';
 import { enhanceBattleNarrative, resetAiGatewayProbe, interpretUnknownCommand, isAiConfigured, describeAiFailure, type AiFailure, type AiSource } from './services/aiClient';
 import { resolveNaturalCommand } from './engine/naturalCommands';
-import { createInitialStats, getAutoSaveMeta, listSaveSlots, readAutoSave, readSaveSlot, writeAutoSave, writeSaveSlot } from './storage/saveStore';
+import { createInitialStats, getAutoSaveMeta, getChapterSaveMetas, listSaveSlots, readAutoSave, readChapterAutoSave, readSaveSlot, writeAutoSave, writeSaveSlot } from './storage/saveStore';
+import { ACHIEVEMENTS } from './constants';
 import { getSoundEnabled, playSound, setSoundEnabled as persistSoundEnabled } from './utils/sound';
 
 const ACHIEVEMENTS_KEY = 'lone_army_achievements';
@@ -50,6 +57,12 @@ const App: React.FC = () => {
   const [modalMode, setModalMode] = useState<'save' | 'load'>('save');
   const [saveSlots, setSaveSlots] = useState<SaveSlotMeta[]>([]);
   const [autoSaveMeta, setAutoSaveMeta] = useState<SaveSlotMeta | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<ChapterId>('street');
+  const [selectedTactics, setSelectedTactics] = useState<Record<ChapterId, TacticId | null>>({ street: null, bridge: null, sihang: null });
+  const [showTacticPreview, setShowTacticPreview] = useState(false);
+  const [showEncounterDetails, setShowEncounterDetails] = useState(false);
+  const [chapterSaves, setChapterSaves] = useState<Partial<Record<ChapterId, SaveSlotMeta>>>({});
+  const [chapterArchive, setChapterArchive] = useState<ChapterArchive>({});
   const [unlockedAchievements, setUnlockedAchievements] = useState<EndingType[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(getSoundEnabled);
   
@@ -87,9 +100,17 @@ const App: React.FC = () => {
   const gameSessionRef = useRef(0);
   const statsRef = useRef(stats);
 
+  useEffect(() => { setShowEncounterDetails(false); setShowTacticPreview(false); }, [stats.campaignId]);
+
   useEffect(() => {
     statsRef.current = stats;
   }, [stats]);
+
+  useEffect(() => {
+    if (!stats.isGameOver) return;
+    try { setChapterArchive(recordChapterResult(localStorage, stats)); }
+    catch { /* The current result remains visible even if storage is full. */ }
+  }, [stats.isGameOver, stats.campaignId]);
 
   useEffect(() => {
     if (view !== 'GAME' || logs.length === 0 || isLoading) return;
@@ -138,7 +159,8 @@ const App: React.FC = () => {
       try {
           const json = localStorage.getItem(ACHIEVEMENTS_KEY);
           if (json) {
-              setUnlockedAchievements(JSON.parse(json));
+              const stored: unknown = JSON.parse(json);
+              if (Array.isArray(stored)) setUnlockedAchievements(stored.filter(id => ACHIEVEMENTS.some(a => a.id === id)));
           }
       } catch (e) {
           console.error("Failed to load achievements", e);
@@ -146,7 +168,7 @@ const App: React.FC = () => {
   };
 
   const unlockAchievement = (endingId: EndingType) => {
-      if (endingId === 'ongoing' || endingId === 'defeat_generic') return;
+      if (!ACHIEVEMENTS.some(achievement => achievement.id === endingId)) return;
       
       setUnlockedAchievements(prev => {
           if (!prev.includes(endingId)) {
@@ -162,12 +184,14 @@ const App: React.FC = () => {
     try {
         setSaveSlots(listSaveSlots(localStorage));
         setAutoSaveMeta(getAutoSaveMeta(localStorage));
+        setChapterSaves(getChapterSaveMetas(localStorage));
+        setChapterArchive(readChapterArchive(localStorage));
     } catch (e) {
         console.error("Error refreshing save slots", e);
     }
   };
 
-  const hasAnySave = () => !!autoSaveMeta || saveSlots.some(s => !s.isEmpty);
+  const hasAnySave = () => !!autoSaveMeta || Object.keys(chapterSaves).length > 0 || saveSlots.some(s => !s.isEmpty);
 
   const handleSaveToSlot = (slotId: number) => {
       try {
@@ -194,10 +218,17 @@ const App: React.FC = () => {
         gameSessionRef.current += 1;
         statsRef.current = data.stats;
         setStats(data.stats);
+        setShowGameOverModal(data.stats.isGameOver);
+        setSelectedChapter(data.stats.chapterId);
+        setShowTacticPreview(false);
+        setSelectedTactics(previous => ({ ...previous, [data.stats.chapterId]: data.stats.equippedTactic?.id ?? null }));
         setLogs(data.logs);
-        setCurrentDilemma(null);
+        setCurrentDilemma(getPendingEvent(data.stats));
         setAttackLocation(null);
         setShowBattleMapHint(false);
+        setShowMap(false);
+        setShowAdvisor(false);
+        setIsLoading(false);
         setAiSource('auto');
         setView('GAME');
         setShowSaveLoadModal(false);
@@ -208,10 +239,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLoadAutoSave = () => {
+  const handleLoadAutoSave = (chapterId?: ChapterId) => {
       try {
         playSound('click');
-        const data = readAutoSave(localStorage);
+        const data = chapterId ? readChapterAutoSave(localStorage, chapterId) : readAutoSave(localStorage);
         if (!data) throw new Error('No auto-save available');
         aiAbortRef.current?.abort();
         aiAbortRef.current = null;
@@ -219,10 +250,17 @@ const App: React.FC = () => {
         gameSessionRef.current += 1;
         statsRef.current = data.stats;
         setStats(data.stats);
+        setShowGameOverModal(data.stats.isGameOver);
+        setSelectedChapter(data.stats.chapterId);
+        setShowTacticPreview(false);
+        setSelectedTactics(previous => ({ ...previous, [data.stats.chapterId]: data.stats.equippedTactic?.id ?? null }));
         setLogs(data.logs);
-        setCurrentDilemma(null);
+        setCurrentDilemma(getPendingEvent(data.stats));
         setAttackLocation(null);
         setShowBattleMapHint(false);
+        setShowMap(false);
+        setShowAdvisor(false);
+        setIsLoading(false);
         setEnemyIntel('自动存档已恢复，侦察信息将在下一次行动后刷新。');
         setAiSource('auto');
         setView('GAME');
@@ -278,7 +316,7 @@ const App: React.FC = () => {
     snapshot: GameStats,
     sessionId: number,
   ) => {
-    if (IS_STATIC_HOSTING || !aiEnabled || response.dilemma || response.updatedStats.isGameOver || !['attack', 'new_day'].includes(response.eventTriggered || '')) return;
+    if (isShortChapter(snapshot) || IS_STATIC_HOSTING || !aiEnabled || response.dilemma || response.updatedStats.isGameOver || !['attack', 'new_day'].includes(response.eventTriggered || '')) return;
 
     aiAbortRef.current?.abort();
     const controller = new AbortController();
@@ -329,7 +367,7 @@ const App: React.FC = () => {
         setAttackLocation(response.attackLocation);
     }
 
-    if (response.eventTriggered === 'attack' && statsRef.current.tutorialStep >= 3) {
+    if (response.eventTriggered === 'attack' && !isShortChapter(logStats) && statsRef.current.tutorialStep >= 3) {
       try {
         if (localStorage.getItem(MAP_HINT_SEEN_KEY) !== '1') {
           localStorage.setItem(MAP_HINT_SEEN_KEY, '1');
@@ -399,14 +437,18 @@ const App: React.FC = () => {
 
   // --- Game Control Logic ---
 
-  const handleNewGame = () => {
-    if (view === 'MENU' && autoSaveMeta && !window.confirm('开始新战役会覆盖当前自动存档，5 个手动档案不会受影响。确认继续吗？')) {
+  const handleNewGame = (chapterId: ChapterId = selectedChapter) => {
+    let existing;
+    try { existing = readChapterAutoSave(localStorage, chapterId); }
+    catch { /* Starting a local game remains possible without persistent storage. */ }
+    if (existing && !existing.stats.isGameOver && !window.confirm(`重新开始${getChapter(chapterId).title}会覆盖本关自动档。其他章节与5个手动档案保留。确认重新开始吗？`)) {
       return;
     }
     playSound('click');
     cancelNarrativeEnhancement();
     gameSessionRef.current += 1;
-    const initialStats = createInitialStats();
+    const initialStats = createInitialStats(undefined, chapterId, selectedTactics[chapterId]);
+    setSelectedChapter(chapterId);
     statsRef.current = initialStats;
     setStats(initialStats);
     setLogs([]);
@@ -416,6 +458,9 @@ const App: React.FC = () => {
     setCurrentDilemma(null);
     setAttackLocation(null);
     setShowBattleMapHint(false);
+    setShowMap(false);
+    setShowAdvisor(false);
+    setShowTacticPreview(false);
     setAiSource('auto');
 
     try {
@@ -433,16 +478,19 @@ const App: React.FC = () => {
   };
 
   const handleConfirmExit = () => {
+    try { writeAutoSave(localStorage, statsRef.current, logs); }
+    catch { if (!window.confirm('自动存档写入失败，返回选关可能丢失本次进度。仍要返回吗？')) return false; }
     playSound('click');
     cancelNarrativeEnhancement();
     gameSessionRef.current += 1;
     setView('MENU');
     setShowGameMenu(false);
     setConfirmExit(false);
-    setStats(prev => ({ ...prev, isGameOver: false }));
     setShowGameOverModal(false); 
+    setShowTacticPreview(false);
     refreshSaveSlots();
     loadAchievements();
+    return true;
   };
 
   const handleCommand = async (e?: React.FormEvent, directCommand?: string, displayLabel?: string) => {
@@ -474,7 +522,7 @@ const App: React.FC = () => {
 
     try {
         const sessionId = gameSessionRef.current;
-        if (!directCommand && aiEnabled && isAiConfigured() && currentStats.tutorialStep >= 3
+        if (!isShortChapter(currentStats) && !directCommand && aiEnabled && isAiConfigured() && currentStats.tutorialStep >= 3
           && !resolveNaturalCommand(currentStats, userCmd)
           && getActionPreview(currentStats, userCmd)?.action === '交谈 / 询问'
           && !/撤退|撤离|逃跑|confirm_|card_|evt_/.test(userCmd)) {
@@ -530,7 +578,7 @@ const App: React.FC = () => {
   };
 
   const toggleAiEnhancement = () => {
-    if (IS_STATIC_HOSTING) return;
+    if (IS_STATIC_HOSTING || isShortChapter(stats)) return;
     const next = !aiEnabled;
     setAiFailure(undefined);
     setAiEnabled(next);
@@ -557,7 +605,9 @@ const App: React.FC = () => {
     visualEffect === 'shake' ? 'effect-shake' : 
     visualEffect === 'heavy-damage' ? 'effect-shake effect-damage' : '';
 
-  const aiStatusLabel = IS_STATIC_HOSTING
+  const shortChapter = isShortChapter(stats);
+  const nextChapter = getChapter(stats.chapterId).next;
+  const aiStatusLabel = shortChapter ? '本关使用本地引擎' : IS_STATIC_HOSTING
     ? '本地模式 · AI 未配置'
     : !aiEnabled
     ? 'AI 已关闭'
@@ -566,7 +616,7 @@ const App: React.FC = () => {
     : isEnhancing
       ? 'AI 润色中'
       : aiSource === 'cloudflare'
-        ? 'AI 已连接'
+        ? '本次 AI 回复成功'
         : aiSource === 'local'
           ? 'AI 暂不可用 · 本地回复'
           : 'AI 副官已开启';
@@ -583,7 +633,7 @@ const App: React.FC = () => {
             slots={saveSlots} 
             autoSave={autoSaveMeta}
             onClose={() => setShowSaveLoadModal(false)}
-            onSelectAutoSave={handleLoadAutoSave}
+            onSelectAutoSave={() => handleLoadAutoSave()}
             onSelectSlot={(id) => {
                 if (modalMode === 'save') {
                     if (saveSlots[id].isEmpty || window.confirm(`确认覆盖 存档 ${id+1} 吗？`)) {
@@ -598,38 +648,54 @@ const App: React.FC = () => {
       )}
       
       {currentDilemma && (
-          <DilemmaModal dilemma={currentDilemma} onChoice={(cmd) => {
+          <DilemmaModal dilemma={currentDilemma} stats={stats} onSaveExit={() => {
+              if (handleConfirmExit()) setCurrentDilemma(null);
+          }} onChoice={(cmd) => {
               const opt = currentDilemma.options.find(o => o.actionCmd === cmd);
               handleDilemmaChoice(cmd, opt?.label || "做出选择");
           }} />
       )}
       
-      {stats.activeTacticalCard && (
+      {view === 'GAME' && showEncounterDetails && !stats.isGameOver && !currentDilemma && !showTacticPreview && !showGameMenu && !showAdvisor && !showSaveLoadModal && stats.activeTacticalCard && (
           <TacticalCardDisplay 
-              card={stats.activeTacticalCard} 
-              onExecute={(cmd) => handleTacticalCardExecute(cmd, stats.activeTacticalCard?.title || "")} 
+              card={TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id) ?? stats.activeTacticalCard}
+              onExecute={(cmd) => { setShowEncounterDetails(false); handleTacticalCardExecute(cmd, '接受战地际遇'); }}
+              onDecline={() => { setShowEncounterDetails(false); handleCommand(undefined, 'encounter_skip', '放弃本次际遇'); }}
+              onClose={() => setShowEncounterDetails(false)}
           />
       )}
+      {view === 'GAME' && showTacticPreview && !stats.isGameOver && <TacticUseModal key={stats.campaignId} stats={stats}
+        onClose={() => setShowTacticPreview(false)} onExecute={(command, label) => {
+          setShowTacticPreview(false); handleCommand(undefined, command, label);
+        }} />}
 
       {/* NEW: Game Over Modal - Triggered by Delayed State */}
       {showGameOverModal && (
           <GameOverModal 
             stats={stats} 
-            onRestart={handleNewGame} 
+            onRestart={() => handleNewGame(stats.chapterId)}
             onExit={handleConfirmExit} 
             onReview={() => setShowGameOverModal(false)}
+            onNext={nextChapter ? () => { if (handleConfirmExit()) setSelectedChapter(nextChapter); } : undefined}
           />
       )}
       
-      <AdvisorChat isOpen={showAdvisor} onClose={() => setShowAdvisor(false)} stats={stats} aiEnabled={aiEnabled} />
+      <AdvisorChat key={stats.chapterId} isOpen={showAdvisor} onClose={() => setShowAdvisor(false)} stats={stats} aiEnabled={!shortChapter && aiEnabled} />
 
       {view === 'MENU' ? (
           <StartScreen 
-            onNewGame={handleNewGame} 
-            onContinueAutoSave={handleLoadAutoSave}
+            onNewGame={() => handleNewGame()}
+            onContinueAutoSave={() => handleLoadAutoSave()}
+            onContinueChapter={() => handleLoadAutoSave(selectedChapter)}
+            onSelectChapter={setSelectedChapter}
+            selectedChapter={selectedChapter}
+            selectedTactic={selectedTactics[selectedChapter]}
+            onSelectTactic={id => setSelectedTactics(previous => ({ ...previous, [selectedChapter]: id }))}
+            chapterSaves={chapterSaves}
+            archive={chapterArchive}
+            recentSave={autoSaveMeta}
             onOpenLoadMenu={openLoadModal} 
             hasSaves={hasAnySave()} 
-            hasAutoSave={!!autoSaveMeta}
             unlockedAchievements={unlockedAchievements}
           />
       ) : (
@@ -658,14 +724,14 @@ const App: React.FC = () => {
                                     本地音效：{soundEnabled ? '开启' : '关闭'}
                                 </button>
                                 <button onClick={handleExitRequest} className="w-full py-3 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded border border-red-900/30 transition-colors">
-                                    撤出战场
+                                    返回主菜单
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-3 text-center">
                                 <p className="text-red-400 text-sm mb-4">确定要返回主菜单吗？<br/><span className="text-neutral-500">最近一次命令已经自动保存。</span></p>
                                 <button onClick={handleConfirmExit} className="w-full py-3 bg-red-800 hover:bg-red-700 text-white rounded font-bold">
-                                    确认撤离
+                                    确认返回
                                 </button>
                                 <button onClick={() => { playSound('click'); setConfirmExit(false); }} className="w-full py-3 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded">
                                     取消
@@ -676,13 +742,13 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <StatsPanel stats={stats} enemyIntel={enemyIntel} />
+            {shortChapter ? <ChapterMissionPanel stats={stats} /> : <StatsPanel stats={stats} enemyIntel={enemyIntel} />}
 
-            {showBattleMapHint && (
+            {!shortChapter && showBattleMapHint && (
               <div className="flex shrink-0 items-center justify-between gap-3 border-b border-red-900/50 bg-red-950/25 px-3 py-2" role="status">
                 <div className="min-w-0">
-                  <div className="text-xs font-black text-red-300">战场提示：红点就是敌军当前目标</div>
-                  <div className="truncate text-[11px] text-neutral-400">打开地图可查看遭袭楼层，并立即调兵或加固。</div>
+                  <div className="text-xs font-black text-red-300">战场提示：红点标出已知交战位置</div>
+                  <div className="truncate text-[11px] text-neutral-400">打开地图查看遭袭楼层；调兵和加固仍会消耗行动时间。</div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   {!showMap && (
@@ -705,17 +771,17 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className="relative z-10 flex shrink-0 justify-center border-b border-neutral-800 bg-neutral-900 px-4 py-2">
+            {!shortChapter && <div className="relative z-10 flex shrink-0 justify-center border-b border-neutral-800 bg-neutral-900 px-4 py-2">
                 <button 
                     onClick={() => { playSound('click'); setShowMap(!showMap); }}
                     className="flex items-center gap-2 text-xs font-bold tracking-wider text-neutral-300 hover:text-white"
                 >
                     {showMap ? '▼ 隐藏战略地图' : '▲ 显示战略地图'}
                 </button>
-            </div>
+            </div>}
 
             {/* Map Container: Restricted height with scroll to prevent blocking chat */}
-            {showMap && (
+            {!shortChapter && showMap && (
                 <div className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-neutral-800 bg-[#0a0a0a] custom-scrollbar sm:max-h-[32vh]">
                     <TacticalMap stats={stats} onAction={(cmd) => handleCommand(undefined, cmd)} attackLocation={attackLocation} />
                 </div>
@@ -735,7 +801,7 @@ const App: React.FC = () => {
                     className={`flex flex-col ${log.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
                     {log.sender === 'user' && log.day !== undefined && log.time && (
-                        <div className="mb-1.5 text-[11px] font-mono font-bold text-neutral-500">第 {log.day} 天 · {log.time}</div>
+                        <div className="mb-1.5 text-[11px] font-mono font-bold text-neutral-500">{shortChapter ? getChapter(stats.chapterId).title : `第${log.day}天`} · {log.time}</div>
                     )}
                     <div className={`max-w-[95%] sm:max-w-[90%] ${
                     log.sender === 'user' 
@@ -795,7 +861,7 @@ const App: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={toggleAiEnhancement}
-                                disabled={IS_STATIC_HOSTING}
+                                disabled={IS_STATIC_HOSTING || shortChapter}
                                 className={`flex items-center gap-1.5 rounded border px-3 py-2 text-xs font-bold transition-colors ${
                                   IS_STATIC_HOSTING
                                     ? 'text-green-700 bg-black border-green-950/70 cursor-default'
@@ -803,11 +869,11 @@ const App: React.FC = () => {
                                     ? 'text-amber-500/90 bg-neutral-900 border-amber-900/50 hover:border-amber-700'
                                     : 'text-neutral-600 bg-black border-neutral-800 hover:text-neutral-400'
                                 }`}
-                                title={IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况经 Cloudflare 网关发送至千问服务；AI 军令经确认才执行，失败回退本地。不发送完整存档或身份资料。'}
+                                title={shortChapter ? '本关使用本地规则与对白，不发送模型请求' : IS_STATIC_HOSTING ? 'AI 网关尚未配置；本地军令和战斗完整可用' : '开启后陌生输入及精简战况经 Cloudflare 网关发送至千问服务；AI 军令经确认才执行，失败回退本地。不发送完整存档或身份资料。'}
                             >
                                 <span className={`w-1.5 h-1.5 rounded-full ${aiSource === 'cloudflare' && aiEnabled ? 'bg-green-500' : 'bg-neutral-600'}`}></span>
                                 <span className="hidden sm:inline">{aiStatusLabel}</span>
-                                <span className="sm:hidden">{IS_STATIC_HOSTING ? '本地' : !aiEnabled ? 'AI 关' : isInterpreting ? 'AI 等待中' : aiSource === 'local' ? 'AI 未连接' : 'AI 开'}</span>
+                                <span className="sm:hidden">{IS_STATIC_HOSTING || shortChapter ? '本地' : !aiEnabled ? 'AI 关' : isInterpreting ? 'AI 等待中' : aiSource === 'local' ? 'AI 未连接' : 'AI 开'}</span>
                             </button>
                         </div>
                         <button 
@@ -823,14 +889,23 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {aiEnabled && aiFailure && !isInterpreting && (
+                {!shortChapter && aiEnabled && aiFailure && !isInterpreting && (
                   <div role="status" className="max-h-24 overflow-y-auto rounded border border-amber-900/50 bg-amber-950/20 px-2 py-1.5 text-xs text-amber-200">
                     {describeAiFailure(aiFailure)} 当前使用本地回复，游戏仍可继续。
                   </div>
                 )}
                 {/* Quick Actions Row */}
+                {!stats.isGameOver && stats.activeTacticalCard && <button type="button" disabled={isLoading || !!currentDilemma}
+                  onClick={() => setShowEncounterDetails(true)} className={`${input.trim() ? 'hidden sm:flex' : 'flex'} min-h-10 items-center justify-between rounded border border-neutral-600 bg-neutral-950 px-3 text-left text-xs text-amber-200 disabled:opacity-40`}>
+                  <span>战地际遇 · {TACTICAL_CARDS.find(card => card.id === stats.activeTacticalCard!.id)?.title ?? stats.activeTacticalCard.title}</span><span>查看</span>
+                </button>}
+                {!stats.isGameOver && stats.equippedTactic && <div className={input.trim() ? 'hidden sm:block' : undefined}>
+                  <TacticStatus stats={stats} disabled={isLoading || !!currentDilemma} onPreview={() => setShowTacticPreview(true)} />
+                </div>}
                 {!stats.isGameOver && (
-                    <>
+                    shortChapter ? <div className={input.trim() ? 'hidden sm:block' : undefined}>
+                      <ChapterMissionActions stats={stats} disabled={isLoading || !!currentDilemma} onAction={cmd => handleCommand(undefined, cmd)} />
+                    </div> : <div className={input.trim() ? 'hidden sm:block' : undefined}>
                       <TutorialGuide
                         stats={stats}
                         disabled={isLoading || !!currentDilemma}
@@ -841,7 +916,7 @@ const App: React.FC = () => {
                           disabled={isLoading || !!currentDilemma}
                           stats={stats}
                       />
-                    </>
+                    </div>
                 )}
 
                 {stats.isGameOver ? (
@@ -869,7 +944,7 @@ const App: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <ActionPreviewBar preview={actionPreview} />
+                    <ActionPreviewBar preview={actionPreview} compact />
 
                     <form onSubmit={(e) => handleCommand(e)} className="relative flex gap-2">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-mono select-none">
@@ -882,7 +957,7 @@ const App: React.FC = () => {
                         onChange={(e) => setInput(e.target.value)}
                         onCompositionStart={() => isComposing.current = true}
                         onCompositionEnd={() => isComposing.current = false}
-                        placeholder={stats.isGameOver ? "连接断开..." : (currentDilemma ? "等待抉择..." : "问战况、说两句，或下达一条军令")}
+                        placeholder={stats.isGameOver ? "本局已结束，可复盘战报" : (currentDilemma ? "请先完成当前选择" : "问战况、说两句，或下达一条军令")}
                         disabled={stats.isGameOver || !!currentDilemma}
                         autoComplete="off"
                         autoCorrect="off"
@@ -896,7 +971,7 @@ const App: React.FC = () => {
                         {isLoading ? '...' : '发送'}
                     </button>
                     </form>
-                    <LocalCommandGuide onFill={command => {setInput(command); inputRef.current?.focus();}} />
+                    {shortChapter ? <p className="text-[11px] text-neutral-400">本关行动见上方按钮。可问任务与战况；普通交谈不耗时。</p> : <LocalCommandGuide onFill={command => {setInput(command); inputRef.current?.focus();}} />}
                   </>
                 )}
             </div>

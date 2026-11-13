@@ -1,11 +1,15 @@
 import { sanitizeDialogueMemory } from '../engine/localConversation';
 import { INITIAL_STATS } from '../constants';
-import type { GameLog, GameStats, SaveData, SaveSlotMeta, TurnSummary } from '../types';
+import { applyChapterSetup, isChapterId, sanitizeMission } from '../data/chapters';
+import { makeTactic, migrateTactic } from '../data/tactics';
+import { getEvent, getEventPlan, validateEventTicket } from '../engine/eventPlans';
+import type { ChapterId, GameLog, GameStats, SaveData, SaveSlotMeta, TacticId, TurnSummary } from '../types';
 
-export const SAVE_SCHEMA_VERSION = 10;
+export const SAVE_SCHEMA_VERSION = 14;
 export const SAVE_INDEX_KEY = 'lone_army_save_index';
 export const SAVE_SLOT_PREFIX = 'lone_army_slot_';
 export const AUTO_SAVE_KEY = 'lone_army_autosave';
+export const CHAPTER_SAVE_PREFIX = 'lone_army_chapter_autosave_';
 export const MAX_SAVE_SLOTS = 5;
 
 interface StorageLike {
@@ -54,24 +58,41 @@ const migrateSummary = (value: unknown): TurnSummary | undefined => {
   };
 };
 
-export const createInitialStats = (seed = createRandomSeed()): GameStats => {
+export const createInitialStats = (seed = createRandomSeed(), chapterId: ChapterId = 'sihang', tacticId: TacticId | null = null): GameStats => {
+  if (!isChapterId(chapterId)) throw new Error('Unknown chapter');
   const stats = typeof structuredClone === 'function'
     ? structuredClone(INITIAL_STATS)
     : JSON.parse(JSON.stringify(INITIAL_STATS)) as GameStats;
   stats.rngState = seed >>> 0 || INITIAL_STATS.rngState;
-  return stats;
+  stats.campaignId = `${chapterId}-${stats.rngState}`;
+  stats.equippedTactic = makeTactic(tacticId, chapterId);
+  return applyChapterSetup(stats, chapterId);
 };
 
 export const migrateSaveData = (value: unknown): SaveData | null => {
   if (!isRecord(value) || !isRecord(value.stats)) return null;
+  if (typeof value.schemaVersion === 'number' && value.schemaVersion > SAVE_SCHEMA_VERSION) return null;
 
-  const base = createInitialStats();
   const incoming = value.stats as Partial<GameStats>;
+  if (incoming.chapterId !== undefined && !isChapterId(incoming.chapterId)) return null;
+  const chapterId = incoming.chapterId ?? 'sihang';
+  const equippedTactic = migrateTactic(incoming.equippedTactic, chapterId);
+  if (equippedTactic === false) return null;
+  const base = createInitialStats(incoming.rngState, chapterId);
+  const mission = chapterId === 'sihang' ? undefined : sanitizeMission(incoming.mission, chapterId);
+  if (chapterId !== 'sihang' && !mission) return null;
   const stats: GameStats = {
     ...base,
     ...incoming,
+    chapterId,
+    equippedTactic,
+    campaignId: typeof incoming.campaignId === 'string' && /^[a-z0-9-]{1,80}$/.test(incoming.campaignId)
+      ? incoming.campaignId : `legacy-${chapterId}-${base.rngState}`,
+    mission: mission ?? undefined,
     localDialogue: sanitizeDialogueMemory(incoming.localDialogue),
     pendingDilemmaId: null,
+    pendingEvent: null,
+    lastDilemmaTurn: -999,
     preparedOrders: Object.fromEntries(Object.entries(incoming.preparedOrders || {}).filter(([location, order]) => ['屋顶', '二楼阵地', '一楼入口', '地下室'].includes(location) && ['rapid', 'conserve', 'close', 'bayonet', 'hold'].includes(String(order)))),
     lastEncourageTurn: typeof incoming.lastEncourageTurn === 'number' && Number.isFinite(incoming.lastEncourageTurn) ? incoming.lastEncourageTurn : -999,
     pendingRetreat: null,
@@ -93,6 +114,31 @@ export const migrateSaveData = (value: unknown): SaveData | null => {
     fortificationBuildCounts: { ...base.fortificationBuildCounts, ...(incoming.fortificationBuildCounts ?? {}) },
   };
 
+  const modern = value.schemaVersion === SAVE_SCHEMA_VERSION;
+  if (modern) {
+    if(stats.hmgSquads.some(q=>!q||typeof q!=='object'||(q.jammed!==undefined&&typeof q.jammed!=='boolean')))return null;
+    if(incoming.lastBattle!==undefined){
+      const b=incoming.lastBattle;
+      if(!isRecord(b)||!Number.isSafeInteger(b.turn)||Number(b.turn)<0||Number(b.turn)>stats.turnCount
+        ||!['一楼入口','二楼阵地','地下室','屋顶'].includes(String(b.location))
+        ||!['INFANTRY','ARTILLERY','BOMBING'].includes(String(b.attackType))||!Array.isArray(b.hmgFired)
+        ||b.hmgFired.length>stats.hmgSquads.length||b.hmgFired.some(n=>typeof n!=='string'||!stats.hmgSquads.some(q=>q.name===n)))return null;
+      stats.lastBattle={turn:Number(b.turn),location:b.location as GameStats['location'],attackType:b.attackType as NonNullable<GameStats['lastBattle']>['attackType'],hmgFired:[...b.hmgFired]};
+    }
+  } else {
+    stats.hmgSquads=stats.hmgSquads.map(({jammed,...q})=>q);delete stats.lastBattle;
+  }
+  if (modern || value.schemaVersion === 13) {
+    const last = incoming.lastDilemmaTurn ?? -999;
+    if (!Number.isSafeInteger(last) || last < -999 || last > stats.turnCount) return null;
+    stats.lastDilemmaTurn = last;
+    if (incoming.pendingEvent != null || incoming.pendingDilemmaId != null) {
+      stats.pendingDilemmaId = incoming.pendingDilemmaId;
+      if (!validateEventTicket(stats, incoming.pendingEvent)) return null;
+      stats.pendingEvent = { ...incoming.pendingEvent };
+      if (!getEvent(stats.pendingDilemmaId!)!.options.some(option => getEventPlan(stats, option.actionCmd, false)?.available)) return null;
+    }
+  }
   const rawLogs = Array.isArray(value.logs) ? value.logs : [];
   const logs: GameLog[] = rawLogs
     .filter(isRecord)
@@ -139,6 +185,7 @@ export const listSaveSlots = (storage: StorageLike): SaveSlotMeta[] => {
       day: typeof existing.day === 'number' ? existing.day : undefined,
       soldiers: typeof existing.soldiers === 'number' ? existing.soldiers : undefined,
       location: typeof existing.location === 'string' ? existing.location : undefined,
+      chapterId: isChapterId(existing.chapterId) ? existing.chapterId : 'sihang',
     };
   });
 };
@@ -169,6 +216,7 @@ export const writeSaveSlot = (
     day: stats.day,
     soldiers: stats.soldiers,
     location: stats.location,
+    chapterId: stats.chapterId,
   };
   storage.setItem(SAVE_INDEX_KEY, JSON.stringify(slots.filter((slot) => !slot.isEmpty)));
   return slots;
@@ -190,6 +238,7 @@ const metaFromSave = (save: SaveData, id = -1): SaveSlotMeta => ({
   day: save.stats.day,
   soldiers: save.stats.soldiers,
   location: save.stats.location,
+  chapterId: save.stats.chapterId,
 });
 
 export const writeAutoSave = (
@@ -203,6 +252,12 @@ export const writeAutoSave = (
     logs: logs.map((log) => ({ ...log, isTyping: false })),
     savedAt: Date.now(),
   };
+  // Preserve a pre-chapter legacy autosave before changing the most-recent slot.
+  const previous = readAutoSave(storage);
+  if (previous && previous.stats.chapterId !== stats.chapterId) {
+    storage.setItem(`${CHAPTER_SAVE_PREFIX}${previous.stats.chapterId}`, JSON.stringify(previous));
+  }
+  storage.setItem(`${CHAPTER_SAVE_PREFIX}${stats.chapterId}`, JSON.stringify(saveData));
   storage.setItem(AUTO_SAVE_KEY, JSON.stringify(saveData));
   return metaFromSave(saveData);
 };
@@ -219,4 +274,20 @@ export const readAutoSave = (storage: StorageLike): SaveData | null => {
 export const getAutoSaveMeta = (storage: StorageLike): SaveSlotMeta | null => {
   const save = readAutoSave(storage);
   return save ? metaFromSave(save) : null;
+};
+
+export const readChapterAutoSave = (storage: StorageLike, chapterId: ChapterId): SaveData | null => {
+  const own = migrateSaveData(parseJson(storage.getItem(`${CHAPTER_SAVE_PREFIX}${chapterId}`)));
+  if (own?.stats.chapterId === chapterId) return own;
+  const recent = readAutoSave(storage);
+  return recent?.stats.chapterId === chapterId ? recent : null;
+};
+
+export const getChapterSaveMetas = (storage: StorageLike): Partial<Record<ChapterId, SaveSlotMeta>> => {
+  const result: Partial<Record<ChapterId, SaveSlotMeta>> = {};
+  for (const id of ['street', 'bridge', 'sihang'] as const) {
+    const save = readChapterAutoSave(storage, id);
+    if (save) result[id] = metaFromSave(save);
+  }
+  return result;
 };
