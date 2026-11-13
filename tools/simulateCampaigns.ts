@@ -120,7 +120,8 @@ const chooseAction = (stats: GameStats, policy: Policy): string => {
   }
 
   const hour = Number(stats.currentTime.split(':')[0]);
-  const raidWindow = hour >= 0 && hour < 5;
+  // A depleted rifle force cannot dispatch a raid, even while HMG crews remain.
+  const raidWindow = hour >= 0 && hour < 5 && stats.soldiers > 0;
   if (policy === 'aggressive' && raidWindow) return '火力突袭';
   if (policy === 'balanced' && raidWindow && stats.reconBonus >= 20 && stats.fatigue < 60) return '火力突袭';
 

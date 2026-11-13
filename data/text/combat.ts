@@ -13,6 +13,13 @@ export const RAID_SUCCESS_TEXTS = [
   "【夜袭得手】行动达成目标。回程口令换成近处的低语，接应的人终于敢认一认那些沾灰的脸。有人说：“先进去，里头再讲。”"
 ];
 
+/** Keep the newer prose; loss-specific filtering also protects future additions. */
+export const raidSuccessTexts = (friendlyDeaths: number): string[] => {
+  if (friendlyDeaths <= 0) return RAID_SUCCESS_TEXTS;
+  const candidates = RAID_SUCCESS_TEXTS.filter(text => !/无一人伤亡|无人伤亡|全身而退|毫发无损|干净利落|全员归来|一个不少/.test(text));
+  return candidates.length ? candidates : ['【夜袭得手】行动完成，实际伤亡与物资见结算。'];
+};
+
 export const RAID_FAIL_TEXTS = [
   "【夜袭失利】回程报告断了好几次。开口的人咽不下唾沫，只能一遍遍清嗓；问到没回来的名字，他终于停住。出发时还挤在门边的人，已经再也答不了点名。",
   "【夜袭失利】火力把行动逼了回来。撤回的人衣服上沾着别人的血，干了以后，弯一下胳膊都能听见布料发硬的声音。物资没拿到，阵亡名单却得马上登记。",

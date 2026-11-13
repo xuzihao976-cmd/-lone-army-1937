@@ -135,7 +135,7 @@ export const getEventPlan = (s: GameStats, raw: string, requireOwnership = true)
     }
     case 'student_run':
       if (active) { Object.assign(p, R.student); needTroops(R.student.maxDeaths); needEntry(); p.maxDeaths = p.partySize;
-        p.riskText = `急救包+10；阵亡0—${p.maxDeaths}名实际派出步兵；建立民间支援线。`; }
+        p.riskText = `急救包+10；阵亡0—${p.maxDeaths}名实际派出步兵；每名实际阵亡另损2点士气（不低于0）；建立民间支援线。`; }
       break;
     case 'smuggler_boat':
       if (active) { Object.assign(p, option === 2 ? R.checkedBoat : R.boat); needTroops(p.maxDeaths); needRiver(); p.maxDeaths = p.partySize;
@@ -151,7 +151,7 @@ export const getEventPlan = (s: GameStats, raw: string, requireOwnership = true)
     case 'wrecked_truck':
       if (active) { Object.assign(p, R.truck); needTroops(R.truck.maxDeaths); needEntry(); p.maxDeaths = p.partySize;
         if (!s.enemyOperation?.revealed) block('先侦察敌情，确认通路风险后再组织抢运。');
-        p.riskText = p.maxDeaths > 0 ? `七九弹+2000；阵亡1—${p.maxDeaths}名派出步兵。` : '没有可派出的步兵，不能组织抢运。'; }
+        p.riskText = p.maxDeaths > 0 ? `七九弹+2000；阵亡1—${p.maxDeaths}名派出步兵；每名实际阵亡另损2点士气（不低于0）。` : '没有可派出的步兵，不能组织抢运。'; }
       break;
     case 'stray_airdrop':
       if (option === 2) break;

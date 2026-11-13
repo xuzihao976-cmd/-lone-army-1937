@@ -3,7 +3,7 @@ import { getLocalDialogue } from '../localConversation';
 import { resolveNaturalCommand } from '../naturalCommands';
 import type { GameStats } from '../../types';
 import { playSound } from '../../utils/sound';
-import { RAID_FAIL_TEXTS, RAID_SUCCESS_TEXTS } from '../../data/text/combat';
+import { RAID_FAIL_TEXTS, raidSuccessTexts } from '../../data/text/combat';
 import { getRaidSuccessChance, getSearchYieldFactor, getSpeechMoraleGain } from '../actionDynamics';
 import { createEnemyOperation, getOperationIntel, revealEnemyOperation } from '../battlefield';
 import { addConsequenceFlag, appendCampaignHistory } from '../campaignProgress';
@@ -166,7 +166,10 @@ export const resolvePlayerAction = (
     }
   } else if (cmd.includes('突袭') || cmd.includes('夜袭') || cmd.includes('偷袭') || cmd.includes('反击') || cmd.includes('进攻')) {
     const currentHour = parseInt(currentStats.currentTime.split(':')[0]);
-    if (currentHour >= 0 && currentHour < 5) {
+    if (currentStats.soldiers <= 0) {
+      narrative.push('副官核对编制：“没有可派出的步兵，夜袭不能出发。”本次未行动，未消耗侦察优势或推进时间。');
+      actionType = 'raid_blocked';
+    } else if (currentHour >= 0 && currentHour < 5) {
       updatedStats.aggressiveCount = (currentStats.aggressiveCount || 0) + 1;
       timeCost = 60;
       siegeIncrease = 5;
@@ -174,30 +177,28 @@ export const resolvePlayerAction = (
       const success = random() < getRaidSuccessChance(currentStats);
       updatedStats.reconBonus = 0;
       if (success) {
-        const died = Math.floor(random() * 6);
+        const died = Math.min(currentStats.soldiers, Math.floor(random() * 6));
         const ammoGain = random() > 0.3 ? Math.floor(random() * 600) : 0;
         const medGain = random() > 0.5 ? Math.floor(random() * 30) : 0;
         updatedStats.soldiers = Math.max(0, currentStats.soldiers - died);
         updatedStats.ammo = currentStats.ammo + ammoGain;
         updatedStats.medkits = currentStats.medkits + medGain;
         applyNamedSoldierDeaths(currentStats, updatedStats, died, narrative, random);
-        narrative.push(pick(RAID_SUCCESS_TEXTS));
+        narrative.push(pick(raidSuccessTexts(died)));
         if (died > 0) {
           logs.push(`🔴 阵亡: ${died}人`);
-          logs.push(`💔 士气 -${died * 2}`);
         }
         if (ammoGain) logs.push(`📦 缴获七九弹 +${ammoGain}`);
         if (medGain) logs.push(`📦 缴获急救包 +${medGain}`);
         updatedStats.morale = Math.max(0, Math.min(100, currentStats.morale + 10 - died * 2));
-        logs.push('💪 突袭成功: 士气 +10');
         if (reconBonus > 0) logs.push(`👁 侦察引导生效: 成功率提升${reconBonus}%`);
       } else {
-        const died = 10 + Math.floor(random() * 11);
+        const died = Math.min(currentStats.soldiers, 10 + Math.floor(random() * 11));
         updatedStats.soldiers = Math.max(0, currentStats.soldiers - died);
         updatedStats.morale = Math.max(0, currentStats.morale - 15 - died * 2);
         applyNamedSoldierDeaths(currentStats, updatedStats, died, narrative, random);
         narrative.push(pick(RAID_FAIL_TEXTS));
-        logs.push(`🔴 阵亡: ${died}人`, '💔 突袭惨败: 士气 -15', `💔 伤亡惩罚: 士气 -${died * 2}`);
+        logs.push(`🔴 阵亡: ${died}人`);
         visualEffect = 'heavy-damage';
       }
       actionType = 'raid';

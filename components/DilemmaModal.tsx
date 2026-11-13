@@ -42,6 +42,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice, stats, o
             {view.options.map((opt, idx) => (
                 <button
                     key={idx}
+                    type="button"
                     onClick={() => onChoice(opt.actionCmd)}
                     disabled={opt.available === false}
                     className="group min-w-0 w-full rounded border border-neutral-700 bg-neutral-800 p-3 text-left transition-all hover:border-neutral-500 hover:bg-neutral-700 disabled:opacity-50 sm:p-4"

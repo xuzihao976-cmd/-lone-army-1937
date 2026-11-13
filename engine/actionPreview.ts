@@ -137,12 +137,13 @@ export const getActionPreview = (stats: GameStats, rawCommand: string): ActionPr
   } else if (includesAny(command, ['突袭', '夜袭', '偷袭', '反击', '进攻'])) {
     action = '夜间突袭';
     const hour = Number(stats.currentTime.split(':')[0]);
-    available = hour >= 0 && hour < 5;
+    available = hour >= 0 && hour < 5 && stats.soldiers > 0;
     durationMinutes = available ? 60 : 0;
     baseThreat = available ? 5 : 0;
     const recon = Math.max(0, stats.reconBonus || 0);
     const chance = Math.round(getRaidSuccessChance(stats) * 100);
-    reason = available ? `预计成功率${chance}%${recon ? `（含侦察+${recon}%）` : ''}；结果会消耗侦察优势` : '仅可在 00:00–04:59 发动';
+    reason = available ? `预计成功率${chance}%${recon ? `（含侦察+${recon}%）` : ''}；结果会消耗侦察优势`
+      : stats.soldiers <= 0 ? '没有可派出的步兵，未行动，不消耗侦察优势。' : '仅可在 00:00–04:59 发动';
   } else if (includesAny(command, ['搜寻', '寻找', '搜'])) {
     action = '搜寻物资';
     durationMinutes = 30;
