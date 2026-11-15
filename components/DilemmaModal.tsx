@@ -1,3 +1,4 @@
+import useModalFocus from './useModalFocus';
 
 import React from 'react';
 import { Dilemma, GameStats } from '../types';
@@ -13,10 +14,11 @@ interface DilemmaModalProps {
 }
 
 const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice, stats, onSaveExit }) => {
+  const dialogRef = useModalFocus(true);
   const event = getEvent(dilemma.id);
   const view = event ? presentEvent(stats, event) : dilemma;
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="dilemma-title" className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm animate-fade-in sm:p-6">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="dilemma-title" className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm animate-fade-in sm:p-6">
       <div className="relative flex max-h-[92dvh] w-full max-w-md flex-col overflow-y-auto rounded-sm border border-neutral-600 bg-neutral-950 shadow-2xl custom-scrollbar">
         
         {/* Urgent Header */}
@@ -38,7 +40,7 @@ const DilemmaModal: React.FC<DilemmaModalProps> = ({ dilemma, onChoice, stats, o
         </div>
 
         {/* Options */}
-        <div className="p-4 bg-[#111] space-y-3">
+        <div className="p-4 bg-neutral-950 space-y-3">
             {view.options.map((opt, idx) => (
                 <button
                     key={idx}

@@ -8,9 +8,10 @@ interface QuickActionsProps {
   onAction: (cmd: string) => void;
   disabled: boolean;
   stats: GameStats;
+  featured?: boolean;
 }
 
-const QuickActions: React.FC<QuickActionsProps> = ({ onAction, disabled, stats }) => {
+const QuickActions: React.FC<QuickActionsProps> = ({ onAction, disabled, stats, featured = false }) => {
   const fortifyCommand = stats.tutorialStep === 1 ? '加固一楼入口' : `加固${stats.location}`;
   const actions = [
     { label: '加固', cmd: fortifyCommand, icon: 'fortify' },
@@ -30,14 +31,20 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onAction, disabled, stats }
     ? [...actions].sort((a, b) => Number(b.cmd === tutorialCommand) - Number(a.cmd === tutorialCommand))
     : actions;
 
+  const visibleActions = featured
+    ? tutorialCommand ? orderedActions.slice(0, 1) : actions.filter(action => action.icon === 'fortify' || action.icon === 'recon')
+    : orderedActions;
   return (
-    <div className="order-strip" aria-label="常用命令">
-      {orderedActions.map((act) => {
+    <div className={`order-strip ${featured ? `featured-orders ${tutorialCommand ? 'tutorial-orders' : ''}` : ''}`} aria-label="常用命令">
+      {visibleActions.map((act) => {
         const preview = getActionPreview(stats, act.cmd);
         const unavailable = preview && !preview.available;
         const isTutorialTarget = tutorialCommand === act.cmd;
         const tutorialBlocked = tutorialCommand !== null && !isTutorialTarget;
-        return (
+        const visibleActions = featured
+    ? tutorialCommand ? orderedActions.slice(0, 1) : actions.filter(action => action.icon === 'fortify' || action.icon === 'recon')
+    : orderedActions;
+  return (
         <button
             key={act.label}
             onClick={() => onAction(act.cmd)}

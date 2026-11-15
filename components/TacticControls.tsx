@@ -1,3 +1,4 @@
+import useModalFocus from './useModalFocus';
 import React, { useState } from 'react';
 import type { ChapterId, GameStats, Location, TacticId } from '../types';
 import { chapterTactics, getTactic, tacticCommand } from '../data/tactics';
@@ -36,6 +37,7 @@ export function TacticStatus({ stats, disabled, onPreview }: { stats: GameStats;
 export function TacticUseModal({ stats, onClose, onExecute }: {
   stats: GameStats; onClose: () => void; onExecute: (command: string, label: string) => void;
 }) {
+  const dialogRef = useModalFocus(true, onClose);
   const [target, setTarget] = useState<Location>(stats.location);
   const card = getTactic(stats.equippedTactic?.id);
   if (!card) return null;
@@ -45,7 +47,7 @@ export function TacticUseModal({ stats, onClose, onExecute }: {
   // Project the confirmed retreat, without arming or mutating the actual game.
   const preview = getActionPreview(retreat ? { ...stats, pendingRetreat: 'confirm_tactic_retreat' } : stats,
     retreat ? 'confirm_tactic_retreat' : command);
-  return <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="tactic-title">
+  return <div ref={dialogRef} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="tactic-title">
     <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded border border-amber-800 bg-neutral-950 p-4 text-neutral-200">
       <div className="flex items-start justify-between gap-2"><h2 id="tactic-title" className="font-serif text-xl font-bold text-amber-200">{card.title} · 行动预览</h2>
         <button type="button" onClick={onClose} aria-label="关闭战术预览" className="min-h-11 min-w-11 rounded border border-neutral-700">✕</button></div>

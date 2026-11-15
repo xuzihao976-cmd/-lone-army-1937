@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-15",
+  "command": "npm run check",
+  "typecheck": "passed",
+  "testFiles": 24,
+  "tests": 442,
+  "languageCases": 10320,
+  "languageFailures": 0,
+  "productionBuild": "passed",
+  "existingWarning": "main chunk >500kB",
+  "sourceBehaviorFilesChanged": []
+}

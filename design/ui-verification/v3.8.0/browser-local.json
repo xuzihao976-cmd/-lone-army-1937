@@ -1,0 +1,1728 @@
+{
+  "base": "http://127.0.0.1:3022/",
+  "layouts": [
+    {
+      "name": "start-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 21,
+        "y": 579.5,
+        "width": 278,
+        "height": 48.5
+      },
+      "journal": null
+    },
+    {
+      "name": "street-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 539,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 190.015625
+      }
+    },
+    {
+      "name": "preview-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 539,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 217.609375,
+        "width": 318,
+        "height": 128
+      }
+    },
+    {
+      "name": "orders-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 239.671875,
+        "y": 21,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 190.015625
+      }
+    },
+    {
+      "name": "tactic-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 247,
+        "y": 129,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 190.015625
+      }
+    },
+    {
+      "name": "advisor-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 243,
+        "y": 49,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 190.015625
+      }
+    },
+    {
+      "name": "start-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 21,
+        "y": 783.5,
+        "width": 348,
+        "height": 48.5
+      },
+      "journal": null
+    },
+    {
+      "name": "street-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 308.671875,
+        "y": 743,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 254.328125,
+        "width": 388,
+        "height": 387.671875
+      }
+    },
+    {
+      "name": "preview-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 308.671875,
+        "y": 743,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 254.328125,
+        "width": 388,
+        "height": 273.671875
+      }
+    },
+    {
+      "name": "orders-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 309.671875,
+        "y": 120.21875,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 254.328125,
+        "width": 388,
+        "height": 387.671875
+      }
+    },
+    {
+      "name": "tactic-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 317,
+        "y": 231,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 254.328125,
+        "width": 388,
+        "height": 387.671875
+      }
+    },
+    {
+      "name": "advisor-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 313,
+        "y": 151,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 254.328125,
+        "width": 388,
+        "height": 387.671875
+      }
+    },
+    {
+      "name": "start-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 33,
+        "y": 963.5,
+        "width": 702,
+        "height": 48.5
+      },
+      "journal": null
+    },
+    {
+      "name": "street-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 676.671875,
+        "y": 923,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 241.140625,
+        "width": 766,
+        "height": 580.859375
+      }
+    },
+    {
+      "name": "preview-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 676.671875,
+        "y": 923,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 241.140625,
+        "width": 766,
+        "height": 530.859375
+      }
+    },
+    {
+      "name": "orders-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 658.671875,
+        "y": 257.609375,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 241.140625,
+        "width": 766,
+        "height": 580.859375
+      }
+    },
+    {
+      "name": "tactic-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 547,
+        "y": 331,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 241.140625,
+        "width": 766,
+        "height": 580.859375
+      }
+    },
+    {
+      "name": "advisor-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 547,
+        "y": 241,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 241.140625,
+        "width": 766,
+        "height": 580.859375
+      }
+    },
+    {
+      "name": "start-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 217,
+        "y": 839.5,
+        "width": 846,
+        "height": 48.5
+      },
+      "journal": null
+    },
+    {
+      "name": "street-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 1012.671875,
+        "y": 799,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 177,
+        "y": 241.140625,
+        "width": 926,
+        "height": 456.859375
+      }
+    },
+    {
+      "name": "preview-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 1012.671875,
+        "y": 799,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 177,
+        "y": 241.140625,
+        "width": 926,
+        "height": 406.859375
+      }
+    },
+    {
+      "name": "orders-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 914.671875,
+        "y": 195.609375,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 177,
+        "y": 241.140625,
+        "width": 926,
+        "height": 456.859375
+      }
+    },
+    {
+      "name": "tactic-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 803,
+        "y": 269,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 177,
+        "y": 241.140625,
+        "width": 926,
+        "height": 456.859375
+      }
+    },
+    {
+      "name": "advisor-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 803,
+        "y": 179,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 177,
+        "y": 241.140625,
+        "width": 926,
+        "height": 456.859375
+      }
+    },
+    {
+      "name": "start-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 33,
+        "y": 333.5,
+        "width": 778,
+        "height": 48.5
+      },
+      "journal": null
+    },
+    {
+      "name": "street-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 752.671875,
+        "y": 292,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "preview-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 752.671875,
+        "y": 292,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 132.609375,
+        "width": 842,
+        "height": 78
+      }
+    },
+    {
+      "name": "orders-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 696.671875,
+        "y": 21,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "tactic-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 585,
+        "y": 32.59375,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "advisor-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 585,
+        "y": 25,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "start-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 21,
+        "y": 423.5,
+        "width": 278,
+        "height": 48.5
+      },
+      "journal": null
+    },
+    {
+      "name": "street-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 382,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "preview-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 382,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 167.609375,
+        "width": 318,
+        "height": 96
+      }
+    },
+    {
+      "name": "orders-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 239.671875,
+        "y": 21,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "tactic-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 247,
+        "y": 49,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "advisor-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 243,
+        "y": 25,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "bridge-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 539,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 226.75,
+        "width": 318,
+        "height": 202.25
+      }
+    },
+    {
+      "name": "bridge-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 308.671875,
+        "y": 743,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 229.140625,
+        "width": 388,
+        "height": 412.859375
+      }
+    },
+    {
+      "name": "bridge-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 676.671875,
+        "y": 923,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 215.953125,
+        "width": 766,
+        "height": 606.046875
+      }
+    },
+    {
+      "name": "bridge-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 1012.671875,
+        "y": 799,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 177,
+        "y": 215.953125,
+        "width": 926,
+        "height": 482.046875
+      }
+    },
+    {
+      "name": "bridge-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 752.671875,
+        "y": 292,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "bridge-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 382,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "sihang-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 539,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 212.484375,
+        "width": 318,
+        "height": 225.515625
+      }
+    },
+    {
+      "name": "repair-preview-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 539,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 212.484375,
+        "width": 318,
+        "height": 155.515625
+      }
+    },
+    {
+      "name": "map-320x640",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 239.671875,
+        "y": 93.359375,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 212.484375,
+        "width": 318,
+        "height": 225.515625
+      }
+    },
+    {
+      "name": "sihang-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 308.671875,
+        "y": 743,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 214.875,
+        "width": 388,
+        "height": 427.125
+      }
+    },
+    {
+      "name": "repair-preview-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 308.671875,
+        "y": 743,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 214.875,
+        "width": 388,
+        "height": 389.125
+      }
+    },
+    {
+      "name": "map-390x844",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 309.671875,
+        "y": 203.609375,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 214.875,
+        "width": 388,
+        "height": 427.125
+      }
+    },
+    {
+      "name": "sihang-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 676.671875,
+        "y": 923,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 220.875,
+        "width": 766,
+        "height": 601.125
+      }
+    },
+    {
+      "name": "repair-preview-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 676.671875,
+        "y": 923,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 220.875,
+        "width": 766,
+        "height": 595.125
+      }
+    },
+    {
+      "name": "map-768x1024",
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768,
+      "productWidth": 766,
+      "productClient": 766,
+      "primary": {
+        "x": 658.671875,
+        "y": 308.046875,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 220.875,
+        "width": 766,
+        "height": 601.125
+      }
+    },
+    {
+      "name": "sihang-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 1012.671875,
+        "y": 799,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 177,
+        "y": 220.875,
+        "width": 926,
+        "height": 477.125
+      }
+    },
+    {
+      "name": "repair-preview-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 1012.671875,
+        "y": 799,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 177,
+        "y": 220.875,
+        "width": 926,
+        "height": 471.125
+      }
+    },
+    {
+      "name": "map-1280x900",
+      "width": 1280,
+      "height": 900,
+      "documentWidth": 1280,
+      "productWidth": 926,
+      "productClient": 926,
+      "primary": {
+        "x": 914.671875,
+        "y": 246.046875,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 177,
+        "y": 220.875,
+        "width": 926,
+        "height": 477.125
+      }
+    },
+    {
+      "name": "sihang-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 752.671875,
+        "y": 292,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "repair-preview-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 752.671875,
+        "y": 292,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 132.609375,
+        "width": 842,
+        "height": 78
+      }
+    },
+    {
+      "name": "map-844x390",
+      "width": 844,
+      "height": 390,
+      "documentWidth": 844,
+      "productWidth": 842,
+      "productClient": 842,
+      "primary": {
+        "x": 696.671875,
+        "y": 21,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 163.578125,
+        "width": 842,
+        "height": 100.421875
+      }
+    },
+    {
+      "name": "sihang-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 382,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "repair-preview-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 244.671875,
+        "y": 382,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 167.609375,
+        "width": 318,
+        "height": 96
+      }
+    },
+    {
+      "name": "map-320x480",
+      "width": 320,
+      "height": 480,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 239.671875,
+        "y": 21,
+        "width": 44.328125,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 184.59375,
+        "width": 318,
+        "height": 169.40625
+      }
+    },
+    {
+      "name": "sihang-after-tutorial-390",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "productWidth": 388,
+      "productClient": 388,
+      "primary": {
+        "x": 308.671875,
+        "y": 743,
+        "width": 62.328125,
+        "height": 46
+      },
+      "journal": {
+        "x": 1,
+        "y": 268.25,
+        "width": 388,
+        "height": 359.75
+      }
+    },
+    {
+      "name": "event-blocked",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 13,
+        "y": 528.53125,
+        "width": 294,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 168.015625
+      }
+    },
+    {
+      "name": "event-jam",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 13,
+        "y": 528.53125,
+        "width": 294,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 168.015625
+      }
+    },
+    {
+      "name": "event-corner",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 13,
+        "y": 569.53125,
+        "width": 294,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 181.015625
+      }
+    },
+    {
+      "name": "event-beam",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 13,
+        "y": 528.71875,
+        "width": 294,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 168.015625
+      }
+    },
+    {
+      "name": "event-knock",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 13,
+        "y": 569.53125,
+        "width": 294,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 181.015625
+      }
+    },
+    {
+      "name": "event-medicine",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 13,
+        "y": 569.53125,
+        "width": 294,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 168.015625
+      }
+    },
+    {
+      "name": "save-320",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 243,
+        "y": 33,
+        "width": 44,
+        "height": 44
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 176.015625
+      }
+    },
+    {
+      "name": "ending-320",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 37,
+        "y": 513.59375,
+        "width": 246,
+        "height": 48
+      },
+      "journal": {
+        "x": 1,
+        "y": 247.984375,
+        "width": 318,
+        "height": 258.015625
+      }
+    },
+    {
+      "name": "font200-menu",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 21,
+        "y": 557,
+        "width": 278,
+        "height": 71
+      },
+      "journal": null
+    },
+    {
+      "name": "font200-street",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 216.359375,
+        "y": 489,
+        "width": 90.640625,
+        "height": 68
+      },
+      "journal": {
+        "x": 1,
+        "y": 217.609375,
+        "width": 318,
+        "height": 128
+      }
+    },
+    {
+      "name": "font200-preview-street",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 216.359375,
+        "y": 489,
+        "width": 90.640625,
+        "height": 68
+      },
+      "journal": {
+        "x": 1,
+        "y": 217.609375,
+        "width": 318,
+        "height": 128
+      }
+    },
+    {
+      "name": "font200-sihang",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 216.359375,
+        "y": 477,
+        "width": 90.640625,
+        "height": 68
+      },
+      "journal": {
+        "x": 1,
+        "y": 217.609375,
+        "width": 318,
+        "height": 128
+      }
+    },
+    {
+      "name": "font200-preview-sihang",
+      "width": 320,
+      "height": 640,
+      "documentWidth": 320,
+      "productWidth": 318,
+      "productClient": 318,
+      "primary": {
+        "x": 216.359375,
+        "y": 477,
+        "width": 90.640625,
+        "height": 68
+      },
+      "journal": {
+        "x": 1,
+        "y": 217.609375,
+        "width": 318,
+        "height": 128
+      }
+    }
+  ],
+  "flows": [
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "chapter": "street",
+      "tacticSelection": true,
+      "queryPreviewAdvisorCancelReadOnly": true,
+      "keyboardContained": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "chapter": "street",
+      "tacticSelection": true,
+      "queryPreviewAdvisorCancelReadOnly": true,
+      "keyboardContained": true
+    },
+    {
+      "viewport": [
+        768,
+        1024
+      ],
+      "chapter": "street",
+      "tacticSelection": true,
+      "queryPreviewAdvisorCancelReadOnly": true,
+      "keyboardContained": true
+    },
+    {
+      "viewport": [
+        1280,
+        900
+      ],
+      "chapter": "street",
+      "tacticSelection": true,
+      "queryPreviewAdvisorCancelReadOnly": true,
+      "keyboardContained": true
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "chapter": "street",
+      "tacticSelection": true,
+      "queryPreviewAdvisorCancelReadOnly": true,
+      "keyboardContained": true
+    },
+    {
+      "viewport": [
+        320,
+        480
+      ],
+      "chapter": "street",
+      "tacticSelection": true,
+      "queryPreviewAdvisorCancelReadOnly": true,
+      "keyboardContained": true
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "chapter": "bridge",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "chapter": "bridge",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        768,
+        1024
+      ],
+      "chapter": "bridge",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        1280,
+        900
+      ],
+      "chapter": "bridge",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "chapter": "bridge",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        320,
+        480
+      ],
+      "chapter": "bridge",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        320,
+        640
+      ],
+      "chapter": "sihang",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "chapter": "sihang",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        768,
+        1024
+      ],
+      "chapter": "sihang",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        1280,
+        900
+      ],
+      "chapter": "sihang",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "chapter": "sihang",
+      "readOnly": true
+    },
+    {
+      "viewport": [
+        320,
+        480
+      ],
+      "chapter": "sihang",
+      "readOnly": true
+    },
+    {
+      "chapter": "street",
+      "shortcutOnlyFills": true,
+      "sendMatchesExactEngineResult": true
+    },
+    {
+      "chapter": "bridge",
+      "shortcutOnlyFills": true,
+      "sendMatchesExactEngineResult": true
+    },
+    {
+      "chapter": "sihang",
+      "shortcutOnlyFills": true,
+      "sendMatchesExactEngineResult": true
+    },
+    {
+      "event": "blocked",
+      "optionsReachable": true,
+      "escapeDoesNotDismiss": true,
+      "saveResumePreservesPending": true
+    },
+    {
+      "event": "jam",
+      "optionsReachable": true,
+      "escapeDoesNotDismiss": true,
+      "saveResumePreservesPending": true
+    },
+    {
+      "event": "corner",
+      "optionsReachable": true,
+      "escapeDoesNotDismiss": true,
+      "saveResumePreservesPending": true
+    },
+    {
+      "event": "beam",
+      "optionsReachable": true,
+      "escapeDoesNotDismiss": true,
+      "saveResumePreservesPending": true
+    },
+    {
+      "event": "knock",
+      "optionsReachable": true,
+      "escapeDoesNotDismiss": true,
+      "saveResumePreservesPending": true
+    },
+    {
+      "event": "medicine",
+      "optionsReachable": true,
+      "escapeDoesNotDismiss": true,
+      "saveResumePreservesPending": true
+    },
+    {
+      "v10Migration": true,
+      "fullStatsPreserved": true,
+      "mapOnlyFills": true,
+      "manualSaveLoad": true
+    },
+    {
+      "actualEnding": true,
+      "exactEngineResult": true,
+      "reviewReadOnly": true
+    },
+    {
+      "textScale": 2,
+      "sample": "menu"
+    },
+    {
+      "textScale": 2,
+      "sample": "street"
+    },
+    {
+      "textScale": 2,
+      "sample": "sihang"
+    }
+  ],
+  "errors": [],
+  "modelRequests": [],
+  "contrasts": [
+    {
+      "selector": ".war-prose",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "selector": ".battle-chapter",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "selector": ".supply-cell dt",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "selector": ".supply-cell dd",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "selector": ".order-caption",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(32, 39, 32)",
+      "ratio": 7.537345907781755
+    },
+    {
+      "selector": ".send-order",
+      "fg": "rgb(23, 28, 24)",
+      "bg": "rgb(211, 182, 136)",
+      "ratio": 8.897152256064558
+    },
+    {
+      "selector": ".dock-tools > span",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(32, 39, 32)",
+      "ratio": 7.537345907781755
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import useModalFocus from './useModalFocus';
 
 import React from 'react';
 import { GameStats, EndingType } from '../types';
@@ -12,6 +13,7 @@ interface GameOverModalProps {
 }
 
 const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit, onReview, onNext }) => {
+  const dialogRef = useModalFocus(true, onReview);
   const endingType = stats.gameResult as EndingType;
   
   // Define Visuals based on Ending Type
@@ -107,7 +109,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
   } as const;
   
   return (
-    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="ending-title">
+    <div ref={dialogRef} className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="ending-title">
       <div className={`max-h-[92dvh] w-full max-w-md overflow-y-auto border rounded-sm p-5 shadow-2xl text-center relative flex flex-col gap-4 ${borderColor} ${bgColor}`}>
         
         {/* Background Effect */}
@@ -173,7 +175,7 @@ const GameOverModal: React.FC<GameOverModalProps> = ({ stats, onRestart, onExit,
             </button>}
             <button 
                 onClick={onReview}
-                className="w-full py-3 bg-neutral-100 hover:bg-white text-black font-bold tracking-widest rounded shadow-lg transition-transform active:scale-95"
+                className="w-full py-3 bg-amber-300 hover:bg-amber-200 text-neutral-950 font-bold tracking-widest rounded shadow-lg transition-transform active:scale-95"
             >
                 返回战场复盘
             </button>

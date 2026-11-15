@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "variants": [
+    {
+      "hostWidth": 320,
+      "name": "night",
+      "width": 304,
+      "height": 790,
+      "scrollWidth": 304,
+      "inputWidth": 216
+    },
+    {
+      "hostWidth": 320,
+      "name": "command",
+      "width": 304,
+      "height": 790,
+      "scrollWidth": 304,
+      "inputWidth": 216
+    },
+    {
+      "hostWidth": 320,
+      "name": "paper",
+      "width": 304,
+      "height": 790,
+      "scrollWidth": 304,
+      "inputWidth": 216
+    },
+    {
+      "hostWidth": 736,
+      "name": "night",
+      "width": 440,
+      "height": 790,
+      "scrollWidth": 440,
+      "inputWidth": 340
+    },
+    {
+      "hostWidth": 736,
+      "name": "command",
+      "width": 440,
+      "height": 790,
+      "scrollWidth": 440,
+      "inputWidth": 340
+    },
+    {
+      "hostWidth": 736,
+      "name": "paper",
+      "width": 440,
+      "height": 790,
+      "scrollWidth": 440,
+      "inputWidth": 340
+    }
+  ]
+}

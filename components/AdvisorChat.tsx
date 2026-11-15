@@ -1,3 +1,4 @@
+import useModalFocus from './useModalFocus';
 import type { GameStats } from '../types';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -42,6 +43,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
     onClose();
   };
 
+  const dialogRef = useModalFocus(isOpen, closeAdvisor);
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -80,7 +82,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-        <div className="bg-neutral-950 w-full max-w-md h-[min(560px,calc(100dvh-2rem))] border border-neutral-600 rounded-sm shadow-2xl flex flex-col relative readable-panel" role="dialog" aria-modal="true" aria-labelledby="advisor-title">
+        <div ref={dialogRef} className="bg-neutral-950 w-full max-w-md h-[min(560px,calc(100dvh-2rem))] border border-neutral-600 rounded-sm shadow-2xl flex flex-col relative readable-panel" role="dialog" aria-modal="true" aria-labelledby="advisor-title">
             {/* Header */}
             <div className="bg-neutral-900 px-4 py-2 border-b border-neutral-700 flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -107,7 +109,7 @@ const AdvisorChat: React.FC<AdvisorChatProps> = ({ isOpen, onClose, stats, aiEna
                 ))}
                 {isLoading && (
                     <div className="flex justify-start">
-                        <div className="bg-[#0a200a] border border-green-900/50 p-2 rounded text-xs text-green-500 animate-pulse">
+                        <div className="bg-neutral-950 border border-green-900/50 p-2 rounded text-xs text-green-500 animate-pulse">
                             正在整理答复……
                         </div>
                     </div>

@@ -1,0 +1,126 @@
+{
+  "runs": 1000,
+  "selectedTactic": null,
+  "generatedAt": "2026-11-15T14:38:54.668Z",
+  "report": {
+    "defensive": {
+      "events": {
+        "wet_medicine": 245,
+        "student_run": 249,
+        "student_thanks": 249,
+        "brit_ceasefire": 249,
+        "puppet_defector": 249,
+        "smuggler_boat": 247,
+        "wrecked_truck": 244,
+        "hmg_jam": 186,
+        "smuggler_return": 120,
+        "beam_creak": 6,
+        "stray_airdrop": 72
+      },
+      "tacticUsed": 0,
+      "campaigns": 250,
+      "winRate": "100%",
+      "commanderDeathRate": "0%",
+      "averageAttacks": 15.2,
+      "averageTurns": 81.7,
+      "averageSurvivors": 341.2,
+      "averageFinalRifleAmmo": 10648.8,
+      "averageFinalMachineGunAmmo": 4179.7,
+      "sectorLossRate": "0%",
+      "averageFirstSectorLossDay": null,
+      "endings": {
+        "victory_hold": 250
+      }
+    },
+    "balanced": {
+      "events": {
+        "puppet_defector": 249,
+        "hmg_jam": 183,
+        "student_run": 247,
+        "student_thanks": 247,
+        "wrecked_truck": 246,
+        "brit_ceasefire": 247,
+        "wet_medicine": 247,
+        "beam_creak": 13,
+        "smuggler_boat": 244,
+        "smuggler_return": 123,
+        "stray_airdrop": 84
+      },
+      "tacticUsed": 0,
+      "campaigns": 250,
+      "winRate": "100%",
+      "commanderDeathRate": "0%",
+      "averageAttacks": 15.2,
+      "averageTurns": 85.6,
+      "averageSurvivors": 316.4,
+      "averageFinalRifleAmmo": 11926.3,
+      "averageFinalMachineGunAmmo": 4170.8,
+      "sectorLossRate": "0.4%",
+      "averageFirstSectorLossDay": 5,
+      "endings": {
+        "victory_hold": 250
+      }
+    },
+    "aggressive": {
+      "events": {
+        "puppet_defector": 249,
+        "hmg_jam": 179,
+        "brit_ceasefire": 242,
+        "student_run": 246,
+        "student_thanks": 245,
+        "wet_medicine": 247,
+        "wrecked_truck": 189,
+        "stray_airdrop": 119,
+        "smuggler_boat": 189,
+        "smuggler_return": 84,
+        "beam_creak": 32
+      },
+      "tacticUsed": 0,
+      "campaigns": 250,
+      "winRate": "75.2%",
+      "commanderDeathRate": "11.2%",
+      "averageAttacks": 14.6,
+      "averageTurns": 106.5,
+      "averageSurvivors": 118.4,
+      "averageFinalRifleAmmo": 17710.5,
+      "averageFinalMachineGunAmmo": 3939.8,
+      "sectorLossRate": "3.6%",
+      "averageFirstSectorLossDay": 5.2,
+      "endings": {
+        "victory_hold": 188,
+        "defeat_commander": 28,
+        "defeat_assault": 34
+      }
+    },
+    "novice": {
+      "events": {
+        "wet_medicine": 247,
+        "puppet_defector": 248,
+        "brit_ceasefire": 242,
+        "student_run": 247,
+        "student_thanks": 247,
+        "smuggler_boat": 242,
+        "hmg_jam": 187,
+        "smuggler_return": 108,
+        "wrecked_truck": 229,
+        "stray_airdrop": 145,
+        "beam_creak": 31
+      },
+      "tacticUsed": 0,
+      "campaigns": 250,
+      "winRate": "93.2%",
+      "commanderDeathRate": "6.8%",
+      "averageAttacks": 16.4,
+      "averageTurns": 95.6,
+      "averageSurvivors": 304.1,
+      "averageFinalRifleAmmo": 10267.5,
+      "averageFinalMachineGunAmmo": 3910.4,
+      "sectorLossRate": "54.4%",
+      "averageFirstSectorLossDay": 4.9,
+      "endings": {
+        "victory_hold": 233,
+        "defeat_commander": 17
+      }
+    }
+  }
+}

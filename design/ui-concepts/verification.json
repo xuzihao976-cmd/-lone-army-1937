@@ -1,0 +1,2023 @@
+{
+  "date": "2026-11-15",
+  "status": "passed",
+  "layoutCases": 30,
+  "interactionGroups": 3,
+  "modelRequests": 0,
+  "consoleErrors": [],
+  "minimumCheckedTextContrast": 4.744122665127465,
+  "records": [
+    {
+      "concept": "night",
+      "sample": "opening",
+      "width": 320,
+      "height": 640,
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "documentWidth": 320,
+      "rootWidth": 320,
+      "clientWidth": 320,
+      "journal": {
+        "x": 0,
+        "y": 271.109375,
+        "width": 320,
+        "height": 260.296875,
+        "bottom": 531.40625,
+        "right": 320
+      },
+      "input": {
+        "x": 12,
+        "y": 540.40625,
+        "width": 232,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 244
+      },
+      "primary": {
+        "x": 252,
+        "y": 540.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 308
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "opening",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "rootWidth": 390,
+      "clientWidth": 390,
+      "journal": {
+        "x": 0,
+        "y": 283.109375,
+        "width": 390,
+        "height": 350.53125,
+        "bottom": 633.640625,
+        "right": 390
+      },
+      "input": {
+        "x": 18,
+        "y": 735.40625,
+        "width": 290,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 308
+      },
+      "primary": {
+        "x": 316,
+        "y": 735.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 372
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "opening",
+      "width": 768,
+      "height": 1024,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "documentWidth": 768,
+      "rootWidth": 768,
+      "clientWidth": 768,
+      "journal": {
+        "x": 0,
+        "y": 283.109375,
+        "width": 768,
+        "height": 549.71875,
+        "bottom": 832.828125,
+        "right": 768
+      },
+      "input": {
+        "x": 18,
+        "y": 915.40625,
+        "width": 668,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 686
+      },
+      "primary": {
+        "x": 694,
+        "y": 915.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 750
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "opening",
+      "width": 1280,
+      "height": 900,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "documentWidth": 1280,
+      "rootWidth": 1280,
+      "clientWidth": 1280,
+      "journal": {
+        "x": 0,
+        "y": 204.34375,
+        "width": 1280,
+        "height": 504.484375,
+        "bottom": 708.828125,
+        "right": 1280
+      },
+      "input": {
+        "x": 260,
+        "y": 791.40625,
+        "width": 696,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 956
+      },
+      "primary": {
+        "x": 964,
+        "y": 791.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 1020
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "opening",
+      "width": 844,
+      "height": 390,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "documentWidth": 844,
+      "rootWidth": 844,
+      "clientWidth": 844,
+      "journal": {
+        "x": 0,
+        "y": 174.765625,
+        "width": 844,
+        "height": 106.640625,
+        "bottom": 281.40625,
+        "right": 844
+      },
+      "input": {
+        "x": 18,
+        "y": 290.40625,
+        "width": 744,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 762
+      },
+      "primary": {
+        "x": 770,
+        "y": 290.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 826
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "field",
+      "width": 320,
+      "height": 640,
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "documentWidth": 320,
+      "rootWidth": 320,
+      "clientWidth": 320,
+      "journal": {
+        "x": 0,
+        "y": 290.296875,
+        "width": 320,
+        "height": 241.109375,
+        "bottom": 531.40625,
+        "right": 320
+      },
+      "input": {
+        "x": 12,
+        "y": 540.40625,
+        "width": 232,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 244
+      },
+      "primary": {
+        "x": 252,
+        "y": 540.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 308
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "field",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "rootWidth": 390,
+      "clientWidth": 390,
+      "journal": {
+        "x": 0,
+        "y": 283.109375,
+        "width": 390,
+        "height": 350.53125,
+        "bottom": 633.640625,
+        "right": 390
+      },
+      "input": {
+        "x": 18,
+        "y": 735.40625,
+        "width": 290,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 308
+      },
+      "primary": {
+        "x": 316,
+        "y": 735.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 372
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "field",
+      "width": 768,
+      "height": 1024,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "documentWidth": 768,
+      "rootWidth": 768,
+      "clientWidth": 768,
+      "journal": {
+        "x": 0,
+        "y": 283.109375,
+        "width": 768,
+        "height": 549.71875,
+        "bottom": 832.828125,
+        "right": 768
+      },
+      "input": {
+        "x": 18,
+        "y": 915.40625,
+        "width": 668,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 686
+      },
+      "primary": {
+        "x": 694,
+        "y": 915.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 750
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "field",
+      "width": 1280,
+      "height": 900,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "documentWidth": 1280,
+      "rootWidth": 1280,
+      "clientWidth": 1280,
+      "journal": {
+        "x": 0,
+        "y": 204.34375,
+        "width": 1280,
+        "height": 504.484375,
+        "bottom": 708.828125,
+        "right": 1280
+      },
+      "input": {
+        "x": 260,
+        "y": 791.40625,
+        "width": 696,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 956
+      },
+      "primary": {
+        "x": 964,
+        "y": 791.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 1020
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "night",
+      "sample": "field",
+      "width": 844,
+      "height": 390,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "documentWidth": 844,
+      "rootWidth": 844,
+      "clientWidth": 844,
+      "journal": {
+        "x": 0,
+        "y": 174.765625,
+        "width": 844,
+        "height": 106.640625,
+        "bottom": 281.40625,
+        "right": 844
+      },
+      "input": {
+        "x": 18,
+        "y": 290.40625,
+        "width": 744,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 762
+      },
+      "primary": {
+        "x": 770,
+        "y": 290.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 826
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "opening",
+      "width": 320,
+      "height": 640,
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "documentWidth": 320,
+      "rootWidth": 320,
+      "clientWidth": 320,
+      "journal": {
+        "x": 0,
+        "y": 344.40625,
+        "width": 320,
+        "height": 187,
+        "bottom": 531.40625,
+        "right": 320
+      },
+      "input": {
+        "x": 12,
+        "y": 540.40625,
+        "width": 232,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 244
+      },
+      "primary": {
+        "x": 252,
+        "y": 540.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 308
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "opening",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "rootWidth": 390,
+      "clientWidth": 390,
+      "journal": {
+        "x": 0,
+        "y": 358.40625,
+        "width": 390,
+        "height": 275.234375,
+        "bottom": 633.640625,
+        "right": 390
+      },
+      "input": {
+        "x": 18,
+        "y": 735.40625,
+        "width": 290,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 308
+      },
+      "primary": {
+        "x": 316,
+        "y": 735.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 372
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "opening",
+      "width": 768,
+      "height": 1024,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "documentWidth": 768,
+      "rootWidth": 768,
+      "clientWidth": 768,
+      "journal": {
+        "x": 0,
+        "y": 358.40625,
+        "width": 768,
+        "height": 474.421875,
+        "bottom": 832.828125,
+        "right": 768
+      },
+      "input": {
+        "x": 18,
+        "y": 915.40625,
+        "width": 668,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 686
+      },
+      "primary": {
+        "x": 694,
+        "y": 915.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 750
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "opening",
+      "width": 1280,
+      "height": 900,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "documentWidth": 1280,
+      "rootWidth": 1280,
+      "clientWidth": 1280,
+      "journal": {
+        "x": 240,
+        "y": 286.9375,
+        "width": 784,
+        "height": 613.0625,
+        "bottom": 900,
+        "right": 1024
+      },
+      "input": {
+        "x": 1041,
+        "y": 731.40625,
+        "width": 223,
+        "height": 47.59375,
+        "bottom": 779,
+        "right": 1264
+      },
+      "primary": {
+        "x": 1041,
+        "y": 787,
+        "width": 223,
+        "height": 44,
+        "bottom": 831,
+        "right": 1264
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "opening",
+      "width": 844,
+      "height": 390,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "documentWidth": 844,
+      "rootWidth": 844,
+      "clientWidth": 844,
+      "journal": {
+        "x": 0,
+        "y": 168.78125,
+        "width": 844,
+        "height": 112.625,
+        "bottom": 281.40625,
+        "right": 844
+      },
+      "input": {
+        "x": 18,
+        "y": 290.40625,
+        "width": 744,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 762
+      },
+      "primary": {
+        "x": 770,
+        "y": 290.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 826
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "field",
+      "width": 320,
+      "height": 640,
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "documentWidth": 320,
+      "rootWidth": 320,
+      "clientWidth": 320,
+      "journal": {
+        "x": 0,
+        "y": 363.59375,
+        "width": 320,
+        "height": 167.8125,
+        "bottom": 531.40625,
+        "right": 320
+      },
+      "input": {
+        "x": 12,
+        "y": 540.40625,
+        "width": 232,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 244
+      },
+      "primary": {
+        "x": 252,
+        "y": 540.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 308
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "field",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "rootWidth": 390,
+      "clientWidth": 390,
+      "journal": {
+        "x": 0,
+        "y": 358.40625,
+        "width": 390,
+        "height": 275.234375,
+        "bottom": 633.640625,
+        "right": 390
+      },
+      "input": {
+        "x": 18,
+        "y": 735.40625,
+        "width": 290,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 308
+      },
+      "primary": {
+        "x": 316,
+        "y": 735.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 372
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "field",
+      "width": 768,
+      "height": 1024,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "documentWidth": 768,
+      "rootWidth": 768,
+      "clientWidth": 768,
+      "journal": {
+        "x": 0,
+        "y": 358.40625,
+        "width": 768,
+        "height": 474.421875,
+        "bottom": 832.828125,
+        "right": 768
+      },
+      "input": {
+        "x": 18,
+        "y": 915.40625,
+        "width": 668,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 686
+      },
+      "primary": {
+        "x": 694,
+        "y": 915.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 750
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "field",
+      "width": 1280,
+      "height": 900,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "documentWidth": 1280,
+      "rootWidth": 1280,
+      "clientWidth": 1280,
+      "journal": {
+        "x": 240,
+        "y": 286.9375,
+        "width": 784,
+        "height": 613.0625,
+        "bottom": 900,
+        "right": 1024
+      },
+      "input": {
+        "x": 1041,
+        "y": 731.40625,
+        "width": 223,
+        "height": 47.59375,
+        "bottom": 779,
+        "right": 1264
+      },
+      "primary": {
+        "x": 1041,
+        "y": 787,
+        "width": 223,
+        "height": 44,
+        "bottom": 831,
+        "right": 1264
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "command",
+      "sample": "field",
+      "width": 844,
+      "height": 390,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "documentWidth": 844,
+      "rootWidth": 844,
+      "clientWidth": 844,
+      "journal": {
+        "x": 0,
+        "y": 168.78125,
+        "width": 844,
+        "height": 112.625,
+        "bottom": 281.40625,
+        "right": 844
+      },
+      "input": {
+        "x": 18,
+        "y": 290.40625,
+        "width": 744,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 762
+      },
+      "primary": {
+        "x": 770,
+        "y": 290.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 826
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "opening",
+      "width": 320,
+      "height": 640,
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "documentWidth": 320,
+      "rootWidth": 320,
+      "clientWidth": 320,
+      "journal": {
+        "x": 0,
+        "y": 338.609375,
+        "width": 320,
+        "height": 192.796875,
+        "bottom": 531.40625,
+        "right": 320
+      },
+      "input": {
+        "x": 12,
+        "y": 540.40625,
+        "width": 232,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 244
+      },
+      "primary": {
+        "x": 252,
+        "y": 540.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 308
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "opening",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "rootWidth": 390,
+      "clientWidth": 390,
+      "journal": {
+        "x": 0,
+        "y": 362.609375,
+        "width": 390,
+        "height": 361.796875,
+        "bottom": 724.40625,
+        "right": 390
+      },
+      "input": {
+        "x": 18,
+        "y": 735.40625,
+        "width": 290,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 308
+      },
+      "primary": {
+        "x": 316,
+        "y": 735.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 372
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "opening",
+      "width": 768,
+      "height": 1024,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "documentWidth": 768,
+      "rootWidth": 768,
+      "clientWidth": 768,
+      "journal": {
+        "x": 0,
+        "y": 362.609375,
+        "width": 768,
+        "height": 541.796875,
+        "bottom": 904.40625,
+        "right": 768
+      },
+      "input": {
+        "x": 18,
+        "y": 915.40625,
+        "width": 668,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 686
+      },
+      "primary": {
+        "x": 694,
+        "y": 915.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 750
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "opening",
+      "width": 1280,
+      "height": 900,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "documentWidth": 1280,
+      "rootWidth": 1280,
+      "clientWidth": 1280,
+      "journal": {
+        "x": 0,
+        "y": 276.734375,
+        "width": 1020,
+        "height": 503.671875,
+        "bottom": 780.40625,
+        "right": 1020
+      },
+      "input": {
+        "x": 260,
+        "y": 791.40625,
+        "width": 696,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 956
+      },
+      "primary": {
+        "x": 964,
+        "y": 791.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 1020
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "opening",
+      "width": 844,
+      "height": 390,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "documentWidth": 844,
+      "rootWidth": 844,
+      "clientWidth": 844,
+      "journal": {
+        "x": 0,
+        "y": 167.78125,
+        "width": 844,
+        "height": 113.625,
+        "bottom": 281.40625,
+        "right": 844
+      },
+      "input": {
+        "x": 18,
+        "y": 290.40625,
+        "width": 744,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 762
+      },
+      "primary": {
+        "x": 770,
+        "y": 290.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 826
+      },
+      "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "80",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "field",
+      "width": 320,
+      "height": 640,
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "documentWidth": 320,
+      "rootWidth": 320,
+      "clientWidth": 320,
+      "journal": {
+        "x": 0,
+        "y": 357.796875,
+        "width": 320,
+        "height": 173.609375,
+        "bottom": 531.40625,
+        "right": 320
+      },
+      "input": {
+        "x": 12,
+        "y": 540.40625,
+        "width": 232,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 244
+      },
+      "primary": {
+        "x": 252,
+        "y": 540.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 588,
+        "right": 308
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "field",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "rootWidth": 390,
+      "clientWidth": 390,
+      "journal": {
+        "x": 0,
+        "y": 362.609375,
+        "width": 390,
+        "height": 361.796875,
+        "bottom": 724.40625,
+        "right": 390
+      },
+      "input": {
+        "x": 18,
+        "y": 735.40625,
+        "width": 290,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 308
+      },
+      "primary": {
+        "x": 316,
+        "y": 735.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 783,
+        "right": 372
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "field",
+      "width": 768,
+      "height": 1024,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "documentWidth": 768,
+      "rootWidth": 768,
+      "clientWidth": 768,
+      "journal": {
+        "x": 0,
+        "y": 362.609375,
+        "width": 768,
+        "height": 541.796875,
+        "bottom": 904.40625,
+        "right": 768
+      },
+      "input": {
+        "x": 18,
+        "y": 915.40625,
+        "width": 668,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 686
+      },
+      "primary": {
+        "x": 694,
+        "y": 915.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 963,
+        "right": 750
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "field",
+      "width": 1280,
+      "height": 900,
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "documentWidth": 1280,
+      "rootWidth": 1280,
+      "clientWidth": 1280,
+      "journal": {
+        "x": 0,
+        "y": 276.734375,
+        "width": 1020,
+        "height": 503.671875,
+        "bottom": 780.40625,
+        "right": 1020
+      },
+      "input": {
+        "x": 260,
+        "y": 791.40625,
+        "width": 696,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 956
+      },
+      "primary": {
+        "x": 964,
+        "y": 791.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 839,
+        "right": 1020
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    },
+    {
+      "concept": "paper",
+      "sample": "field",
+      "width": 844,
+      "height": 390,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "documentWidth": 844,
+      "rootWidth": 844,
+      "clientWidth": 844,
+      "journal": {
+        "x": 0,
+        "y": 167.78125,
+        "width": 844,
+        "height": 113.625,
+        "bottom": 281.40625,
+        "right": 844
+      },
+      "input": {
+        "x": 18,
+        "y": 290.40625,
+        "width": 744,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 762
+      },
+      "primary": {
+        "x": 770,
+        "y": 290.40625,
+        "width": 56,
+        "height": 47.59375,
+        "bottom": 338,
+        "right": 826
+      },
+      "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f",
+      "values": {
+        "combatReady": "414",
+        "wounded": "0",
+        "morale": "95",
+        "health": "100",
+        "ammo": "20000",
+        "machineGunAmmo": "8000",
+        "grenades": "500",
+        "sandbags": "2600",
+        "medkits": "40"
+      }
+    }
+  ],
+  "flows": [
+    {
+      "concept": "night",
+      "militaryPreview": true,
+      "advisorReadOnly": true,
+      "mapOwnSectors": true,
+      "dialogEscape": true,
+      "threeChapters": true,
+      "tacticRules": true,
+      "inputEscaping": true,
+      "bodyText200Percent": true,
+      "storageUnchanged": true
+    },
+    {
+      "concept": "command",
+      "militaryPreview": true,
+      "advisorReadOnly": true,
+      "mapOwnSectors": true,
+      "dialogEscape": true,
+      "threeChapters": true,
+      "tacticRules": true,
+      "inputEscaping": true,
+      "bodyText200Percent": true,
+      "storageUnchanged": true
+    },
+    {
+      "concept": "paper",
+      "militaryPreview": true,
+      "advisorReadOnly": true,
+      "mapOwnSectors": true,
+      "dialogEscape": true,
+      "threeChapters": true,
+      "tacticRules": true,
+      "inputEscaping": true,
+      "bodyText200Percent": true,
+      "storageUnchanged": true
+    }
+  ],
+  "contrasts": [
+    {
+      "concept": "night",
+      "text": "第1天 · 一楼入口",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "10月27日",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "可战",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "伤员",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "士气",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "总结构",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "七九弹",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "20,000",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "机枪弹",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "8,000",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "手榴弹",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "500",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "工事材料",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "2,600",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "急救包",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "40",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "仓库里的名字",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "轮休结束，接班的人揉着脸站起来，先找自己的阵位。天亮了——10月27日",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "士气 80 → 95",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "你说：我有点害怕",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "传令兵说话有了精神。副官把风险照旧报清，没有因为士气高就少说一句。",
+      "fg": "rgb(234, 227, 212)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 13.520197362173363
+    },
+    {
+      "concept": "night",
+      "text": "3条记录",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(23, 28, 24)",
+      "ratio": 8.509221423109643
+    },
+    {
+      "concept": "night",
+      "text": "2小时 · 工事材料 170",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(32, 39, 32)",
+      "ratio": 7.537345907781755
+    },
+    {
+      "concept": "night",
+      "text": "15分钟",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(32, 39, 32)",
+      "ratio": 7.537345907781755
+    },
+    {
+      "concept": "night",
+      "text": "先查看代价 →",
+      "fg": "rgb(183, 183, 167)",
+      "bg": "rgb(32, 39, 32)",
+      "ratio": 7.537345907781755
+    },
+    {
+      "concept": "night",
+      "text": "预览",
+      "fg": "rgb(34, 40, 30)",
+      "bg": "rgb(211, 182, 136)",
+      "ratio": 7.7800639492055454
+    },
+    {
+      "concept": "command",
+      "text": "可战",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(34, 49, 40)",
+      "ratio": 7.688174217205122
+    },
+    {
+      "concept": "command",
+      "text": "伤员",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(34, 49, 40)",
+      "ratio": 7.688174217205122
+    },
+    {
+      "concept": "command",
+      "text": "士气",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(34, 49, 40)",
+      "ratio": 7.688174217205122
+    },
+    {
+      "concept": "command",
+      "text": "总结构",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(34, 49, 40)",
+      "ratio": 7.688174217205122
+    },
+    {
+      "concept": "command",
+      "text": "七九弹",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "20,000",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "机枪弹",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "8,000",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "手榴弹",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "500",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "工事材料",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "2,600",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "急救包",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "40",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "仓库里的名字",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "轮休结束，接班的人揉着脸站起来，先找自己的阵位。天亮了——10月27日",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "士气 80 → 95",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "你说：我有点害怕",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "传令兵说话有了精神。副官把风险照旧报清，没有因为士气高就少说一句。",
+      "fg": "rgb(232, 235, 223)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 13.677073129899629
+    },
+    {
+      "concept": "command",
+      "text": "3条记录",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(23, 33, 28)",
+      "ratio": 9.305010156621412
+    },
+    {
+      "concept": "command",
+      "text": "2小时 · 工事材料 170",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(43, 60, 48)",
+      "ratio": 6.599316079795394
+    },
+    {
+      "concept": "command",
+      "text": "15分钟",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(43, 60, 48)",
+      "ratio": 6.599316079795394
+    },
+    {
+      "concept": "command",
+      "text": "30分钟",
+      "fg": "rgb(185, 198, 183)",
+      "bg": "rgb(43, 60, 48)",
+      "ratio": 6.599316079795394
+    },
+    {
+      "concept": "command",
+      "text": "预览",
+      "fg": "rgb(27, 42, 29)",
+      "bg": "rgb(200, 215, 173)",
+      "ratio": 9.874009117035785
+    },
+    {
+      "concept": "paper",
+      "text": "可战",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "伤员",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "士气",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "总结构",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "七九弹",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "20,000",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "机枪弹",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "8,000",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "手榴弹",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "500",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "工事材料",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "2,600",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "急救包",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "40",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "仓库里的名字",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "轮休结束，接班的人揉着脸站起来，先找自己的阵位。天亮了——10月27日",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "士气 80 → 95",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "你说：我有点害怕",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "传令兵说话有了精神。副官把风险照旧报清，没有因为士气高就少说一句。",
+      "fg": "rgb(48, 53, 46)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 10.043737346105505
+    },
+    {
+      "concept": "paper",
+      "text": "3条记录",
+      "fg": "rgb(98, 102, 83)",
+      "bg": "rgb(233, 230, 220)",
+      "ratio": 4.744122665127465
+    },
+    {
+      "concept": "paper",
+      "text": "预览",
+      "fg": "rgb(255, 248, 233)",
+      "bg": "rgb(112, 85, 59)",
+      "ratio": 6.506827884033903
+    }
+  ],
+  "limits": [
+    "Browser size simulation; no real iOS/Android keyboard test",
+    "200% check applies to narrative text, not complete OS font scaling",
+    "Read-only design prototypes; no production game or online deployment test"
+  ]
+}

@@ -1,3 +1,4 @@
+import useModalFocus from './useModalFocus';
 
 import React from 'react';
 import { TacticalCard } from '../types';
@@ -10,6 +11,7 @@ interface TacticalCardDisplayProps {
 }
 
 const TacticalCardDisplay: React.FC<TacticalCardDisplayProps> = ({ card, onExecute, onDecline, onClose }) => {
+  const dialogRef = useModalFocus(true, onClose);
   let borderColor = 'border-amber-500';
   let textColor = 'text-amber-500';
   
@@ -22,7 +24,7 @@ const TacticalCardDisplay: React.FC<TacticalCardDisplayProps> = ({ card, onExecu
   }
 
   return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="战地际遇">
+    <div ref={dialogRef} className="fixed inset-0 z-[65] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="战地际遇">
        <div 
          className={`relative max-h-[90dvh] w-full max-w-md overflow-y-auto break-words rounded-lg border-2 bg-neutral-950 p-4 ${borderColor} shadow-2xl custom-scrollbar`}
        >

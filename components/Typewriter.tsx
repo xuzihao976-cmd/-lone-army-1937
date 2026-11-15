@@ -25,6 +25,13 @@ const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 30, onComplete })
     indexRef.current = 0;
     if (timerRef.current) clearInterval(timerRef.current);
 
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      indexRef.current = text.length;
+      setDisplayedText(text);
+      onCompleteRef.current?.();
+      return;
+    }
+
     timerRef.current = window.setInterval(() => {
       // Check if we reached the end
       if (indexRef.current < text.length) {

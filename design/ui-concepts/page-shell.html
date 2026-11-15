@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>孤军 · 三套UI方案</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;min-width:0;height:100%;font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;background:#0d120f;color:#e3e6d9}button{font:inherit}button:focus-visible{outline:2px solid #e3c58e;outline-offset:3px}
+    #studio{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0}.studio-bar{padding:12px 22px;border-bottom:1px solid #4e5a4d;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#161e18}.studio-title{margin:0;font-size:14px;font-weight:500;line-height:1.6}.studio-title small{display:block;font-size:12px;font-weight:400;color:#b9c3b5}.studio-choices{display:flex;gap:5px;flex-wrap:wrap}.studio-choices button{background:transparent;border:1px solid #6c7a65;min-height:44px;padding:8px 14px;color:#e3e6d9;border-radius:3px;cursor:pointer}.studio-choices button[aria-pressed=true]{background:#d1bc91;color:#21281b;border-color:#d1bc91}.studio-main{flex:1;min-height:0;width:100%;max-width:1280px;margin:auto}.studio-main #lone-army-ui-options .studio-stages,.studio-stages>.concept-stage,.studio-stages .concept-frame{height:100%;min-height:0}.studio-main #lone-army-ui-options{height:100%;min-height:0}.studio-main #lone-army-ui-options .la-concept{height:100%;min-height:0}.studio-stages>.concept-stage[hidden]{display:none}.capture .studio-bar{display:none}
+    @media(max-width:600px){.studio-bar{padding:8px 12px;gap:6px}.studio-title{font-size:12px}.studio-title small{font-size:12px}.studio-choices{width:100%}.studio-choices button{flex:1;padding:7px 8px;font-size:12px}}
+  </style>
+</head>
+<body>
+  <div id="studio">
+    <header class="studio-bar">
+      <p class="studio-title">《孤军》界面方案<small>只读样本 · 同一战况 · 军令仅预览，不写入存档</small></p>
+      <nav class="studio-choices" aria-label="选择界面方案">
+        <button type="button" data-design-choice="night" aria-pressed="true">守夜档案</button>
+        <button type="button" data-design-choice="command" aria-pressed="false">前线指挥</button>
+        <button type="button" data-design-choice="paper" aria-pressed="false">灰纸战报</button>
+      </nav>
+    </header>
+    <main class="studio-main">
+      __CONCEPT_FRAGMENT__
+    </main>
+  </div>
+  <noscript>请启用JavaScript查看界面样本。此页面只做预览，不执行游戏军令。</noscript>
+  <script>
+    const parameters=new URLSearchParams(location.search);
+    const chosen=parameters.get('concept')||'__DEFAULT_DESIGN__';
+    const options=document.getElementById('lone-army-ui-options');
+    if(parameters.get('capture')==='1')document.body.classList.add('capture');
+    function chooseDesign(value){
+      if(!['night','command','paper'].includes(value))value='night';
+      for(const section of options.querySelectorAll('.concept-stage'))section.hidden=section.querySelector('[data-concept]').dataset.concept!==value;
+      for(const button of document.querySelectorAll('[data-design-choice]'))button.setAttribute('aria-pressed',String(button.dataset.designChoice===value));
+      document.title='孤军 · '+{night:'守夜档案',command:'前线指挥',paper:'灰纸战报'}[value];
+    }
+    for(const button of document.querySelectorAll('[data-design-choice]'))button.addEventListener('click',()=>chooseDesign(button.dataset.designChoice));
+    chooseDesign(chosen);
+  </script>
+</body>
+</html>
