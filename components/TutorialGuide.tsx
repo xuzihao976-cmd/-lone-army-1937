@@ -25,8 +25,8 @@ const TutorialGuide: React.FC<TutorialGuideProps> = ({ stats, disabled, onSkip }
         </summary>
         <p className="pb-3 text-xs leading-5 text-neutral-300">
           {isFortifyStep
-            ? '工事会直接提高实际减伤。点击下方标出的「加固」命令。'
-            : '休息可恢复士气并结束序章。点击下方标出的「休息」命令。'}
+            ? '工事会直接提高实际减伤。选择标出的「加固」，核对预览后点击「发送」。'
+            : '休息可恢复士气并结束序章。选择标出的「休息」，核对预览后点击「发送」。'}
         </p>
       </details>
       <button

@@ -130,7 +130,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
   };
 
   return (
-    <section className="select-none border-b border-neutral-800 bg-[#080808] p-2.5 font-sans" aria-label="仓库战略地图">
+    <section className="select-none border-b border-neutral-800 bg-neutral-950 p-2.5 font-sans" aria-label="仓库战略地图">
       <div className="mx-auto max-w-3xl">
         <header className="mb-2 flex items-center justify-between gap-3">
           <h2 className="text-sm font-black tracking-wider text-neutral-100">战略地图</h2>
@@ -163,13 +163,13 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
 
         {showCommandPanel && <div className="mb-2 grid grid-cols-3 gap-1.5 text-[11px] font-bold">
           <div className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-neutral-400">
-            兵力 <span className={operationVisible ? 'text-red-300' : 'text-neutral-600'}>{operationVisible && operation ? operation.scale === 'LARGE' ? '大规模' : operation.scale === 'MEDIUM' ? '中等' : '小股' : '待侦察'}</span>
+            兵力 <span className={operationVisible ? 'text-red-300' : 'text-neutral-400'}>{operationVisible && operation ? operation.scale === 'LARGE' ? '大规模' : operation.scale === 'MEDIUM' ? '中等' : '小股' : '待侦察'}</span>
           </div>
           <div className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-neutral-400">
-            武器 <span className={operationVisible ? 'text-amber-300' : 'text-neutral-600'}>{operationVisible && operation ? operation.attackType === 'BOMBING' ? '航空兵' : operation.attackType === 'ARTILLERY' ? '炮兵' : '步兵' : '待侦察'}</span>
+            武器 <span className={operationVisible ? 'text-amber-300' : 'text-neutral-400'}>{operationVisible && operation ? operation.attackType === 'BOMBING' ? '航空兵' : operation.attackType === 'ARTILLERY' ? '炮兵' : '步兵' : '待侦察'}</span>
           </div>
           <div className="truncate rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-neutral-400" title={operationVisible ? operation?.routeName : '执行侦察后显示'}>
-            路线 <span className={operationVisible ? 'text-cyan-300' : 'text-neutral-600'}>{operationVisible && operation ? operation.routeName : '待侦察'}</span>
+            路线 <span className={operationVisible ? 'text-cyan-300' : 'text-neutral-400'}>{operationVisible && operation ? operation.routeName : '待侦察'}</span>
           </div>
         </div>}
 
@@ -223,7 +223,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                   <div className="flex flex-col items-end gap-1">
                     <div className="flex items-center gap-1">
                       {targeted && <span title="敌军正在向此处推进" className="h-2 w-2 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.9)]" />}
-                      {current && <span title="指挥部" className="text-xs text-amber-300">🎖</span>}
+                      {current && <span title="指挥部" className="text-xs text-amber-300">指</span>}
                     </div>
                     <span className={`hidden rounded px-1.5 py-0.5 text-[11px] font-bold sm:block ${condition === 'lost' ? 'bg-red-900/50 text-red-300' : condition === 'critical' ? 'bg-orange-900/40 text-orange-300' : condition === 'strained' ? 'bg-amber-900/30 text-amber-300' : 'bg-green-950/50 text-green-400'}`}>{conditionLabels[condition]}</span>
                   </div>
@@ -308,7 +308,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
               )}
               {stats.location === selectedLocation && (
                 <div className={`mt-1 text-xs font-black ${commanderRisk >= 0.03 ? 'text-red-300 animate-pulse' : commanderRisk >= 0.015 ? 'text-amber-300' : 'text-green-300'}`}>
-                  🎖 阵亡风险 {formatCommanderRisk(commanderRisk)}
+                  指 阵亡风险 {formatCommanderRisk(commanderRisk)}
                 </div>
               )}
               {stats.sealedApproaches.includes(selectedLocation) && (
@@ -340,7 +340,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
             ) : (
               <>
                 {stats.location !== selectedLocation && (
-                  <TacticalAction command={`前往${selectedLocation}`} label="🏃 移动指挥部" />
+                  <TacticalAction command={`前往${selectedLocation}`} label="移动指挥部" />
                 )}
                 {donor && (
                   <TacticalAction
@@ -353,7 +353,7 @@ const TacticalMap: React.FC<TacticalMapProps> = ({ stats, onAction, attackLocati
                 )}
                 <TacticalAction
                   command={`加固${selectedLocation}`}
-                  label="🛠 修复并加固"
+                  label="修复并加固"
                   tone="amber"
                   disabled={selectedFort >= 3 && selectedIntegrity >= 100}
                 />

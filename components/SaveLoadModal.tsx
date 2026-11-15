@@ -1,3 +1,4 @@
+import useModalFocus from './useModalFocus';
 
 import React from 'react';
 import { SaveSlotMeta } from '../types';
@@ -13,6 +14,7 @@ interface SaveLoadModalProps {
 }
 
 const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, onSelectSlot, onSelectAutoSave, onClose }) => {
+  const dialogRef = useModalFocus(true, onClose);
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString('zh-CN', {
         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
@@ -20,19 +22,19 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col p-4 sm:p-8 animate-fade-in text-neutral-200">
-      <div className="max-w-5xl mx-auto w-full flex flex-col h-full border border-neutral-800 bg-[#0a0a0a] rounded shadow-2xl">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="save-dialog-title" className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col p-4 sm:p-8 animate-fade-in text-neutral-200">
+      <div className="max-w-5xl mx-auto w-full flex flex-col h-full border border-neutral-800 bg-neutral-950 rounded shadow-2xl">
         
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-neutral-800 bg-neutral-900">
-            <h2 className="text-xl font-bold font-serif tracking-widest text-amber-500">
+            <h2 id="save-dialog-title" className="text-xl font-bold font-serif tracking-widest text-amber-500">
                 {mode === 'save' ? '保存作战记录' : '读取作战记录'}
             </h2>
             <button onClick={onClose} aria-label="关闭作战记录" className="min-h-11 min-w-11 text-neutral-300 hover:text-white px-2 text-xl">✕</button>
         </div>
 
         {/* Grid Area */}
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar">
             <div className="mb-4">
                 {mode === 'load' && autoSave ? (
                     <button
@@ -61,9 +63,9 @@ const SaveLoadModal: React.FC<SaveLoadModalProps> = ({ mode, slots, autoSave, on
                         key={slot.id}
                         onClick={() => onSelectSlot(slot.id)}
                         className={`
-                            relative h-24 border rounded text-left p-3 transition-all duration-200 group flex flex-col justify-between
+                            relative min-h-24 border rounded text-left p-3 transition-all duration-200 group flex flex-col justify-between
                             ${slot.isEmpty 
-                                ? 'border-neutral-800 bg-neutral-900/30 text-neutral-600 hover:bg-neutral-800 hover:border-neutral-600' 
+                                ? 'border-neutral-800 bg-neutral-900/30 text-neutral-400 hover:bg-neutral-800 hover:border-neutral-600'
                                 : 'border-neutral-700 bg-neutral-900 hover:bg-neutral-800 hover:border-amber-600/50'
                             }
                         `}
