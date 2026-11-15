@@ -1,0 +1,134 @@
+[
+  {
+    "width": 390,
+    "height": 844,
+    "documentWidth": 390,
+    "regions": {
+      ".battle-overview": {
+        "top": 0,
+        "bottom": 203.5,
+        "height": 203.5,
+        "width": 388
+      },
+      ".battle-log": {
+        "top": 248.5,
+        "bottom": 576,
+        "height": 327.5,
+        "width": 388
+      },
+      ".command-dock": {
+        "top": 576,
+        "bottom": 844,
+        "height": 268,
+        "width": 388
+      },
+      ".command-options": {
+        "top": 585,
+        "bottom": 750,
+        "height": 165,
+        "width": 364
+      },
+      ".command-form": {
+        "top": 758,
+        "bottom": 804,
+        "height": 46,
+        "width": 364
+      },
+      ".map-toggle": {
+        "top": 203.5,
+        "bottom": 248.5,
+        "height": 45,
+        "width": 388
+      }
+    },
+    "modelRequests": []
+  },
+  {
+    "width": 320,
+    "height": 640,
+    "documentWidth": 320,
+    "regions": {
+      ".battle-overview": {
+        "top": 0,
+        "bottom": 203.5,
+        "height": 203.5,
+        "width": 318
+      },
+      ".battle-log": {
+        "top": 248.5,
+        "bottom": 372,
+        "height": 123.5,
+        "width": 318
+      },
+      ".command-dock": {
+        "top": 372,
+        "bottom": 640,
+        "height": 268,
+        "width": 318
+      },
+      ".command-options": {
+        "top": 381,
+        "bottom": 546,
+        "height": 165,
+        "width": 294
+      },
+      ".command-form": {
+        "top": 554,
+        "bottom": 600,
+        "height": 46,
+        "width": 294
+      },
+      ".map-toggle": {
+        "top": 203.5,
+        "bottom": 248.5,
+        "height": 45,
+        "width": 318
+      }
+    },
+    "modelRequests": []
+  },
+  {
+    "width": 1280,
+    "height": 900,
+    "documentWidth": 1280,
+    "regions": {
+      ".battle-overview": {
+        "top": 0,
+        "bottom": 189.5,
+        "height": 189.5,
+        "width": 1022
+      },
+      ".battle-log": {
+        "top": 234.5,
+        "bottom": 632,
+        "height": 397.5,
+        "width": 1022
+      },
+      ".command-dock": {
+        "top": 632,
+        "bottom": 900,
+        "height": 268,
+        "width": 1022
+      },
+      ".command-options": {
+        "top": 641,
+        "bottom": 806,
+        "height": 165,
+        "width": 998
+      },
+      ".command-form": {
+        "top": 814,
+        "bottom": 860,
+        "height": 46,
+        "width": 998
+      },
+      ".map-toggle": {
+        "top": 189.5,
+        "bottom": 234.5,
+        "height": 45,
+        "width": 1022
+      }
+    },
+    "modelRequests": []
+  }
+]

@@ -1,0 +1,2023 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>孤军 · 三套UI方案</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;min-width:0;height:100%;font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;background:#0d120f;color:#e3e6d9}button{font:inherit}button:focus-visible{outline:2px solid #e3c58e;outline-offset:3px}
+    #studio{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0}.studio-bar{padding:12px 22px;border-bottom:1px solid #4e5a4d;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#161e18}.studio-title{margin:0;font-size:14px;font-weight:500;line-height:1.6}.studio-title small{display:block;font-size:12px;font-weight:400;color:#b9c3b5}.studio-choices{display:flex;gap:5px;flex-wrap:wrap}.studio-choices button{background:transparent;border:1px solid #6c7a65;min-height:44px;padding:8px 14px;color:#e3e6d9;border-radius:3px;cursor:pointer}.studio-choices button[aria-pressed=true]{background:#d1bc91;color:#21281b;border-color:#d1bc91}.studio-main{flex:1;min-height:0;width:100%;max-width:1280px;margin:auto}.studio-main #lone-army-ui-options .studio-stages,.studio-stages>.concept-stage,.studio-stages .concept-frame{height:100%;min-height:0}.studio-main #lone-army-ui-options{height:100%;min-height:0}.studio-main #lone-army-ui-options .la-concept{height:100%;min-height:0}.studio-stages>.concept-stage[hidden]{display:none}.capture .studio-bar{display:none}
+    @media(max-width:600px){.studio-bar{padding:8px 12px;gap:6px}.studio-title{font-size:12px}.studio-title small{font-size:12px}.studio-choices{width:100%}.studio-choices button{flex:1;padding:7px 8px;font-size:12px}}
+  </style>
+</head>
+<body>
+  <div id="studio">
+    <header class="studio-bar">
+      <p class="studio-title">《孤军》界面方案<small>只读样本 · 同一战况 · 军令仅预览，不写入存档</small></p>
+      <nav class="studio-choices" aria-label="选择界面方案">
+        <button type="button" data-design-choice="night" aria-pressed="true">守夜档案</button>
+        <button type="button" data-design-choice="command" aria-pressed="false">前线指挥</button>
+        <button type="button" data-design-choice="paper" aria-pressed="false">灰纸战报</button>
+      </nav>
+    </header>
+    <main class="studio-main">
+      <style>
+/* Original interface studies. No third-party art, web fonts or production overrides. */
+#lone-army-ui-options{width:100%}
+#lone-army-ui-options *{box-sizing:border-box}
+#lone-army-ui-options [hidden]{display:none!important}
+#lone-army-ui-options .concept-frame{container-type:inline-size;width:100%;max-width:1280px;margin:auto}
+#lone-army-ui-options .concept-stage{width:100%}
+#lone-army-ui-options .la-concept{--ink:#eae3d4;--muted:#b7b7a7;--bg:#171c18;--surface:#202720;--raised:#293129;--rule:#4b5548;--accent:#d3b688;--accent-ink:#22281e;--danger:#edb19d;--focus:#f3d6a0;--serif:"Noto Serif CJK SC","Songti SC",SimSun,serif;--sans:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);color-scheme:dark;font:14px/1.6 var(--sans);min-height:600px;min-width:0;display:flex;flex-direction:column;isolation:isolate}
+#lone-army-ui-options .theme-command{--ink:#e8ebdf;--muted:#b9c6b7;--bg:#17211c;--surface:#223128;--raised:#2b3c30;--rule:#586b58;--accent:#c8d7ad;--accent-ink:#1b2a1d;--danger:#f0b3a1;--focus:#e3eccd}
+#lone-army-ui-options .theme-paper{--ink:#30352e;--muted:#626653;--bg:#e9e6dc;--surface:#f3f0e6;--raised:#dedbce;--rule:#a8aa99;--accent:#70553b;--accent-ink:#fff8e9;--danger:#8b3b2e;--focus:#755236;color-scheme:light}
+#lone-army-ui-options .la-concept h1,#lone-army-ui-options .la-concept h2,#lone-army-ui-options .la-concept h3,#lone-army-ui-options .la-concept p{margin:0}
+#lone-army-ui-options .la-concept button,#lone-army-ui-options .la-concept input{font:inherit;color:inherit}
+#lone-army-ui-options .la-concept button{appearance:none;background:transparent;border:0;border-radius:2px;min-height:44px;min-width:44px;padding:8px 12px;cursor:pointer;touch-action:manipulation}
+#lone-army-ui-options .la-concept button:disabled{cursor:default;color:var(--muted)}
+#lone-army-ui-options .la-concept button:hover:not(:disabled){background:var(--raised)}
+#lone-army-ui-options .la-concept :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#lone-army-ui-options .la-concept .primary{background:var(--accent);color:var(--accent-ink);font-weight:700}
+#lone-army-ui-options .la-concept .primary:hover{background:var(--accent);filter:brightness(1.06)}
+#lone-army-ui-options .la-concept .outline{border:1px solid var(--rule)}
+#lone-army-ui-options .la-concept small,#lone-army-ui-options .meta,#lone-army-ui-options .eyebrow{font:12px/1.6 var(--sans);color:var(--muted)}
+#lone-army-ui-options .eyebrow{letter-spacing:.14em}
+#lone-army-ui-options .tabular{font-variant-numeric:tabular-nums}
+#lone-army-ui-options .masthead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--rule);flex-shrink:0}
+#lone-army-ui-options .brand{font:700 25px/1 var(--serif);letter-spacing:.16em;display:flex;align-items:center;gap:13px;white-space:nowrap}
+#lone-army-ui-options .brand small{letter-spacing:0;border-left:1px solid var(--rule);padding-left:12px}
+#lone-army-ui-options .masthead .wordmark{padding:0;min-height:44px}
+#lone-army-ui-options .masthead-right{display:flex;gap:6px;align-items:center}
+#lone-army-ui-options .local-label{color:var(--muted);font-size:12px;white-space:nowrap}
+#lone-army-ui-options .overview{flex-shrink:0;padding:12px 20px 0}
+#lone-army-ui-options .dateline{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+#lone-army-ui-options .chapter-caption{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+#lone-army-ui-options .chapter-caption span+span{border-left:1px solid var(--rule);padding-left:9px}
+#lone-army-ui-options .place-name{font:500 21px/1.4 var(--serif);letter-spacing:.06em;margin-top:2px}
+#lone-army-ui-options .clock{font:500 25px/1.1 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:.02em;color:var(--accent);text-align:right;white-space:nowrap}
+#lone-army-ui-options .clock small{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+#lone-army-ui-options .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 0 9px;border-bottom:1px solid var(--rule)}
+#lone-army-ui-options .metric{min-width:0}
+#lone-army-ui-options .metric span{display:block;color:var(--muted);font-size:12px}
+#lone-army-ui-options .metric strong{font-size:21px;font-weight:500;line-height:1.4;font-variant-numeric:tabular-nums}
+#lone-army-ui-options .supplies{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:9px 0;border-bottom:1px solid var(--rule)}
+#lone-army-ui-options .supply{min-width:0}
+#lone-army-ui-options .supply span{display:block;font-size:12px;color:var(--muted);white-space:nowrap}
+#lone-army-ui-options .supply b{display:block;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+#lone-army-ui-options .supply:last-child{text-align:right}
+#lone-army-ui-options .readouts{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;padding:7px 0;font-size:12px;color:var(--muted)}
+#lone-army-ui-options .readouts>span:nth-child(even){text-align:right}
+#lone-army-ui-options .readouts b{font-weight:500;color:var(--ink)}
+#lone-army-ui-options .workspace{display:flex;flex-direction:column;flex:1;min-height:0;position:relative}
+#lone-army-ui-options .intel-note{padding:10px 20px;background:var(--surface);font-size:12px;line-height:1.6;display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--rule)}
+#lone-army-ui-options .intel-note b{color:var(--accent);white-space:nowrap;font-weight:500}
+#lone-army-ui-options .intel-note span{min-width:0;overflow-wrap:anywhere}
+#lone-army-ui-options .journal{flex:1;min-height:120px;padding:22px 24px 26px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
+#lone-army-ui-options .journal-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:18px}
+#lone-army-ui-options .journal-title{font:500 25px/1.5 var(--serif);letter-spacing:.08em}
+#lone-army-ui-options .journal-copy{max-width:42rem;margin:auto;font:400 var(--reading-size,16px)/1.95 var(--serif);color:var(--ink);overflow-wrap:anywhere}
+#lone-army-ui-options .journal-copy p+p{margin-top:1.1em}
+#lone-army-ui-options .journal-copy .narrative-kicker{display:block;font:12px/1.6 var(--sans);color:var(--muted);letter-spacing:.08em;margin-bottom:16px}
+#lone-army-ui-options .journal-copy blockquote{margin:23px 0 0;padding:0 0 0 16px;border-left:2px solid var(--accent);font:inherit}
+#lone-army-ui-options .journal-copy blockquote p+p{margin-top:.8em}
+#lone-army-ui-options .journal-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:20px;margin-top:22px;border-top:1px solid var(--rule)}
+#lone-army-ui-options .journal-tools button{padding:6px 0;color:var(--muted);font-size:12px}
+#lone-army-ui-options .situation{display:none;background:var(--surface);padding:20px;min-width:0}
+#lone-army-ui-options .situation h3{font:500 18px/1.6 var(--serif);margin:0 0 18px}
+#lone-army-ui-options .sector{padding:14px 0;border-top:1px solid var(--rule)}
+#lone-army-ui-options .sector-label{display:flex;gap:12px;justify-content:space-between;font-size:13px}
+#lone-army-ui-options .sector-label small{color:var(--accent)}
+#lone-army-ui-options .sector-track{height:3px;background:var(--raised);margin-top:9px}
+#lone-army-ui-options .sector-track span{display:block;height:3px;background:var(--accent)}
+#lone-army-ui-options .sector-details{display:flex;gap:10px;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:7px}
+#lone-army-ui-options .command-side{display:none}
+#lone-army-ui-options .command-dock{flex-shrink:0;padding:10px 18px 14px;background:var(--surface);border-top:1px solid var(--rule)}
+#lone-army-ui-options .quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:10px}
+#lone-army-ui-options .quick-action{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:8px 10px!important;text-align:left;border:1px solid var(--rule)!important;min-width:0;line-height:1.5}
+#lone-army-ui-options .quick-action b{font-weight:500;font-size:14px}
+#lone-army-ui-options .quick-action span{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+#lone-army-ui-options .quick-action:first-child{border-color:var(--accent)!important}
+#lone-army-ui-options .command-form{display:flex;gap:8px;align-items:stretch}
+#lone-army-ui-options .command-input{background:var(--bg);border:1px solid var(--muted);border-radius:2px;min-width:0;min-height:46px;flex:1;padding:10px 12px;font-size:16px!important;line-height:1.4}
+#lone-army-ui-options .command-input::placeholder{color:var(--muted);opacity:1}
+#lone-army-ui-options .command-form .primary{flex-shrink:0;padding:8px 14px}
+#lone-army-ui-options .dock-tools{display:flex;gap:2px;align-items:center;justify-content:space-between;margin-top:3px}
+#lone-army-ui-options .dock-tools button{font-size:12px;padding:6px 8px;min-height:44px}
+#lone-army-ui-options .dock-tools>span{font-size:12px;color:var(--muted)}
+#lone-army-ui-options .compact-cost{font-size:12px;color:var(--accent);padding:0 0 7px;line-height:1.7}
+#lone-army-ui-options .compact-cost:empty{display:none}
+#lone-army-ui-options .empty-space{flex:1}
+#lone-army-ui-options .menu-content{flex:1;min-height:0;overflow-y:auto;padding:22px 22px 26px}
+#lone-army-ui-options .menu-hero{margin-bottom:28px}
+#lone-army-ui-options .menu-hero h1{font:500 44px/1.2 var(--serif);letter-spacing:.14em;margin:10px 0 14px}
+#lone-army-ui-options .menu-hero .subtitle{font:16px/1.9 var(--serif);color:var(--muted)}
+#lone-army-ui-options .chapter-picker{display:flex;flex-direction:column;margin:0 0 18px}
+#lone-army-ui-options .chapter-option{display:flex;align-items:center;gap:15px;padding:16px 4px!important;text-align:left;border-bottom:1px solid var(--rule)!important;border-radius:0!important;min-height:83px}
+#lone-army-ui-options .chapter-option[aria-pressed=true]{padding-left:12px!important;border-left:3px solid var(--accent)!important;background:var(--surface)}
+#lone-army-ui-options .chapter-number{font:22px/1.2 var(--serif);color:var(--accent);min-width:24px}
+#lone-army-ui-options .chapter-option h3{font:500 20px/1.6 var(--serif);letter-spacing:.06em}
+#lone-army-ui-options .chapter-option .meta{font-size:12px}
+#lone-army-ui-options .chapter-option .arrow{margin-left:auto;color:var(--accent)}
+#lone-army-ui-options .chapter-brief{padding:10px 0 20px;border-bottom:1px solid var(--rule)}
+#lone-army-ui-options .chapter-brief p+p{margin-top:8px}
+#lone-army-ui-options .tactic-preview{margin-top:18px}
+#lone-army-ui-options .tactic-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+#lone-army-ui-options .tactic-list button{padding:12px;text-align:left;border:1px solid var(--rule);display:flex;flex-direction:column;gap:4px}
+#lone-army-ui-options .menu-footer{margin-top:20px;font-size:12px;color:var(--muted)}
+#lone-army-ui-options .menu-dock{padding:14px 20px;background:var(--surface);border-top:1px solid var(--rule);flex-shrink:0}
+#lone-army-ui-options .menu-dock .primary{display:flex;justify-content:space-between;align-items:center;width:100%;font-size:15px;min-height:50px;margin-top:8px}
+#lone-army-ui-options .menu-dock .meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#lone-army-ui-options dialog{width:min(560px,calc(100% - 28px));max-height:85vh;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:22px;font:14px/1.8 var(--sans);overflow:auto}
+#lone-army-ui-options dialog::backdrop{background:#060b08c9}
+#lone-army-ui-options .dialog-head{display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:18px}
+#lone-army-ui-options .dialog-head h2{font:500 22px/1.5 var(--serif)}
+#lone-army-ui-options .dialog-head form{margin:0}
+#lone-army-ui-options .dialog-head button{border:1px solid var(--rule)}
+#lone-army-ui-options .dialog-body p+p{margin-top:14px}
+#lone-army-ui-options .dialog-body .cost-line{font-size:18px;color:var(--accent);margin:12px 0}
+#lone-army-ui-options .dialog-body .unavailable{color:var(--danger)}
+#lone-army-ui-options .dialog-body button{width:100%;border-bottom:1px solid var(--rule);text-align:left;display:flex;justify-content:space-between;gap:12px}
+#lone-army-ui-options .dialog-body button span{font-size:12px;color:var(--muted)}
+#lone-army-ui-options .theme-night .masthead{border-bottom:0;padding-bottom:2px}
+#lone-army-ui-options .theme-night .overview{padding-top:4px}
+#lone-army-ui-options .theme-night.mode-game .dateline{display:none}
+#lone-army-ui-options .brand-compact{display:block;letter-spacing:.08em;text-align:left}
+#lone-army-ui-options .night-title{display:flex;align-items:center;gap:10px}
+#lone-army-ui-options .night-title small{border:0!important;padding:0!important;letter-spacing:0;font-size:12px}
+#lone-army-ui-options .night-context{display:block;font:12px/1.6 var(--sans);letter-spacing:0;color:var(--muted);margin-top:5px}
+#lone-army-ui-options .header-time{font:500 24px/1.2 var(--sans);color:var(--accent);text-align:right;letter-spacing:.02em}
+#lone-army-ui-options .header-time small{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+#lone-army-ui-options .settlement-note{font:13px/1.8 var(--sans);color:var(--muted);padding-top:2px}
+#lone-army-ui-options .theme-night .journal-title{font-size:27px}
+#lone-army-ui-options .theme-night .journal-header{align-items:flex-end}
+#lone-army-ui-options .theme-night .quick-action:nth-child(3){border-color:transparent!important}
+#lone-army-ui-options .theme-night .journal-copy{padding-top:2px}
+#lone-army-ui-options .theme-night .journal-copy blockquote{padding-left:18px}
+#lone-army-ui-options .theme-command .masthead{padding-top:8px;padding-bottom:8px;background:var(--surface)}
+#lone-army-ui-options .theme-command .brand{font:500 22px/1 var(--sans);letter-spacing:.1em}
+#lone-army-ui-options .theme-command .place-name{font:500 18px/1.6 var(--sans)}
+#lone-army-ui-options .theme-command .dateline{margin-bottom:8px}
+#lone-army-ui-options .theme-command .overview{display:grid;grid-template-columns:1.05fr 1fr;column-gap:14px}
+#lone-army-ui-options .theme-command .dateline{grid-column:1/-1}
+#lone-army-ui-options .theme-command .metrics{grid-column:1;grid-row:2;grid-template-columns:1fr 1fr;gap:1px;border:0;background:var(--rule);padding:0;margin:0}
+#lone-army-ui-options .theme-command .metric{padding:6px 12px;background:var(--surface)}
+#lone-army-ui-options .theme-command .supplies{grid-column:2;grid-row:2;grid-template-columns:1fr!important;padding:0 0 0 12px;border:0;border-left:1px solid var(--rule);align-content:space-between}
+#lone-army-ui-options .theme-command .supply{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#lone-army-ui-options .theme-command .readouts{grid-column:1/-1;margin-top:9px;border-top:1px solid var(--rule)}
+#lone-army-ui-options .theme-command .journal{padding-top:18px}
+#lone-army-ui-options .theme-command .journal-title{font:500 21px/1.5 var(--sans);letter-spacing:.04em}
+#lone-army-ui-options .theme-command .journal-copy{font-family:var(--sans);line-height:1.85}
+#lone-army-ui-options .theme-command .quick-action{background:var(--raised);border-color:var(--rule)!important}
+#lone-army-ui-options .theme-command .menu-hero h1{font-family:var(--sans);font-size:36px;letter-spacing:.12em}
+#lone-army-ui-options .theme-command .chapter-picker{gap:10px}
+#lone-army-ui-options .theme-command .chapter-option{border:1px solid var(--rule)!important;border-radius:3px!important;padding:13px!important;background:var(--surface)}
+#lone-army-ui-options .theme-command .chapter-option[aria-pressed=true]{border-color:var(--accent)!important;background:var(--raised)}
+#lone-army-ui-options .theme-paper .masthead{background:var(--ink);color:var(--bg);padding-top:12px;padding-bottom:12px;border:0}
+#lone-army-ui-options .theme-paper .masthead .brand small,#lone-army-ui-options .theme-paper .masthead .local-label{color:#d5d5c7}
+#lone-army-ui-options .theme-paper .masthead button:hover{background:#444b40}
+#lone-army-ui-options .theme-paper .overview{padding-top:18px}
+#lone-army-ui-options .theme-paper .dateline{padding-bottom:9px;border-bottom:2px solid var(--ink);margin-bottom:10px}
+#lone-army-ui-options .theme-paper .metrics{border-bottom:0;padding-bottom:4px}
+#lone-army-ui-options .theme-paper .metric strong{font-family:var(--serif);font-size:23px}
+#lone-army-ui-options .theme-paper .intel-note{background:transparent;border-bottom:1px solid var(--rule);padding-top:6px;padding-bottom:10px}
+#lone-army-ui-options .theme-paper .journal{padding-top:24px}
+#lone-army-ui-options .theme-paper .journal-title{font-size:28px;letter-spacing:.1em}
+#lone-army-ui-options .theme-paper .journal-header{display:flex;flex-direction:column;align-items:center;gap:7px;border-bottom:1px solid var(--rule);padding-bottom:17px;margin-bottom:16px}
+#lone-army-ui-options .theme-paper .journal-header .eyebrow{order:-1;letter-spacing:.3em}
+#lone-army-ui-options .theme-paper .narrative-kicker{text-align:center}
+#lone-army-ui-options .theme-paper .journal-copy{line-height:2.05}
+#lone-army-ui-options .theme-paper .journal-copy blockquote{border:0;padding:16px 0 0;border-top:1px solid var(--rule)}
+#lone-army-ui-options .theme-paper .quick-actions{display:none}
+#lone-army-ui-options .theme-paper .command-dock{background:var(--surface)}
+#lone-army-ui-options .theme-paper .menu-hero{padding-bottom:22px;border-bottom:2px solid var(--ink)}
+#lone-army-ui-options .theme-paper .menu-hero h1{font-size:50px}
+#lone-army-ui-options .theme-paper .chapter-option[aria-pressed=true]{background:var(--surface)}
+#lone-army-ui-options .mode-menu .overview,#lone-army-ui-options .mode-menu .workspace,#lone-army-ui-options .mode-menu .command-dock{display:none}
+#lone-army-ui-options .mode-game .menu-content,#lone-army-ui-options .mode-game .menu-dock{display:none}
+@container (min-width:900px){
+  #lone-army-ui-options .la-concept{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr)}
+  #lone-army-ui-options .la-concept.mode-menu{grid-template-rows:auto minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr)}
+  #lone-army-ui-options .masthead{padding:14px 36px}
+  #lone-army-ui-options .overview{padding-left:36px;padding-right:36px;display:grid;grid-template-columns:250px minmax(0,1fr);column-gap:30px}
+  #lone-army-ui-options .dateline{grid-row:1/3;margin:0;border-right:1px solid var(--rule);padding-right:26px}
+  #lone-army-ui-options .supplies{grid-column:2;grid-row:2}
+  #lone-army-ui-options .readouts{grid-column:1/-1;border-top:1px solid var(--rule);display:flex;justify-content:space-between}
+  #lone-army-ui-options .theme-night.mode-game .overview{grid-template-columns:1fr 1.2fr}
+  #lone-army-ui-options .theme-night.mode-game .metrics{grid-column:1;grid-row:1}
+  #lone-army-ui-options .theme-night.mode-game .supplies{grid-column:2;grid-row:1}
+  #lone-army-ui-options .theme-night.mode-game .readouts{grid-column:1/-1;grid-row:2}
+  #lone-army-ui-options .journal{padding:28px 42px}
+  #lone-army-ui-options .journal-header{max-width:42rem;margin:0 auto 22px}
+  #lone-army-ui-options .command-dock{padding-left:max(24px,calc((100% - 760px)/2));padding-right:max(24px,calc((100% - 760px)/2))}
+  #lone-army-ui-options .menu-content{display:grid;grid-template-columns:.8fr 1.2fr;column-gap:70px;padding:50px 65px}
+  #lone-army-ui-options .menu-hero{grid-row:1/5;padding-top:26px}
+  #lone-army-ui-options .menu-hero h1{font-size:76px;margin-bottom:30px}
+  #lone-army-ui-options .menu-dock{padding:18px 65px}
+  #lone-army-ui-options .menu-dock>div{max-width:600px;margin-left:auto}
+  #lone-army-ui-options .theme-command.mode-game{grid-template-columns:240px minmax(0,1fr) 256px;grid-template-rows:auto auto minmax(0,1fr)}
+  #lone-army-ui-options .theme-command .masthead{grid-column:1/-1;padding:12px 24px}
+  #lone-army-ui-options .theme-command .overview{grid-column:1/-1;padding:14px 24px 0;grid-template-columns:260px minmax(0,1fr)}
+  #lone-army-ui-options .theme-command .metrics{margin:0;grid-template-columns:repeat(4,minmax(0,1fr));grid-column:2;grid-row:1}
+  #lone-army-ui-options .theme-command .supplies{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-column:2;grid-row:2;border:0;padding:10px 0}
+  #lone-army-ui-options .theme-command .supply{display:block}
+  #lone-army-ui-options .theme-command .workspace{grid-column:1/3;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  #lone-army-ui-options .theme-command .intel-note{grid-column:2;grid-row:1;border-left:1px solid var(--rule)}
+  #lone-army-ui-options .theme-command .situation{display:block;grid-column:1;grid-row:1/3;border-right:1px solid var(--rule);overflow:auto}
+  #lone-army-ui-options .theme-command .journal{grid-column:2;grid-row:2;padding:20px 24px}
+  #lone-army-ui-options .theme-command .journal-title{font-size:22px}
+  #lone-army-ui-options .theme-command .command-dock{grid-column:3;grid-row:3;padding:22px 16px;border-top:0;border-left:1px solid var(--rule);display:flex;flex-direction:column}
+  #lone-army-ui-options .theme-command .quick-actions{grid-template-columns:1fr;gap:10px;margin:12px 0 24px}
+  #lone-army-ui-options .theme-command .quick-action{padding:14px!important;min-height:66px}
+  #lone-army-ui-options .theme-command .command-side{display:block;font:500 18px/1.6 var(--sans)}
+  #lone-army-ui-options .theme-command .command-form{flex-direction:column;margin-top:auto}
+  #lone-army-ui-options .theme-command .dock-tools>span{display:none}
+  #lone-army-ui-options .theme-paper .overview{grid-template-columns:300px minmax(0,1fr);padding-top:24px}
+  #lone-army-ui-options .theme-paper .dateline{border-bottom:0;padding-bottom:8px}
+  #lone-army-ui-options .theme-paper .workspace{display:grid;grid-template-columns:minmax(0,1fr) 260px;grid-template-rows:auto minmax(0,1fr)}
+  #lone-army-ui-options .theme-paper .intel-note{grid-column:1/-1;padding-left:36px}
+  #lone-army-ui-options .theme-paper .situation{display:block;grid-column:2;grid-row:2;background:transparent;border-left:1px solid var(--rule);overflow:auto}
+  #lone-army-ui-options .theme-paper .journal{grid-column:1;grid-row:2;padding:32px 48px}
+  #lone-army-ui-options .theme-paper .journal-copy{max-width:36rem}
+  #lone-army-ui-options .theme-paper .journal-header{max-width:36rem}
+}
+@container (max-width:360px){
+  #lone-army-ui-options .masthead{padding-left:15px;padding-right:15px}
+  #lone-army-ui-options .overview{padding-left:15px;padding-right:15px}
+  #lone-army-ui-options .journal{padding:18px 18px 22px}
+  #lone-army-ui-options .journal-title{font-size:23px!important}
+  #lone-army-ui-options .command-dock{padding-left:12px;padding-right:12px}
+  #lone-army-ui-options .local-label{display:none}
+  #lone-army-ui-options .brand small{font-size:12px}
+  #lone-army-ui-options .quick-action{padding:7px!important}
+}
+@media (max-height:700px){
+  #lone-army-ui-options:not(.inline-preview) .quick-actions{display:none}
+  #lone-army-ui-options:not(.inline-preview) .journal{min-height:80px;padding-top:16px}
+  #lone-army-ui-options:not(.inline-preview) .masthead{padding-top:5px;padding-bottom:5px}
+  #lone-army-ui-options:not(.inline-preview) .command-dock{padding-top:8px;padding-bottom:5px}
+  #lone-army-ui-options:not(.inline-preview) .dateline{margin-bottom:6px}
+  #lone-army-ui-options:not(.inline-preview) .readouts{padding-top:4px;padding-bottom:4px}
+}
+@media (max-height:520px){
+  #lone-army-ui-options:not(.inline-preview) .masthead{padding-top:0;padding-bottom:0}
+  #lone-army-ui-options:not(.inline-preview) .overview{max-height:24dvh;overflow-y:auto;padding-top:4px}
+  #lone-army-ui-options:not(.inline-preview) .intel-note{max-height:48px;padding-top:5px;padding-bottom:5px;overflow-y:auto}
+  #lone-army-ui-options:not(.inline-preview) .journal{min-height:32px}
+  #lone-army-ui-options:not(.inline-preview) .journal-header{margin-bottom:10px;padding-bottom:5px}
+}
+@media (prefers-reduced-motion:reduce){#lone-army-ui-options *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+/* Conversation-only stage grows naturally. Product styling stays independent of host utilities. */
+#lone-army-ui-options.inline-preview .concept-frame{max-width:440px}
+#lone-army-ui-options.inline-preview .la-concept{min-height:0;height:790px}
+#lone-army-ui-options.inline-preview .journal{overflow-y:auto;min-height:80px}
+#lone-army-ui-options.inline-preview .menu-content{overflow-y:auto}
+#lone-army-ui-options.inline-preview .concept-stage{height:790px;min-height:790px}
+
+</style>
+<div id="lone-army-ui-options" class="standalone-preview" data-sample="field">
+  <div class="studio-stages" aria-label="孤军三套界面方案" data-previous-label="上一套" data-next-label="下一套">
+    <section class="concept-stage" data-variant="守夜档案" aria-label="守夜档案方案">
+      <div class="concept-frame"><div class="la-concept theme-night" data-concept="night"></div></div>
+    </section>
+    <section class="concept-stage" data-variant="前线指挥" aria-label="前线指挥方案" hidden>
+      <div class="concept-frame"><div class="la-concept theme-command" data-concept="command"></div></div>
+    </section>
+    <section class="concept-stage" data-variant="灰纸战报" aria-label="灰纸战报方案" hidden>
+      <div class="concept-frame"><div class="la-concept theme-paper" data-concept="paper"></div></div>
+    </section>
+  </div>
+</div>
+<script id="la-concept-fixture" type="application/json">{
+  "sourceVersion": "3.7.0",
+  "sourceCommit": "9d6a7fe",
+  "seed": 19371115,
+  "source": "Snapshots generated by existing local engine; controls only preview, never execute orders.",
+  "chapters": [
+    {
+      "id": "street",
+      "number": "一",
+      "title": "街巷撤收",
+      "subtitle": "把人带回来",
+      "setting": "淞沪战场 · 虚构支线",
+      "duration": "短篇 · 约10—15次行动",
+      "description": "巷道里还有人没有出来。先查清路，再在封锁前接回他们；不是找到人就算救到了人。",
+      "objective": "180分钟内护送至少8名被困民众到安全区，并确认撤出小队。",
+      "opening": "傍晚，临时接应所。\n\n门板上压着一份十二人的求援登记，有人把同一家人的名字写在了一起。老班长把纸折好：“找到了，也得带出来。别隔着一条街就说人已经安全。”\n\n先侦察路线，再选择内巷或沿河撤收线；搜救找到的人需要另行护送。封锁会在180分钟后收紧，至少护送8人并让小队撤离才算完成。\n\n本章人物与行动为虚构支线，不对应某次真实史实。",
+      "next": "bridge",
+      "tactics": [
+        {
+          "id": "group_escort",
+          "chapterId": "street",
+          "title": "分组接应",
+          "description": "班长压着名单：“前后都得有人照看。多带两个，不是把队伍往一块挤。”",
+          "effect": "一次护送上限6→8人，仍按已选路线耗时。",
+          "tradeoff": "额外消耗20发七九弹，基础压力增量额外+8；至少7人等待护送。"
+        },
+        {
+          "id": "wall_hug",
+          "chapterId": "street",
+          "title": "贴墙慢行",
+          "description": "“慢一点，让后头的人跟上。”班长指着路边的遮蔽；这条路不会变短，要走得稳，就得多留些时间。",
+          "effect": "一次护送的压力增量降低15点。",
+          "tradeoff": "护送额外耗时10分钟，封锁期限照常推进。"
+        }
+      ],
+      "openingSample": {
+        "stats": {
+          "chapterId": "street",
+          "campaignId": "street-19371115",
+          "location": "一楼入口",
+          "soldiers": 36,
+          "wounded": 0,
+          "woundedTimer": 0,
+          "roster": [
+            {
+              "id": "street-1",
+              "name": "周存生",
+              "origin": "虚构人物",
+              "trait": "老班长",
+              "status": "alive"
+            },
+            {
+              "id": "street-2",
+              "name": "陆文清",
+              "origin": "虚构人物",
+              "trait": "传令兵",
+              "status": "alive"
+            },
+            {
+              "id": "street-3",
+              "name": "许守义",
+              "origin": "虚构人物",
+              "trait": "救护兵",
+              "status": "alive"
+            }
+          ],
+          "hmgSquads": [],
+          "specialistSquads": [],
+          "morale": 72,
+          "minMorale": 0,
+          "health": 100,
+          "day": 0,
+          "currentTime": "17:00",
+          "turnCount": 0,
+          "lastRestTurn": 0,
+          "lastAttackTurn": -99,
+          "lastStandUsed": false,
+          "fatigue": 10,
+          "searchExhaustion": 0,
+          "speechStreak": 0,
+          "reconBonus": 0,
+          "tutorialStep": 3,
+          "siegeMeter": 15,
+          "activeTacticalCard": null,
+          "equippedTactic": null,
+          "ammo": 240,
+          "machineGunAmmo": 0,
+          "grenades": 0,
+          "sandbags": 0,
+          "medkits": 6,
+          "hasFlagRaised": false,
+          "flagWarned": false,
+          "enemiesKilled": 0,
+          "triggeredEvents": [],
+          "pendingEvent": null,
+          "lastDilemmaTurn": -999,
+          "usedTacticalCards": [],
+          "consequenceFlags": [],
+          "campaignHistory": [],
+          "aggressiveCount": 0,
+          "soldierDistribution": {
+            "一楼入口": 36,
+            "二楼阵地": 0,
+            "地下室": 0,
+            "屋顶": 0
+          },
+          "sectorIntegrity": {
+            "一楼入口": 100,
+            "二楼阵地": 100,
+            "屋顶": 100,
+            "地下室": 100
+          },
+          "sealedApproaches": [],
+          "fortificationLevel": {
+            "一楼入口": 1,
+            "二楼阵地": 1,
+            "屋顶": 0,
+            "地下室": 3
+          },
+          "fortificationBuildCounts": {
+            "一楼入口": 2,
+            "二楼阵地": 2,
+            "屋顶": 0,
+            "地下室": 6
+          },
+          "isGameOver": false,
+          "gameResult": "ongoing",
+          "mission": {
+            "started": true,
+            "elapsedMinutes": 0,
+            "recon": false,
+            "route": null,
+            "found": 0,
+            "evacuated": 0,
+            "crossed": 0,
+            "cover": 0
+          },
+          "pendingRetreat": null,
+          "enemyOperation": null
+        },
+        "combatReady": 36,
+        "history": [
+          {
+            "command": "start_game",
+            "text": "傍晚，临时接应所。\n\n门板上压着一份十二人的求援登记，有人把同一家人的名字写在了一起。老班长把纸折好：“找到了，也得带出来。别隔着一条街就说人已经安全。”\n\n先侦察路线，再选择内巷或沿河撤收线；搜救找到的人需要另行护送。封锁会在180分钟后收紧，至少护送8人并让小队撤离才算完成。\n\n本章人物与行动为虚构支线，不对应某次真实史实。"
+          }
+        ],
+        "dialogue": null,
+        "intel": "",
+        "date": "10月26日",
+        "previews": [
+          {
+            "label": "侦察",
+            "command": "侦察路线",
+            "preview": {
+              "action": "侦察路线",
+              "durationMinutes": 15,
+              "durationLabel": "15分钟",
+              "threatIncrease": 8,
+              "predictedThreat": 23,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [],
+              "available": true,
+              "reason": "查清两条撤收线，之后才能选择路线并护送",
+              "short": "15分钟 · 侦察路线",
+              "missionTiming": {
+                "elapsedAfter": 15,
+                "remainingAfter": 165,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "搜救",
+            "command": "搜救街巷",
+            "preview": {
+              "action": "搜救街巷",
+              "durationMinutes": 20,
+              "durationLabel": "20分钟",
+              "threatIncrease": 18,
+              "predictedThreat": 33,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [],
+              "available": true,
+              "reason": "找到2—4名尚未接回的民众；找到后仍需护送，不能直接计为安全",
+              "short": "20分钟 · 搜救街巷",
+              "missionTiming": {
+                "elapsedAfter": 20,
+                "remainingAfter": 160,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "护送",
+            "command": "护送民众",
+            "preview": {
+              "action": "护送民众",
+              "durationMinutes": 0,
+              "durationLabel": "不耗时",
+              "threatIncrease": 0,
+              "predictedThreat": 15,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 0,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "不可执行",
+              "costs": [],
+              "available": false,
+              "reason": "先侦察路线，再明确选择内巷或沿河",
+              "short": "0分钟 · 护送民众"
+            },
+            "tutorialBlocked": false
+          }
+        ],
+        "sourceCommands": [
+          "start_game"
+        ],
+        "stateHash": "bfc1118723c6ad6fcb4aa8ee08d73656889dddaa4751eaf878f9652598f699ea"
+      },
+      "fieldSample": {
+        "stats": {
+          "chapterId": "street",
+          "campaignId": "street-19371115",
+          "location": "一楼入口",
+          "soldiers": 36,
+          "wounded": 0,
+          "woundedTimer": 0,
+          "roster": [
+            {
+              "id": "street-1",
+              "name": "周存生",
+              "origin": "虚构人物",
+              "trait": "老班长",
+              "status": "alive"
+            },
+            {
+              "id": "street-2",
+              "name": "陆文清",
+              "origin": "虚构人物",
+              "trait": "传令兵",
+              "status": "alive"
+            },
+            {
+              "id": "street-3",
+              "name": "许守义",
+              "origin": "虚构人物",
+              "trait": "救护兵",
+              "status": "alive"
+            }
+          ],
+          "hmgSquads": [],
+          "specialistSquads": [],
+          "morale": 72,
+          "minMorale": 0,
+          "health": 100,
+          "day": 0,
+          "currentTime": "17:00",
+          "turnCount": 0,
+          "lastRestTurn": 0,
+          "lastAttackTurn": -99,
+          "lastStandUsed": false,
+          "fatigue": 10,
+          "searchExhaustion": 0,
+          "speechStreak": 0,
+          "reconBonus": 0,
+          "tutorialStep": 3,
+          "siegeMeter": 15,
+          "activeTacticalCard": null,
+          "equippedTactic": null,
+          "ammo": 240,
+          "machineGunAmmo": 0,
+          "grenades": 0,
+          "sandbags": 0,
+          "medkits": 6,
+          "hasFlagRaised": false,
+          "flagWarned": false,
+          "enemiesKilled": 0,
+          "triggeredEvents": [],
+          "pendingEvent": null,
+          "lastDilemmaTurn": -999,
+          "usedTacticalCards": [],
+          "consequenceFlags": [],
+          "campaignHistory": [],
+          "aggressiveCount": 0,
+          "soldierDistribution": {
+            "一楼入口": 36,
+            "二楼阵地": 0,
+            "地下室": 0,
+            "屋顶": 0
+          },
+          "sectorIntegrity": {
+            "一楼入口": 100,
+            "二楼阵地": 100,
+            "屋顶": 100,
+            "地下室": 100
+          },
+          "sealedApproaches": [],
+          "fortificationLevel": {
+            "一楼入口": 1,
+            "二楼阵地": 1,
+            "屋顶": 0,
+            "地下室": 3
+          },
+          "fortificationBuildCounts": {
+            "一楼入口": 2,
+            "二楼阵地": 2,
+            "屋顶": 0,
+            "地下室": 6
+          },
+          "isGameOver": false,
+          "gameResult": "ongoing",
+          "mission": {
+            "started": true,
+            "elapsedMinutes": 0,
+            "recon": false,
+            "route": null,
+            "found": 0,
+            "evacuated": 0,
+            "crossed": 0,
+            "cover": 0
+          },
+          "pendingRetreat": null,
+          "enemyOperation": null
+        },
+        "combatReady": 36,
+        "history": [
+          {
+            "command": "start_game",
+            "text": "傍晚，临时接应所。\n\n门板上压着一份十二人的求援登记，有人把同一家人的名字写在了一起。老班长把纸折好：“找到了，也得带出来。别隔着一条街就说人已经安全。”\n\n先侦察路线，再选择内巷或沿河撤收线；搜救找到的人需要另行护送。封锁会在180分钟后收紧，至少护送8人并让小队撤离才算完成。\n\n本章人物与行动为虚构支线，不对应某次真实史实。"
+          }
+        ],
+        "dialogue": null,
+        "intel": "",
+        "date": "10月26日",
+        "previews": [
+          {
+            "label": "侦察",
+            "command": "侦察路线",
+            "preview": {
+              "action": "侦察路线",
+              "durationMinutes": 15,
+              "durationLabel": "15分钟",
+              "threatIncrease": 8,
+              "predictedThreat": 23,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [],
+              "available": true,
+              "reason": "查清两条撤收线，之后才能选择路线并护送",
+              "short": "15分钟 · 侦察路线",
+              "missionTiming": {
+                "elapsedAfter": 15,
+                "remainingAfter": 165,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "搜救",
+            "command": "搜救街巷",
+            "preview": {
+              "action": "搜救街巷",
+              "durationMinutes": 20,
+              "durationLabel": "20分钟",
+              "threatIncrease": 18,
+              "predictedThreat": 33,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [],
+              "available": true,
+              "reason": "找到2—4名尚未接回的民众；找到后仍需护送，不能直接计为安全",
+              "short": "20分钟 · 搜救街巷",
+              "missionTiming": {
+                "elapsedAfter": 20,
+                "remainingAfter": 160,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "护送",
+            "command": "护送民众",
+            "preview": {
+              "action": "护送民众",
+              "durationMinutes": 0,
+              "durationLabel": "不耗时",
+              "threatIncrease": 0,
+              "predictedThreat": 15,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 0,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "不可执行",
+              "costs": [],
+              "available": false,
+              "reason": "先侦察路线，再明确选择内巷或沿河",
+              "short": "0分钟 · 护送民众"
+            },
+            "tutorialBlocked": false
+          }
+        ],
+        "sourceCommands": [
+          "start_game"
+        ],
+        "stateHash": "bfc1118723c6ad6fcb4aa8ee08d73656889dddaa4751eaf878f9652598f699ea"
+      }
+    },
+    {
+      "id": "bridge",
+      "number": "二",
+      "title": "桥头阻击",
+      "subtitle": "最后走的人",
+      "setting": "淞沪战场 · 虚构支线",
+      "duration": "短篇 · 约8—12次行动",
+      "description": "身后的人正在过桥。火力、掩体与轮换都得算，而任务完成后，你还需要把掩护小队撤出来。",
+      "objective": "掩护60名友军过桥，再于180分钟封锁前确认撤出小队。",
+      "opening": "桥头，临时掩护阵地。\n\n传令兵指向桥面：“还有六十个人。那边有人接，咱们看住这一头。”你问他最后一队怎么走，他没立刻答，先看了看身边的人。\n\n每2分钟可让1名友军过桥，交谈不推进时间。压制射击、加固与轮换各有代价；60人过桥后，明确下令撤离并再次确认。180分钟后通路关闭，不能一直守到没有退路。\n\n本章为虚构支线，与四行仓库切换小队视角。",
+      "next": "sihang",
+      "tactics": [
+        {
+          "id": "rapid_crossing",
+          "chapterId": "bridge",
+          "title": "加速渡桥",
+          "description": "传令兵拿着分批接应的草案：“到了那边，谁负责再点一次名？您得给我一句准话。”",
+          "effect": "一次20分钟压制掩护，过桥人数上限10→20人。",
+          "tradeoff": "本次七九弹共60发、压力最多+16，额外疲劳最多+8；至少11人尚未过桥。"
+        },
+        {
+          "id": "covered_withdrawal",
+          "chapterId": "bridge",
+          "title": "交替撤离",
+          "description": "“谁都不单留下。”班长指着两组的名单，“最后走的人，也得有人接。”",
+          "effect": "本次撤离若接敌，小队伤亡最多减少2人。",
+          "tradeoff": "撤离20→30分钟；仍须二次确认、达成目标并赶在封锁前撤出。"
+        }
+      ],
+      "openingSample": {
+        "stats": {
+          "chapterId": "bridge",
+          "campaignId": "bridge-19371115",
+          "location": "一楼入口",
+          "soldiers": 48,
+          "wounded": 0,
+          "woundedTimer": 0,
+          "roster": [
+            {
+              "id": "bridge-1",
+              "name": "韩立秋",
+              "origin": "虚构人物",
+              "trait": "老班长",
+              "status": "alive"
+            },
+            {
+              "id": "bridge-2",
+              "name": "钱有根",
+              "origin": "虚构人物",
+              "trait": "传令兵",
+              "status": "alive"
+            },
+            {
+              "id": "bridge-3",
+              "name": "周述平",
+              "origin": "虚构人物",
+              "trait": "救护兵",
+              "status": "alive"
+            }
+          ],
+          "hmgSquads": [],
+          "specialistSquads": [],
+          "morale": 72,
+          "minMorale": 0,
+          "health": 100,
+          "day": 0,
+          "currentTime": "06:00",
+          "turnCount": 0,
+          "lastRestTurn": 0,
+          "lastAttackTurn": -99,
+          "lastStandUsed": false,
+          "fatigue": 10,
+          "searchExhaustion": 0,
+          "speechStreak": 0,
+          "reconBonus": 0,
+          "tutorialStep": 3,
+          "siegeMeter": 15,
+          "activeTacticalCard": null,
+          "equippedTactic": null,
+          "ammo": 420,
+          "machineGunAmmo": 0,
+          "grenades": 0,
+          "sandbags": 120,
+          "medkits": 8,
+          "hasFlagRaised": false,
+          "flagWarned": false,
+          "enemiesKilled": 0,
+          "triggeredEvents": [],
+          "pendingEvent": null,
+          "lastDilemmaTurn": -999,
+          "usedTacticalCards": [],
+          "consequenceFlags": [],
+          "campaignHistory": [],
+          "aggressiveCount": 0,
+          "soldierDistribution": {
+            "一楼入口": 48,
+            "二楼阵地": 0,
+            "地下室": 0,
+            "屋顶": 0
+          },
+          "sectorIntegrity": {
+            "一楼入口": 100,
+            "二楼阵地": 100,
+            "屋顶": 100,
+            "地下室": 100
+          },
+          "sealedApproaches": [],
+          "fortificationLevel": {
+            "一楼入口": 1,
+            "二楼阵地": 1,
+            "屋顶": 0,
+            "地下室": 3
+          },
+          "fortificationBuildCounts": {
+            "一楼入口": 2,
+            "二楼阵地": 2,
+            "屋顶": 0,
+            "地下室": 6
+          },
+          "isGameOver": false,
+          "gameResult": "ongoing",
+          "mission": {
+            "started": true,
+            "elapsedMinutes": 0,
+            "recon": false,
+            "route": null,
+            "found": 0,
+            "evacuated": 0,
+            "crossed": 0,
+            "cover": 0
+          },
+          "pendingRetreat": null,
+          "enemyOperation": null
+        },
+        "combatReady": 48,
+        "history": [
+          {
+            "command": "start_game",
+            "text": "桥头，临时掩护阵地。\n\n传令兵指向桥面：“还有六十个人。那边有人接，咱们看住这一头。”你问他最后一队怎么走，他没立刻答，先看了看身边的人。\n\n每2分钟可让1名友军过桥，交谈不推进时间。压制射击、加固与轮换各有代价；60人过桥后，明确下令撤离并再次确认。180分钟后通路关闭，不能一直守到没有退路。\n\n本章为虚构支线，与四行仓库切换小队视角。"
+          }
+        ],
+        "dialogue": null,
+        "intel": "",
+        "date": "10月26日",
+        "previews": [
+          {
+            "label": "压制",
+            "command": "压制射击",
+            "preview": {
+              "action": "压制射击",
+              "durationMinutes": 20,
+              "durationLabel": "20分钟",
+              "threatIncrease": 6,
+              "predictedThreat": 21,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [
+                "七九弹30发"
+              ],
+              "available": true,
+              "reason": "压低本次压力增幅，掩护身后友军继续过桥",
+              "short": "20分钟 · 压制射击",
+              "missionTiming": {
+                "elapsedAfter": 20,
+                "remainingAfter": 160,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "加固",
+            "command": "加固桥头",
+            "preview": {
+              "action": "加固桥头",
+              "durationMinutes": 30,
+              "durationLabel": "30分钟",
+              "threatIncrease": 22,
+              "predictedThreat": 37,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [
+                "工事材料40份"
+              ],
+              "available": true,
+              "reason": "桥头掩体提高一级，最多三级；每级减少接敌伤亡",
+              "short": "30分钟 · 加固桥头",
+              "missionTiming": {
+                "elapsedAfter": 30,
+                "remainingAfter": 150,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "轮换",
+            "command": "轮换掩护",
+            "preview": {
+              "action": "轮换掩护",
+              "durationMinutes": 20,
+              "durationLabel": "20分钟",
+              "threatIncrease": 20,
+              "predictedThreat": 35,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [],
+              "available": true,
+              "reason": "疲劳最多降低25点、士气最多提高4点；封锁时间仍在推进",
+              "short": "20分钟 · 轮换掩护",
+              "missionTiming": {
+                "elapsedAfter": 20,
+                "remainingAfter": 160,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          }
+        ],
+        "sourceCommands": [
+          "start_game"
+        ],
+        "stateHash": "d57964a4886d3e2c3d3555506919b33090392983ee8a9f14d784665df1dda9a0"
+      },
+      "fieldSample": {
+        "stats": {
+          "chapterId": "bridge",
+          "campaignId": "bridge-19371115",
+          "location": "一楼入口",
+          "soldiers": 48,
+          "wounded": 0,
+          "woundedTimer": 0,
+          "roster": [
+            {
+              "id": "bridge-1",
+              "name": "韩立秋",
+              "origin": "虚构人物",
+              "trait": "老班长",
+              "status": "alive"
+            },
+            {
+              "id": "bridge-2",
+              "name": "钱有根",
+              "origin": "虚构人物",
+              "trait": "传令兵",
+              "status": "alive"
+            },
+            {
+              "id": "bridge-3",
+              "name": "周述平",
+              "origin": "虚构人物",
+              "trait": "救护兵",
+              "status": "alive"
+            }
+          ],
+          "hmgSquads": [],
+          "specialistSquads": [],
+          "morale": 72,
+          "minMorale": 0,
+          "health": 100,
+          "day": 0,
+          "currentTime": "06:00",
+          "turnCount": 0,
+          "lastRestTurn": 0,
+          "lastAttackTurn": -99,
+          "lastStandUsed": false,
+          "fatigue": 10,
+          "searchExhaustion": 0,
+          "speechStreak": 0,
+          "reconBonus": 0,
+          "tutorialStep": 3,
+          "siegeMeter": 15,
+          "activeTacticalCard": null,
+          "equippedTactic": null,
+          "ammo": 420,
+          "machineGunAmmo": 0,
+          "grenades": 0,
+          "sandbags": 120,
+          "medkits": 8,
+          "hasFlagRaised": false,
+          "flagWarned": false,
+          "enemiesKilled": 0,
+          "triggeredEvents": [],
+          "pendingEvent": null,
+          "lastDilemmaTurn": -999,
+          "usedTacticalCards": [],
+          "consequenceFlags": [],
+          "campaignHistory": [],
+          "aggressiveCount": 0,
+          "soldierDistribution": {
+            "一楼入口": 48,
+            "二楼阵地": 0,
+            "地下室": 0,
+            "屋顶": 0
+          },
+          "sectorIntegrity": {
+            "一楼入口": 100,
+            "二楼阵地": 100,
+            "屋顶": 100,
+            "地下室": 100
+          },
+          "sealedApproaches": [],
+          "fortificationLevel": {
+            "一楼入口": 1,
+            "二楼阵地": 1,
+            "屋顶": 0,
+            "地下室": 3
+          },
+          "fortificationBuildCounts": {
+            "一楼入口": 2,
+            "二楼阵地": 2,
+            "屋顶": 0,
+            "地下室": 6
+          },
+          "isGameOver": false,
+          "gameResult": "ongoing",
+          "mission": {
+            "started": true,
+            "elapsedMinutes": 0,
+            "recon": false,
+            "route": null,
+            "found": 0,
+            "evacuated": 0,
+            "crossed": 0,
+            "cover": 0
+          },
+          "pendingRetreat": null,
+          "enemyOperation": null
+        },
+        "combatReady": 48,
+        "history": [
+          {
+            "command": "start_game",
+            "text": "桥头，临时掩护阵地。\n\n传令兵指向桥面：“还有六十个人。那边有人接，咱们看住这一头。”你问他最后一队怎么走，他没立刻答，先看了看身边的人。\n\n每2分钟可让1名友军过桥，交谈不推进时间。压制射击、加固与轮换各有代价；60人过桥后，明确下令撤离并再次确认。180分钟后通路关闭，不能一直守到没有退路。\n\n本章为虚构支线，与四行仓库切换小队视角。"
+          }
+        ],
+        "dialogue": null,
+        "intel": "",
+        "date": "10月26日",
+        "previews": [
+          {
+            "label": "压制",
+            "command": "压制射击",
+            "preview": {
+              "action": "压制射击",
+              "durationMinutes": 20,
+              "durationLabel": "20分钟",
+              "threatIncrease": 6,
+              "predictedThreat": 21,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [
+                "七九弹30发"
+              ],
+              "available": true,
+              "reason": "压低本次压力增幅，掩护身后友军继续过桥",
+              "short": "20分钟 · 压制射击",
+              "missionTiming": {
+                "elapsedAfter": 20,
+                "remainingAfter": 160,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "加固",
+            "command": "加固桥头",
+            "preview": {
+              "action": "加固桥头",
+              "durationMinutes": 30,
+              "durationLabel": "30分钟",
+              "threatIncrease": 22,
+              "predictedThreat": 37,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [
+                "工事材料40份"
+              ],
+              "available": true,
+              "reason": "桥头掩体提高一级，最多三级；每级减少接敌伤亡",
+              "short": "30分钟 · 加固桥头",
+              "missionTiming": {
+                "elapsedAfter": 30,
+                "remainingAfter": 150,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "轮换",
+            "command": "轮换掩护",
+            "preview": {
+              "action": "轮换掩护",
+              "durationMinutes": 20,
+              "durationLabel": "20分钟",
+              "threatIncrease": 20,
+              "predictedThreat": 35,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": null,
+              "risk": "safe",
+              "riskLabel": "留意封锁剩余时间",
+              "costs": [],
+              "available": true,
+              "reason": "疲劳最多降低25点、士气最多提高4点；封锁时间仍在推进",
+              "short": "20分钟 · 轮换掩护",
+              "missionTiming": {
+                "elapsedAfter": 20,
+                "remainingAfter": 160,
+                "extracting": false,
+                "confirmationRequired": false,
+                "reachesDeadline": false,
+                "canWithdrawAfter": true
+              }
+            },
+            "tutorialBlocked": false
+          }
+        ],
+        "sourceCommands": [
+          "start_game"
+        ],
+        "stateHash": "d57964a4886d3e2c3d3555506919b33090392983ee8a9f14d784665df1dda9a0"
+      }
+    },
+    {
+      "id": "sihang",
+      "number": "三",
+      "title": "四行1937",
+      "subtitle": "仓库里的名字",
+      "setting": "四行仓库 · 历史背景演绎",
+      "duration": "长篇 · 原版完整战役",
+      "description": "四层阵地、专业小队、伤员与物资。沿用完整四行战役，守到任务期限，或按规则奉命撤退。",
+      "objective": "守至第6天，或第4天起奉命撤退；撤退仍需二次确认。",
+      "opening": "",
+      "tactics": [
+        {
+          "id": "emergency_shoring",
+          "chapterId": "sihang",
+          "title": "应急支撑",
+          "description": "工兵把修补单摊开：“只能先顶住一处受损支撑。整面墙的活，不能算做完。”",
+          "effect": "30分钟修补一处受控楼层，完整度最多+10。",
+          "tradeoff": "消耗100份工事材料，不提高工事等级；无法修补失守楼层。"
+        },
+        {
+          "id": "urgent_aid",
+          "chapterId": "sihang",
+          "title": "紧急救治",
+          "description": "军医压着急救单：“要赶这半个钟头，就得多用些东西。别让我先答应能救几个，药箱还得数清。”",
+          "effect": "30分钟让最多2名现有伤员恢复战斗力。",
+          "tradeoff": "每人消耗2份急救包；地下室医院必须仍受控。"
+        }
+      ],
+      "openingSample": {
+        "stats": {
+          "chapterId": "sihang",
+          "campaignId": "sihang-19371115",
+          "location": "一楼入口",
+          "soldiers": 354,
+          "wounded": 0,
+          "woundedTimer": 0,
+          "roster": [
+            {
+              "id": "s1",
+              "name": "陈树生",
+              "origin": "湖北",
+              "trait": "敢死队",
+              "status": "alive"
+            },
+            {
+              "id": "s2",
+              "name": "杨瑞符",
+              "origin": "天津",
+              "trait": "指挥官",
+              "status": "alive"
+            },
+            {
+              "id": "s3",
+              "name": "万连卿",
+              "origin": "湖北",
+              "trait": "神枪手",
+              "status": "alive"
+            },
+            {
+              "id": "s4",
+              "name": "石大力",
+              "origin": "山东",
+              "trait": "大力士",
+              "status": "alive"
+            },
+            {
+              "id": "s5",
+              "name": "朱胜忠",
+              "origin": "湖北",
+              "trait": "暴躁",
+              "status": "alive"
+            },
+            {
+              "id": "s6",
+              "name": "齐家铭",
+              "origin": "四川",
+              "trait": "老兵",
+              "status": "alive"
+            },
+            {
+              "id": "s7",
+              "name": "唐棣",
+              "origin": "湖南",
+              "trait": "文书",
+              "status": "alive"
+            },
+            {
+              "id": "s8",
+              "name": "雷雄",
+              "origin": "湖北",
+              "trait": "机枪手",
+              "status": "alive"
+            },
+            {
+              "id": "s9",
+              "name": "小湖北",
+              "origin": "湖北",
+              "trait": "胆小",
+              "status": "alive"
+            },
+            {
+              "id": "s10",
+              "name": "老葫芦",
+              "origin": "河南",
+              "trait": "厨师",
+              "status": "alive"
+            },
+            {
+              "id": "s11",
+              "name": "王看山",
+              "origin": "浙江",
+              "trait": "观察员",
+              "status": "alive"
+            },
+            {
+              "id": "s12",
+              "name": "李铁柱",
+              "origin": "河北",
+              "trait": "工兵",
+              "status": "alive"
+            }
+          ],
+          "hmgSquads": [
+            {
+              "name": "机枪一连",
+              "location": "一楼入口",
+              "count": 30,
+              "status": "active"
+            },
+            {
+              "name": "机枪二连",
+              "location": "二楼阵地",
+              "count": 30,
+              "status": "active"
+            }
+          ],
+          "specialistSquads": [
+            {
+              "id": "veteran",
+              "name": "湖北老兵班",
+              "role": "veteran",
+              "location": "二楼阵地",
+              "count": 18,
+              "status": "active"
+            },
+            {
+              "id": "engineer",
+              "name": "工兵抢修组",
+              "role": "engineer",
+              "location": "一楼入口",
+              "count": 12,
+              "status": "active"
+            },
+            {
+              "id": "medic",
+              "name": "战地救护组",
+              "role": "medic",
+              "location": "地下室",
+              "count": 10,
+              "status": "active"
+            },
+            {
+              "id": "assault",
+              "name": "敢死突击组",
+              "role": "assault",
+              "location": "一楼入口",
+              "count": 16,
+              "status": "active"
+            }
+          ],
+          "morale": 80,
+          "minMorale": 0,
+          "health": 100,
+          "day": 0,
+          "currentTime": "19:00",
+          "turnCount": 0,
+          "lastRestTurn": 0,
+          "lastAttackTurn": -99,
+          "lastStandUsed": false,
+          "fatigue": 12,
+          "searchExhaustion": 0,
+          "speechStreak": 0,
+          "reconBonus": 0,
+          "tutorialStep": 1,
+          "siegeMeter": 10,
+          "activeTacticalCard": null,
+          "equippedTactic": null,
+          "ammo": 20000,
+          "machineGunAmmo": 8000,
+          "grenades": 500,
+          "sandbags": 2600,
+          "medkits": 40,
+          "hasFlagRaised": false,
+          "flagWarned": false,
+          "enemiesKilled": 0,
+          "triggeredEvents": [],
+          "pendingEvent": null,
+          "lastDilemmaTurn": -999,
+          "usedTacticalCards": [],
+          "consequenceFlags": [],
+          "campaignHistory": [],
+          "aggressiveCount": 0,
+          "soldierDistribution": {
+            "一楼入口": 140,
+            "二楼阵地": 180,
+            "屋顶": 10,
+            "地下室": 24
+          },
+          "sectorIntegrity": {
+            "一楼入口": 100,
+            "二楼阵地": 100,
+            "屋顶": 100,
+            "地下室": 100
+          },
+          "sealedApproaches": [],
+          "fortificationLevel": {
+            "一楼入口": 1,
+            "二楼阵地": 1,
+            "屋顶": 0,
+            "地下室": 3
+          },
+          "fortificationBuildCounts": {
+            "一楼入口": 2,
+            "二楼阵地": 2,
+            "屋顶": 0,
+            "地下室": 6
+          },
+          "isGameOver": false,
+          "gameResult": "ongoing",
+          "pendingRetreat": null,
+          "enemyOperation": {
+            "turnsRemaining": 7,
+            "revealed": false
+          }
+        },
+        "combatReady": 414,
+        "history": [
+          {
+            "command": "start_game",
+            "text": "1937年10月26日，19:00。上海闸北，四行仓库。\n\n雨水顺着军帽往领口里淌。你接过防务记录，纸角已经软了，里面却清清楚楚写着人和弹药的数目。\n\n副官等你看完，才指向一楼入口：“这里先补牢。人得有个能站住的地方。”\n\n完成下方两步引导后正式开战。本作含具体伤势、死亡与战地创伤；对白、可变战况及结局为游戏演绎，不作史料。"
+          }
+        ],
+        "dialogue": null,
+        "intel": "具体来袭路线尚未确证，先完成布防。",
+        "date": "10月26日",
+        "previews": [
+          {
+            "label": "加固",
+            "command": "加固一楼入口",
+            "preview": {
+              "action": "加固工事",
+              "durationMinutes": 120,
+              "durationLabel": "2小时",
+              "threatIncrease": 8,
+              "predictedThreat": 18,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 2,
+              "projectedContactTurns": 5,
+              "risk": "low",
+              "riskLabel": "预计5回合后接敌",
+              "costs": [
+                "工事材料 170"
+              ],
+              "available": true,
+              "reason": "最多恢复24个百分点的防区完整度；每两次施工强化一次实际减伤（工兵效能100%）",
+              "short": "2小时 · 接敌5回合"
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "侦察",
+            "command": "侦察敌情",
+            "preview": {
+              "action": "侦察敌情",
+              "durationMinutes": 15,
+              "durationLabel": "15分钟",
+              "threatIncrease": 3,
+              "predictedThreat": 13,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": 6,
+              "risk": "low",
+              "riskLabel": "预计6回合后接敌",
+              "costs": [],
+              "available": true,
+              "reason": "查明下一轮目标、路线、规模和武器；夜袭加成提高20个百分点，上限30个百分点",
+              "short": "15分钟 · 接敌6回合"
+            },
+            "tutorialBlocked": true
+          },
+          {
+            "label": "搜寻",
+            "command": "搜寻物资",
+            "preview": {
+              "action": "搜寻物资",
+              "durationMinutes": 30,
+              "durationLabel": "30分钟",
+              "threatIncrease": 5,
+              "predictedThreat": 15,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": 6,
+              "risk": "low",
+              "riskLabel": "预计6回合后接敌",
+              "costs": [],
+              "available": true,
+              "reason": "可能找到弹药、药品或工事材料；当前区域剩余收益约100%",
+              "short": "30分钟 · 接敌6回合"
+            },
+            "tutorialBlocked": true
+          },
+          {
+            "label": "救治",
+            "command": "治疗伤员",
+            "preview": {
+              "action": "救治伤员",
+              "durationMinutes": 0,
+              "durationLabel": "不耗时",
+              "threatIncrease": 0,
+              "predictedThreat": 10,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 0,
+              "projectedContactTurns": 7,
+              "risk": "low",
+              "riskLabel": "预计7回合后接敌",
+              "costs": [],
+              "available": false,
+              "reason": "目前没有伤员需要救治",
+              "short": "当前不可执行"
+            },
+            "tutorialBlocked": true
+          },
+          {
+            "label": "休息",
+            "command": "休息整顿",
+            "preview": {
+              "action": "轮换休整",
+              "durationMinutes": 120,
+              "durationLabel": "2小时",
+              "threatIncrease": 17,
+              "predictedThreat": 27,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 2,
+              "projectedContactTurns": 5,
+              "risk": "low",
+              "riskLabel": "预计5回合后接敌",
+              "costs": [],
+              "available": true,
+              "reason": "士气最多+10、结构最多+5，疲劳最多降低35点；耗时较长，敌军推进2格（当前疲劳12%）",
+              "short": "2小时 · 接敌5回合"
+            },
+            "tutorialBlocked": true
+          }
+        ],
+        "sourceCommands": [
+          "start_game"
+        ],
+        "stateHash": "f217c6cdf3f350e34b50b259f51ebc49bf8ade4c6c92401b96b96107821c2b12"
+      },
+      "fieldSample": {
+        "stats": {
+          "chapterId": "sihang",
+          "campaignId": "sihang-19371115",
+          "location": "一楼入口",
+          "soldiers": 354,
+          "wounded": 0,
+          "woundedTimer": 0,
+          "roster": [
+            {
+              "id": "s1",
+              "name": "陈树生",
+              "origin": "湖北",
+              "trait": "敢死队",
+              "status": "alive"
+            },
+            {
+              "id": "s2",
+              "name": "杨瑞符",
+              "origin": "天津",
+              "trait": "指挥官",
+              "status": "alive"
+            },
+            {
+              "id": "s3",
+              "name": "万连卿",
+              "origin": "湖北",
+              "trait": "神枪手",
+              "status": "alive"
+            },
+            {
+              "id": "s4",
+              "name": "石大力",
+              "origin": "山东",
+              "trait": "大力士",
+              "status": "alive"
+            },
+            {
+              "id": "s5",
+              "name": "朱胜忠",
+              "origin": "湖北",
+              "trait": "暴躁",
+              "status": "alive"
+            },
+            {
+              "id": "s6",
+              "name": "齐家铭",
+              "origin": "四川",
+              "trait": "老兵",
+              "status": "alive"
+            },
+            {
+              "id": "s7",
+              "name": "唐棣",
+              "origin": "湖南",
+              "trait": "文书",
+              "status": "alive"
+            },
+            {
+              "id": "s8",
+              "name": "雷雄",
+              "origin": "湖北",
+              "trait": "机枪手",
+              "status": "alive"
+            },
+            {
+              "id": "s9",
+              "name": "小湖北",
+              "origin": "湖北",
+              "trait": "胆小",
+              "status": "alive"
+            },
+            {
+              "id": "s10",
+              "name": "老葫芦",
+              "origin": "河南",
+              "trait": "厨师",
+              "status": "alive"
+            },
+            {
+              "id": "s11",
+              "name": "王看山",
+              "origin": "浙江",
+              "trait": "观察员",
+              "status": "alive"
+            },
+            {
+              "id": "s12",
+              "name": "李铁柱",
+              "origin": "河北",
+              "trait": "工兵",
+              "status": "alive"
+            }
+          ],
+          "hmgSquads": [
+            {
+              "name": "机枪一连",
+              "location": "一楼入口",
+              "count": 30,
+              "status": "active"
+            },
+            {
+              "name": "机枪二连",
+              "location": "二楼阵地",
+              "count": 30,
+              "status": "active"
+            }
+          ],
+          "specialistSquads": [
+            {
+              "id": "veteran",
+              "name": "湖北老兵班",
+              "role": "veteran",
+              "location": "二楼阵地",
+              "count": 18,
+              "status": "active"
+            },
+            {
+              "id": "engineer",
+              "name": "工兵抢修组",
+              "role": "engineer",
+              "location": "一楼入口",
+              "count": 12,
+              "status": "active"
+            },
+            {
+              "id": "medic",
+              "name": "战地救护组",
+              "role": "medic",
+              "location": "地下室",
+              "count": 10,
+              "status": "active"
+            },
+            {
+              "id": "assault",
+              "name": "敢死突击组",
+              "role": "assault",
+              "location": "一楼入口",
+              "count": 16,
+              "status": "active"
+            }
+          ],
+          "morale": 95,
+          "minMorale": 0,
+          "health": 100,
+          "day": 1,
+          "currentTime": "08:00",
+          "turnCount": 0,
+          "lastRestTurn": 0,
+          "lastAttackTurn": -99,
+          "lastStandUsed": false,
+          "fatigue": 12,
+          "searchExhaustion": 0,
+          "speechStreak": 0,
+          "reconBonus": 0,
+          "tutorialStep": 3,
+          "siegeMeter": 20,
+          "activeTacticalCard": null,
+          "equippedTactic": null,
+          "ammo": 20000,
+          "machineGunAmmo": 8000,
+          "grenades": 500,
+          "sandbags": 2600,
+          "medkits": 40,
+          "hasFlagRaised": false,
+          "flagWarned": false,
+          "enemiesKilled": 0,
+          "triggeredEvents": [],
+          "pendingEvent": null,
+          "lastDilemmaTurn": -999,
+          "usedTacticalCards": [],
+          "consequenceFlags": [],
+          "campaignHistory": [],
+          "aggressiveCount": 0,
+          "soldierDistribution": {
+            "一楼入口": 140,
+            "二楼阵地": 180,
+            "屋顶": 10,
+            "地下室": 24
+          },
+          "sectorIntegrity": {
+            "一楼入口": 100,
+            "二楼阵地": 100,
+            "屋顶": 100,
+            "地下室": 100
+          },
+          "sealedApproaches": [],
+          "fortificationLevel": {
+            "一楼入口": 2,
+            "二楼阵地": 1,
+            "屋顶": 0,
+            "地下室": 3
+          },
+          "fortificationBuildCounts": {
+            "一楼入口": 4,
+            "二楼阵地": 2,
+            "屋顶": 0,
+            "地下室": 6
+          },
+          "isGameOver": false,
+          "gameResult": "ongoing",
+          "pendingRetreat": null,
+          "enemyOperation": {
+            "turnsRemaining": 7,
+            "revealed": false
+          }
+        },
+        "combatReady": 414,
+        "history": [
+          {
+            "command": "start_game",
+            "text": "1937年10月26日，19:00。上海闸北，四行仓库。\n\n雨水顺着军帽往领口里淌。你接过防务记录，纸角已经软了，里面却清清楚楚写着人和弹药的数目。\n\n副官等你看完，才指向一楼入口：“这里先补牢。人得有个能站住的地方。”\n\n完成下方两步引导后正式开战。本作含具体伤势、死亡与战地创伤；对白、可变战况及结局为游戏演绎，不作史料。"
+          },
+          {
+            "command": "加固一楼入口",
+            "text": "【第 1/2 步完成】\n\n新补的掩体压实了，出入的通道仍留着。工兵直起腰揉了揉手，副官看了一眼队列：“接下来轮休。别等站不住才让人歇。”\n\n现在点击下方发光的【休息】。"
+          },
+          {
+            "command": "休息整顿",
+            "text": "【新手引导完成】\n\n轮休结束，接班的人揉着脸站起来，先找自己的阵位。天亮了——10月27日，第一天。仓库里那些还不熟悉的声音，从现在起要彼此认得。\n\n💤 士气 80 → 95"
+          }
+        ],
+        "dialogue": "传令兵说话有了精神。副官把风险照旧报清，没有因为士气高就少说一句。",
+        "intel": "观察哨发现敌军正在调动，接敌时间约 7 回合；目标尚未查明。",
+        "date": "10月27日",
+        "previews": [
+          {
+            "label": "加固",
+            "command": "加固一楼入口",
+            "preview": {
+              "action": "加固工事",
+              "durationMinutes": 120,
+              "durationLabel": "2小时",
+              "threatIncrease": 9,
+              "predictedThreat": 29,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 2,
+              "projectedContactTurns": 5,
+              "risk": "low",
+              "riskLabel": "预计5回合后接敌",
+              "costs": [
+                "工事材料 170"
+              ],
+              "available": true,
+              "reason": "最多恢复24个百分点的防区完整度；每两次施工强化一次实际减伤（工兵效能100%）",
+              "short": "2小时 · 接敌5回合"
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "侦察",
+            "command": "侦察敌情",
+            "preview": {
+              "action": "侦察敌情",
+              "durationMinutes": 15,
+              "durationLabel": "15分钟",
+              "threatIncrease": 3,
+              "predictedThreat": 23,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": 6,
+              "risk": "low",
+              "riskLabel": "预计6回合后接敌",
+              "costs": [],
+              "available": true,
+              "reason": "查明下一轮目标、路线、规模和武器；夜袭加成提高20个百分点，上限30个百分点",
+              "short": "15分钟 · 接敌6回合"
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "搜寻",
+            "command": "搜寻物资",
+            "preview": {
+              "action": "搜寻物资",
+              "durationMinutes": 30,
+              "durationLabel": "30分钟",
+              "threatIncrease": 6,
+              "predictedThreat": 26,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 1,
+              "projectedContactTurns": 6,
+              "risk": "low",
+              "riskLabel": "预计6回合后接敌",
+              "costs": [],
+              "available": true,
+              "reason": "可能找到弹药、药品或工事材料；当前区域剩余收益约100%",
+              "short": "30分钟 · 接敌6回合"
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "救治",
+            "command": "治疗伤员",
+            "preview": {
+              "action": "救治伤员",
+              "durationMinutes": 0,
+              "durationLabel": "不耗时",
+              "threatIncrease": 0,
+              "predictedThreat": 20,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 0,
+              "projectedContactTurns": 7,
+              "risk": "low",
+              "riskLabel": "预计7回合后接敌",
+              "costs": [],
+              "available": false,
+              "reason": "目前没有伤员需要救治",
+              "short": "当前不可执行"
+            },
+            "tutorialBlocked": false
+          },
+          {
+            "label": "休息",
+            "command": "休息整顿",
+            "preview": {
+              "action": "轮换休整",
+              "durationMinutes": 120,
+              "durationLabel": "2小时",
+              "threatIncrease": 19,
+              "predictedThreat": 39,
+              "attackChance": 0,
+              "enemyAdvanceSteps": 2,
+              "projectedContactTurns": 5,
+              "risk": "low",
+              "riskLabel": "预计5回合后接敌",
+              "costs": [],
+              "available": true,
+              "reason": "士气最多+10、结构最多+5，疲劳最多降低35点；耗时较长，敌军推进2格（当前疲劳12%）",
+              "short": "2小时 · 接敌5回合"
+            },
+            "tutorialBlocked": false
+          }
+        ],
+        "sourceCommands": [
+          "start_game",
+          "加固一楼入口",
+          "休息整顿"
+        ],
+        "stateHash": "bc34bbc04e38771c246a4cb9bc7d4848f1d1e08d9c53c14b7204c72dbaf9541f"
+      }
+    }
+  ]
+}
+</script>
+ <script>const earlyParams=new URLSearchParams(location.search);const earlyRoot=document.getElementById('lone-army-ui-options');earlyRoot.dataset.sample=earlyParams.get('sample')==='opening'?'opening':'field';earlyRoot.dataset.screen=earlyParams.get('screen')==='menu'?'menu':'game';</script><script>
+/* Fixed engine snapshots; this file never imports the engine or touches saved games. */
+(() => {
+  const host=document.getElementById('lone-army-ui-options');
+  const data=JSON.parse(document.getElementById('la-concept-fixture').textContent);
+  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const paragraphs=text=>String(text??'').split(/\n\n+/).filter(Boolean).map(p=>`<p>${escape(p).replace(/\n/g,'<br>')}</p>`).join('');
+  const number=value=>Number(value).toLocaleString('en-US');
+  const chapters=new Map(data.chapters.map(c=>[c.id,c]));
+  const appRoots=host.querySelectorAll('[data-concept]');
+  for(const root of appRoots){
+    const design=root.dataset.concept;
+    const state={chapterId:'sihang',view:host.dataset.screen||'game',input:'',readingSize:16};
+    const sample=()=>chapters.get(state.chapterId)[host.dataset.sample==='opening'?'openingSample':'fieldSample'];
+    const chapter=()=>chapters.get(state.chapterId);
+    const actionButton=(a,index)=>{
+      const p=a.preview;const blocked=a.tutorialBlocked||!p?.available;
+      const caption=blocked?(a.tutorialBlocked?'先完成当前引导':p?.reason||'当前不可执行'):(p.costs?.length?`${p.durationLabel} · ${p.costs.join('、')}`:p.durationLabel);
+      return `<button type="button" class="quick-action" data-action="preview" data-index="${index}" aria-label="预览${escape(a.label)}军令${blocked?'，当前不可执行':''}"><b>${escape(a.label)}</b><span>${escape(caption)}</span></button>`;
+    };
+    function sectorMarkup(){
+      const s=sample().stats;
+      if(state.chapterId!=='sihang'){
+        const m=s.mission;const rows=state.chapterId==='street'?[['登记民众',12],['已找到',m.found],['安全抵达',m.evacuated],['距封锁',`${180-m.elapsedMinutes}分钟`]]:[['需掩护过桥',60],['已过桥',m.crossed],['桥头掩体',`${m.cover}/3`],['距封锁',`${180-m.elapsedMinutes}分钟`]];
+        return `<h3>本章进度</h3>${rows.map(([k,v])=>`<div class="sector"><div class="sector-label"><span>${escape(k)}</span><b>${escape(v)}</b></div></div>`).join('')}<p class="meta" style="margin-top:18px">${escape(chapter().objective)}</p>`;
+      }
+      return `<h3>仓库阵地</h3><p class="meta" style="margin-bottom:16px">本方防区示意</p>${['屋顶','二楼阵地','一楼入口','地下室'].map(name=>{
+        const integrity=s.sectorIntegrity[name];
+        return `<div class="sector"><div class="sector-label"><span>${name}</span><small>${s.location===name?'指挥部':integrity>0?'受控':'失守'}</small></div><div class="sector-track"><span style="width:${Math.max(0,Math.min(100,integrity))}%"></span></div><div class="sector-details"><span>完整度 ${integrity}%</span><span>步兵 ${s.soldierDistribution[name]}</span></div></div>`;
+      }).join('')}<p class="meta" style="margin-top:18px">${escape(sample().intel)}</p>`;
+    }
+    function metricsMarkup(){
+      const d=sample(),s=d.stats;const short=state.chapterId!=='sihang';
+      const metrics=short?[['可战',d.combatReady,'combatReady'],['伤员',s.wounded,'wounded'],[state.chapterId==='street'?'安全抵达':'已过桥',state.chapterId==='street'?s.mission.evacuated:s.mission.crossed,'progress'],['距封锁',`${180-s.mission.elapsedMinutes}分`,'remaining']]:[['可战',d.combatReady,'combatReady'],['伤员',s.wounded,'wounded'],['士气',s.morale,'morale'],['总结构',s.health,'health']];
+      const supplies=short?[['七九弹',s.ammo,'ammo'],['急救包',s.medkits,'medkits'],...(state.chapterId==='bridge'?[['工事材料',s.sandbags,'sandbags']]:[])]:[['七九弹',s.ammo,'ammo'],['机枪弹',s.machineGunAmmo,'machineGunAmmo'],['手榴弹',s.grenades,'grenades'],['工事材料',s.sandbags,'sandbags'],['急救包',s.medkits,'medkits']];
+      return `<div class="dateline"><div><div class="chapter-caption"><span>${escape(chapter().title)}</span><span>${short?'虚构支线':`第${s.day}天`}</span></div><div class="place-name">${short?escape(chapter().subtitle):escape(s.location)}</div></div><div class="clock">${s.currentTime}<small>${short?'本章开场':escape(d.date)}</small></div></div>
+        <div class="metrics">${metrics.map(([k,v,key])=>`<div class="metric"><span>${k}</span><strong data-field="${key}" data-value="${escape(v)}">${typeof v==='number'?number(v):escape(v)}</strong></div>`).join('')}</div>
+        <div class="supplies" style="grid-template-columns:repeat(${supplies.length},minmax(0,1fr))" aria-label="现有物资">${supplies.map(([k,v,key])=>`<div class="supply"><span>${k}</span><b data-field="${key}" data-value="${v}">${number(v)}</b></div>`).join('')}</div>
+        <div class="readouts"><span>压力 <b>${s.siegeMeter}%</b></span><span>疲劳 <b>${s.fatigue}%</b></span>${short?'':`<span>接敌 <b>${s.enemyOperation?`${s.enemyOperation.turnsRemaining}回合${s.enemyOperation.revealed?'':' · 目标未明'}`:'重整中'}</b></span><span>国旗 <b>${s.hasFlagRaised?'飘扬':'未升起'}</b></span>`}</div>`;
+    }
+    function journalMarkup(){
+      const d=sample();const opening=host.dataset.sample==='opening'||state.chapterId!=='sihang';
+      const text=opening?d.history[0].text:d.history.at(-1).text;
+      const chunks=text.split(/\n\n+/).filter(p=>p&&!/^【/.test(p));
+      if(opening&&state.chapterId==='sihang')chunks.shift();
+      const body=chunks.map(p=>p.startsWith('💤 ')?`<p class="settlement-note">${escape(p.slice(3))}</p>`:paragraphs(p)).join('');
+      return `<div class="journal-header"><h2 class="journal-title">${escape(chapter().subtitle)}</h2><span class="eyebrow">${opening?'入驻记录':'作战记录'}</span></div>
+        <div class="journal-copy"><span class="narrative-kicker">${escape(d.date)} · ${d.stats.currentTime}　${state.chapterId==='sihang'?'四行仓库':'虚构支线'}</span>${body}${d.dialogue&&!opening?`<blockquote><span class="meta">你说：我有点害怕</span>${paragraphs(d.dialogue)}</blockquote>`:''}
+        <div class="journal-tools"><button type="button" data-action="history">查看完整战报 →</button><span class="meta">${d.history.length}条记录</span></div></div>`;
+    }
+    function menuMarkup(){
+      const c=chapter();
+      return `<div class="menu-hero"><p class="eyebrow">文字策略 / 一九三七</p><h1>孤军</h1><p class="subtitle">不同的阵地，<br>许多个想回家的人。</p><p class="meta" style="margin-top:22px">三处阵地，三份独立记录。</p></div>
+        <div class="chapter-picker" aria-label="章节选择">${data.chapters.map(c=>`<button type="button" class="chapter-option" data-action="chapter" data-chapter="${c.id}" aria-pressed="${c.id===state.chapterId}"><span class="chapter-number">${c.number}</span><div><p class="meta">${escape(c.setting)}</p><h3>${escape(c.title)}</h3><p class="meta">${escape(c.subtitle)}</p></div><span class="arrow" aria-hidden="true">${c.id===state.chapterId?'✓':'→'}</span></button>`).join('')}</div>
+        <section class="chapter-brief" aria-label="章节说明"><p class="eyebrow">本章任务</p><p>${escape(c.objective)}</p><p class="meta">${escape(c.duration)}</p></section>
+        <section class="tactic-preview"><p class="eyebrow">本章战术 · 二选一</p><p class="meta">当前样本：不携带，可查看两张牌的规则。</p><div class="tactic-list">${c.tactics.map((t,i)=>`<button type="button" data-action="tactic" data-index="${i}"><b>${escape(t.title)}</b><span class="meta">查看效果与代价 →</span></button>`).join('')}</div></section>
+        <p class="menu-footer">成人战争叙事，含具体伤势、死亡与战地创伤。前两章为虚构支线，演绎不作史料。</p>`;
+    }
+    function render(){
+      const d=sample(),s=d.stats;const opening=s.tutorialStep===1&&state.chapterId==='sihang';
+      root.className=`la-concept theme-${design} mode-${state.view}`;
+      root.dataset.chapter=state.chapterId;root.dataset.stateHash=d.stateHash;
+      root.setAttribute('aria-label',{'night':'守夜档案','command':'前线指挥','paper':'灰纸战报'}[design]+'界面');
+      const compact=design==='night'&&state.view==='game';
+      const brand=compact?`<span class="brand brand-compact"><span class="night-title">孤军<small>${escape(chapter().title)}</small></span><span class="night-context">${state.chapterId==='sihang'?`第${s.day}天 · ${escape(s.location)}`:'虚构支线 · 独立小队'}</span></span>`:`<span class="brand">孤军<small>${state.view==='menu'?'战役档案':state.chapterId==='sihang'?'一九三七':chapter().title}</small></span>`;
+      const headerState=compact?`<div class="header-time tabular">${s.currentTime}<small>${escape(d.date)}</small></div>`:'<span class="local-label">本地游玩</span>';
+      root.innerHTML=`<header class="masthead"><button type="button" class="wordmark" data-action="menu" aria-label="返回章节">${brand}</button><div class="masthead-right">${headerState}<button type="button" data-action="${state.view==='menu'?'game':'menu'}">${state.view==='menu'?'看战报':'章节'}</button></div></header>
+        <section class="overview" aria-label="战况与物资">${metricsMarkup()}</section>
+        <div class="workspace"><div class="intel-note"><b>${opening?'当前目标':'本章任务'}</b><span>${opening?'先加固一楼入口，再让守军轮换休息。':escape(chapter().objective)}</span></div><aside class="situation" aria-label="阵地详情">${sectorMarkup()}</aside><article class="journal" aria-label="作战记录">${journalMarkup()}</article></div>
+        <footer class="command-dock" aria-label="军令与对话"><h3 class="command-side">指挥区</h3><div class="quick-actions">${d.previews.slice(0,design==='night'?2:3).map(actionButton).join('')}${design==='night'?'<button type="button" class="quick-action" data-action="actions"><b>全部军令</b><span>先查看代价 →</span></button>':''}</div><div class="empty-space"></div><p class="compact-cost" aria-live="polite"></p><form class="command-form"><input id="${design}-command" class="command-input" aria-label="军令或对话" placeholder="下令，或说两句话" autocomplete="off" value="${escape(state.input)}"><button type="submit" class="primary" aria-label="查看输入的军令预览">预览</button></form><div class="dock-tools"><button type="button" data-action="map">${state.chapterId==='sihang'?'阵地':'任务'}</button><button type="button" data-action="advisor">顾问</button><button type="button" data-action="actions">军令</button><span>交谈不耗时</span></div></footer>
+        <section class="menu-content" aria-label="章节与战术">${menuMarkup()}</section><footer class="menu-dock"><div><div class="meta"><span>${escape(chapter().title)}</span><span>样本战术：不携带</span></div><button type="button" class="primary" data-action="game"><span>预览${escape(chapter().title)}</span><span aria-hidden="true">→</span></button></div></footer>
+        <dialog aria-labelledby="${design}-dialog-heading"><div class="dialog-head"><h2 id="${design}-dialog-heading"></h2><form method="dialog"><button type="submit" aria-label="关闭窗口">关闭</button></form></div><div class="dialog-body"></div></dialog>`;
+      root.style.setProperty('--reading-size',state.readingSize+'px');
+    }
+    function modal(title,body){const dialog=root.querySelector('dialog');dialog.querySelector('h2').textContent=title;dialog.querySelector('.dialog-body').innerHTML=body;if(!dialog.open)dialog.showModal();else dialog.querySelector('button').focus();}
+    function showPreview(index){
+      const a=sample().previews[index];if(!a)return;
+      const p=a.preview;const blocked=a.tutorialBlocked||!p?.available;
+      const cost=p?.costs?.length?p.costs.join(' · '):'无额外物资消耗';
+      modal(`军令预览 · ${a.label}`,`<p class="eyebrow">${escape(a.command)}</p>${blocked?`<p class="unavailable">当前不可执行：${escape(a.tutorialBlocked?'先完成当前新手引导':p?.reason||'未识别为行动')}</p>`:`<p class="cost-line">${escape(p.durationLabel)} · ${escape(cost)}</p><p>${escape(p.riskLabel)}</p><p>${escape(p.reason)}</p>`}<p class="meta" style="margin-top:22px">只读界面样本：尚未执行军令，时间与资源保持原值。</p>`);
+    }
+    root.addEventListener('click',event=>{
+      const control=event.target.closest('button[data-action]');if(!control)return;
+      switch(control.dataset.action){
+        case'menu':state.view='menu';render();break;
+        case'game':state.view='game';render();break;
+        case'chapter':state.chapterId=control.dataset.chapter;state.input='';render();break;
+        case'preview':showPreview(Number(control.dataset.index));break;
+        case'actions':modal('常用军令',sample().previews.map((a,i)=>`<button type="button" data-action="preview" data-index="${i}"><b>${escape(a.label)}</b><span>${escape(a.tutorialBlocked?'先完成引导':a.preview?.short||'未识别')}</span></button>`).join('')+'<p class="meta" style="margin-top:16px">选择军令查看规则和代价；此样本不执行行动。</p>');break;
+        case'map':modal(state.chapterId==='sihang'?'仓库阵地':'本章任务',sectorMarkup());break;
+        case'advisor':modal('战地顾问',`<p class="eyebrow">回答与预览，不执行军令</p><p>${escape(chapter().objective)}</p><p>${escape(sample().intel||'先明确本章任务和行动代价。')}</p><p class="meta" style="margin-top:18px">本地只读说明；没有发送模型请求。</p>`);break;
+        case'history':modal('完整战报',sample().history.map((h,i)=>`<p class="eyebrow" style="margin-top:20px">${i+1} · ${escape(h.command==='start_game'?'开场':h.command)}</p>${paragraphs(h.text)}`).join(''));break;
+        case'tactic':{const t=chapter().tactics[Number(control.dataset.index)];modal(t.title,`${paragraphs(t.description)}<p class="cost-line">${escape(t.effect)}</p><p>${escape(t.tradeoff)}</p><p class="meta" style="margin-top:18px">此处只查看战术说明，未改变样本装备。</p>`);break;}
+      }
+    });
+    root.addEventListener('input',event=>{
+      if(!event.target.matches('.command-input'))return;
+      state.input=event.target.value;
+      const a=sample().previews.find(p=>p.command===state.input.trim());
+      root.querySelector('.compact-cost').textContent=a?`${a.label} · ${a.preview?.short||'先查看规则'}`:'';
+    });
+    root.addEventListener('submit',event=>{
+      if(!event.target.matches('.command-form'))return;
+      event.preventDefault();const i=sample().previews.findIndex(p=>p.command===state.input.trim());
+      if(i>=0)showPreview(i);else modal('军令与对话',`<p>${state.input.trim()?`已输入：${escape(state.input)}`:'可以先从常用军令中选择一项，查看时间、物资和风险。'}</p><p class="meta" style="margin-top:18px">这是一份只读界面样本，没有执行军令、写入存档或请求模型。</p>`);
+    });
+    render();
+    if(globalThis.Tweak){
+      const tweak=new Tweak({container:root,onChange:()=>root.style.setProperty('--reading-size',state.readingSize+'px')});
+      tweak.addSlider(state,'readingSize',{label:'正文大小',min:16,max:20,step:1,unit:'px',reference:'--reading-size'});
+    }
+  }
+})();
+
+</script>
+
+    </main>
+  </div>
+  <noscript>请启用JavaScript查看界面样本。此页面只做预览，不执行游戏军令。</noscript>
+  <script>
+    const parameters=new URLSearchParams(location.search);
+    const chosen=parameters.get('concept')||'night';
+    const options=document.getElementById('lone-army-ui-options');
+    if(parameters.get('capture')==='1')document.body.classList.add('capture');
+    function chooseDesign(value){
+      if(!['night','command','paper'].includes(value))value='night';
+      for(const section of options.querySelectorAll('.concept-stage'))section.hidden=section.querySelector('[data-concept]').dataset.concept!==value;
+      for(const button of document.querySelectorAll('[data-design-choice]'))button.setAttribute('aria-pressed',String(button.dataset.designChoice===value));
+      document.title='孤军 · '+{night:'守夜档案',command:'前线指挥',paper:'灰纸战报'}[value];
+    }
+    for(const button of document.querySelectorAll('[data-design-choice]'))button.addEventListener('click',()=>chooseDesign(button.dataset.designChoice));
+    chooseDesign(chosen);
+  </script>
+</body>
+</html>
