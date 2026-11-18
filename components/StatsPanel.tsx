@@ -1,4 +1,5 @@
 import React from 'react';
+import BattleOverview from './BattleOverview';
 import type { GameStats } from '../types';
 import { getDayProfile } from '../data/dayProfiles';
 import { getOperationIntel } from '../engine/battlefield';
@@ -23,7 +24,10 @@ export default function StatsPanel({ stats }: { stats: GameStats }) {
     { label: '工事材料', value: stats.sandbags, alert: stats.sandbags < 150 },
     { label: '急救包', value: stats.medkits, alert: stats.medkits < 10 },
   ];
-  return <section className="battle-overview" aria-label="战况总览" tabIndex={0}>
+  return <BattleOverview label="战况总览" summary={<>
+    <span>可战 {combatReady}人</span>
+    <span className={operation?.turnsRemaining === 1 ? 'state-warning' : ''}>{operation ? `${operation.turnsRemaining}回合接敌` : '敌军重整中'}</span>
+  </>} notice={threatened && <p className="battle-warning" role="alert">指挥部将在 {operation?.turnsRemaining} 回合后遭袭 · 阵亡风险 {formatCommanderRisk(calculateCommanderDeathRisk(stats, stats.location))}</p>}>
     <dl className="battle-metrics">
       {primary.map(item => <div key={item.label} className={item.alert ? 'state-warning' : ''}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}
     </dl>
@@ -37,6 +41,5 @@ export default function StatsPanel({ stats }: { stats: GameStats }) {
       <span>国旗 {stats.hasFlagRaised ? '飘扬' : '未升起'}</span>
     </div>
     {stats.tutorialStep >= 3 && <p className="battle-intel"><b>{lost ? `失守 ${lost}/4` : getDayProfile(stats.day).title}</b><span>{getOperationIntel(operation)}</span></p>}
-    {threatened && <p className="battle-warning" role="alert">指挥部将在 {operation?.turnsRemaining} 回合后遭袭 · 阵亡风险 {formatCommanderRisk(calculateCommanderDeathRisk(stats, stats.location))}</p>}
-  </section>;
+  </BattleOverview>;
 }

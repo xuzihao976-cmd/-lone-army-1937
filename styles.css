@@ -133,6 +133,7 @@ button { touch-action: manipulation; }
 .battle-clock span { display: block; margin-top: 4px; }
 .masthead-menu { font-size: 12px; color: var(--night-ink); padding: 0 4px; }
 .battle-overview { flex-shrink: 1; min-height: 44px; max-height: 28dvh; overflow-y: auto; padding: 0 20px; scrollbar-width: thin; }
+.overview-toggle { display: none; }
 .battle-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 2px 0 5px; border-bottom: 1px solid var(--night-rule); }
 .battle-metrics dt, .supply-cell dt { font-size: 12px; color: var(--night-muted); line-height: 1.5; }
 .battle-metrics dd { font-size: 21px; font-weight: 500; line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
@@ -248,6 +249,22 @@ button { touch-action: manipulation; }
   .archive-layout { padding-top: 20px; }
   .archive-heading { margin-bottom: 20px; }
   .archive-dock { padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
+
+/* Phone reading layout, including short landscape viewports. Wider layouts keep the full ledger. */
+@media (max-width: 639px), (max-height: 480px) and (max-width: 960px) {
+  .battle-masthead { padding-top: 4px; padding-bottom: 2px; }
+  .battle-identity p, .battle-clock span { margin-top: 0; }
+  .battle-brand { font-size: 22px; }
+  .battle-clock time { font-size: 21px; }
+  .battle-overview { max-height: 36dvh; }
+  .overview-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; border-top: 1px solid var(--night-rule); text-align: left; }
+  .overview-summary { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 13px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .overview-action { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; color: var(--night-accent); font-size: 12px; }
+  .overview-chevron { width: 7px; height: 7px; border: solid currentColor; border-width: 0 1px 1px 0; transform: translateY(-2px) rotate(45deg); }
+  .overview-toggle[aria-expanded="true"] .overview-chevron { transform: translateY(2px) rotate(225deg); }
+  .overview-toggle:focus-visible { outline-offset: -2px; }
+  .overview-details[data-expanded="false"] { display: none; }
 }
 
 ::-webkit-scrollbar {
