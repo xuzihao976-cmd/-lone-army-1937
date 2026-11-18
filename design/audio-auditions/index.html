@@ -1,0 +1,29 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>孤军 · 声音试映</title>
+<style>
+:root{color-scheme:dark;font:17px/1.55 system-ui,sans-serif;background:#20231e;color:#f2ecda}body{max-width:44rem;margin:auto;padding:1.3rem}h1,h2{font-family:serif;line-height:1.25}h2{margin-top:0}section{padding:1.25rem;margin:1.1rem 0;background:#292c25;border:1px solid #656559;border-radius:4px}p{margin:.65rem 0}small{color:#d1c8b3}audio{width:100%;margin:.45rem 0}select,button{font:inherit;max-width:100%;padding:.35rem .55rem;margin:.25rem;background:#37392f;color:inherit;border:1px solid #9d9887;border-radius:3px}label{display:inline-block}details{margin-top:.7rem}summary{cursor:pointer}button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #edbd80}
+</style><main><h1>孤军 · 声音试映</h1><p>每套 36 秒。先用相同音量比较三段，再展开单轨，听一段守夜配乐能否陪你读完一页。</p>
+<small>0:00 名册　0:07 街巷　0:14 桥头　0:18 远爆　0:20.8 轻受击　0:22 重受击　0:23 仓内　0:29 收束</small><div id="kits"></div></main>
+<script>
+const kits=[
+ ['A','灯下的名册','钢琴把一句话分成两口气，大提琴接住停顿。适合读名册、守夜和安静的对话。'],
+ ['B','江岸来信','尼龙弦拨出脚步般的起落，长笛把句尾留在空中。适合沿街寻人和护送场景。'],
+ ['C','墙内的回声','低音管与颤音琴在五拍里隔空应答，砖石余响留在句后。适合桥头时限和仓内警戒。']
+];
+const music={archive:'翻开名册',street:'街巷寻人',bridge:'桥头倒计时',warehouse:'仓内守夜',coda:'余声（收束）'};
+const fx={type:'落字',click:'操作',save:'归档',radio:'电台',alert:'警示',damage:'受击',explosion:'远处爆响',success:'阶段完成'};
+for(const [id,title,description] of kits){
+ const panel=document.createElement('section');
+ panel.innerHTML='<h2>'+id+' · '+title+'</h2><p>'+description+'</p><audio controls preload="none" aria-label="'+title+'混合试听" src="'+id+'/demo.mp3"></audio><details><summary>单听配乐与音效</summary><label>声音 <select></select></label><label class="version" hidden>版本 <select><option>1</option><option>2</option><option>3</option></select></label><p><small class="hint"></small></p><audio controls preload="none" aria-label="'+title+'单轨"></audio></details>';
+ const [choice,variation]=panel.querySelectorAll('select'),track=panel.querySelector('details audio');
+ for(const [key,name] of Object.entries({...music,...fx}))choice.add(new Option(name,key));
+ function update(){
+  const key=choice.value,isFx=Object.hasOwn(fx,key);
+  panel.querySelector('.version').hidden=!isFx;
+  track.src=id+'/'+key+(isFx?'-'+variation.value+'.wav':'.ogg');
+  track.loop=!isFx && key!=='coda';
+  panel.querySelector('.hint').textContent=key==='damage'?'1 轻撞 · 2 闷击 · 3 重击':isFx?'同一动作的三次不同触感。':track.loop?'循环试听，可随时暂停。':'一次播放，保留收尾。';
+ }
+ choice.onchange=variation.onchange=update;update();document.querySelector('#kits').append(panel);
+}
+document.addEventListener('play',event=>{for(const player of document.querySelectorAll('audio'))if(player!==event.target)player.pause()},true);
+</script></html>
