@@ -708,7 +708,7 @@ const App: React.FC = () => {
       ) : (
         <>
             <BattleMasthead stats={stats} onMenu={() => { playSound('click'); setConfirmExit(false); setShowGameMenu(true); }} />
-            {shortChapter ? <ChapterMissionPanel stats={stats} /> : <StatsPanel stats={stats} />}
+            {shortChapter ? <ChapterMissionPanel key={stats.campaignId} stats={stats} /> : <StatsPanel key={stats.campaignId} stats={stats} />}
 
             {showGameMenu && <GameDialog title="战时菜单" onClose={() => { setShowGameMenu(false); setConfirmExit(false); }} className="menu-dialog">
               {!confirmExit ? <div className="menu-actions">

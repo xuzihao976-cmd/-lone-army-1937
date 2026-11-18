@@ -1,4 +1,5 @@
 import React from 'react';
+import BattleOverview from './BattleOverview';
 import type { GameStats } from '../types';
 import { CHAPTER_TIME_LIMIT, getChapter } from '../data/chapters';
 import { getMissionPlan, getMissionPreview } from '../engine/chapterEngine';
@@ -10,7 +11,10 @@ export function ChapterMissionPanel({ stats }: { stats: GameStats }) {
   const chapter = getChapter(stats.chapterId);
   const remaining = Math.max(0, CHAPTER_TIME_LIMIT - mission.elapsedMinutes);
   const notice = getMissionWithdrawalNotice(stats);
-  return <section className="mission-overview battle-overview" aria-label="本章任务总览" tabIndex={0}>
+  return <BattleOverview label="本章任务总览" summary={<>
+    <span>{stats.chapterId === 'street' ? `已送达 ${mission.evacuated}人` : `已过桥 ${mission.crossed}/60`}</span>
+    <span className={remaining <= 40 ? 'state-warning' : ''}>距封锁 {remaining}分钟</span>
+  </>} notice={notice && <p role="status" className={`mission-notice ${notice.urgent ? 'state-warning' : ''}`}>{notice.text}</p>}>
     <dl className="battle-metrics">
       {([['可战', stats.soldiers], ['伤员', stats.wounded], ['七九弹', stats.ammo], ['急救包', stats.medkits]] as const).map(([label, value]) =>
         <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
@@ -22,8 +26,7 @@ export function ChapterMissionPanel({ stats }: { stats: GameStats }) {
     <div className="battle-readouts"><span>压力 {stats.siegeMeter}%</span><span>疲劳 {stats.fatigue}%</span></div>
     <p className="battle-intel"><b>本章任务</b><span>{chapter.objective}</span></p>
     {stats.chapterId === 'street' && <p className="mission-route">撤收线：{mission.route === 'inner' ? '内巷 · 护送25分钟' : mission.route === 'river' ? '沿河 · 护送15分钟，高暴露' : mission.recon ? '已查明，请选择内巷或沿河' : '尚待侦察'}{innerRoadBlocked(stats) ? ' · 内巷障碍未清' : ''}</p>}
-    {notice && <p role="status" className={`mission-notice ${notice.urgent ? 'state-warning' : ''}`}>{notice.text}</p>}
-  </section>;
+  </BattleOverview>;
 }
 
 export function ChapterMissionActions({ stats, disabled, onAction, featured = false }: { stats: GameStats; disabled: boolean; featured?: boolean; onAction: (command: string) => void }) {

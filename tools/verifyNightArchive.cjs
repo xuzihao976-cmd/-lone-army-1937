@@ -105,7 +105,16 @@ function contrast(a, b) {
     await resume(p); await geometry(p, `${chapter}-${w}x${h}`, send(p), h >= 640 ? 100 : 15);
     await query(p, chapter === 'bridge' ? '报告任务' : '报告弹药和士气');
     if (chapter === 'sihang') {
-      assert.equal(await p.getByLabel('现有物资', { exact: true }).locator('.supply-cell').count(), 5);
+      const toggle = p.getByRole('button', { name: /战况详情|收起详情/ });
+      const compact = w < 640 || (h <= 480 && w <= 960);
+      const supplies = p.getByLabel('现有物资', { exact: true });
+      assert.equal(await toggle.isVisible(), compact);
+      if (compact) {
+        assert.equal(await supplies.isVisible(), false);
+        await toggle.click();
+      }
+      assert.equal(await supplies.locator('.supply-cell:visible').count(), 5);
+      if (compact) await toggle.click();
       const before = await stats(p); await input(p).fill('检修机枪一连');
       await geometry(p, `repair-preview-${w}x${h}`, send(p)); assert.deepEqual(await stats(p), before);
       await input(p).fill(''); await p.getByRole('button', { name: '阵地', exact: true }).click();
@@ -184,6 +193,7 @@ function contrast(a, b) {
   }
   {
     const { c, p } = await open(390, 844, { lone_army_autosave: JSON.stringify(fixtures.order_sihang) }); await resume(p);
+    await p.getByRole('button', { name: /战况详情/ }).click();
     for (const selector of ['.war-prose', '.battle-chapter', '.supply-cell dt', '.supply-cell dd', '.order-caption', '.send-order', '.dock-tools > span']) {
       const colors = await p.locator(selector).first().evaluate(el => {
         let node = el, bg; do { bg = getComputedStyle(node).backgroundColor; if (bg !== 'rgba(0, 0, 0, 0)') break; node = node.parentElement; } while (node);
